@@ -54,24 +54,37 @@ Loïc (frigoriste, Belgique) a acheté un environnement de dossiers : socle de c
 au vocal, sans taper**. Tension : on a vendu « tout vit dans un environnement type Claude Code » — or
 Claude Code n'est pas une surface mobile/vocale. Ce doc tranche cette tension.
 
+> 🔄 **MISE À JOUR (2026-06-19) — lire ceci avant la suite.** Le mécanisme mobile décrit plus bas
+> parle de **« Projets »** : c'est **dépassé**. Architecture retenue (cf. `decisions/log.md`,
+> 2026-06-19, test mobile réussi) : la surface mobile = des **Skills custom uploadées sur le compte
+> claude.ai de Loïc**, déclenchées dans un **chat normal** (tél ou desktop, sans PC allumé, sans
+> Dispatch). Partout ci-dessous, **lire « Projet » comme « Skill custom uploadée sur le compte »**.
+> Différence majeure : une skill claude.ai **a du code execution + un filesystem (éphémère) + réseau
+> variable** — contrairement à un Projet (Knowledge seul). L'idée surface/engine ci-dessous **reste vraie**.
+
 ## L'idée-clé : séparer la *surface de capture* de l'*engine*
 
 | Couche | Où ça tourne | Ce que ça fait | Pour Loïc |
 |---|---|---|---|
-| **Surface capture/consommation** | **App Claude mobile**, Projets | contexte → texte : vocal in, post/résumé out, photos jointes | C'est là qu'il vit, ~80 % de l'usage quotidien |
-| **Engine** | **Claude Code** (PC/cloud) + n8n + Supabase/Markdown | scripts, scraping concurrents, base d'idées, analyse de perf, veille | Il n'y touche pas — ça tourne en coulisse, il consomme les résultats |
+| **Surface capture/consommation** | **App Claude** (mobile + desktop) — **Skills uploadées sur le compte** | contexte → texte : vocal in, post/résumé out, photos jointes | C'est là qu'il vit, ~80 % de l'usage quotidien |
+| **Engine** | **Le dossier (repo)** sur PC (Claude Code / Cowork) + n8n + Supabase/Markdown | scripts, scraping concurrents, base d'idées, analyse de perf, veille | Il n'y touche pas — ça tourne en coulisse, il consomme les résultats |
 
-**Le folder de contexte vendu = l'actif portable.** Il se charge dans les DEUX : comme *Knowledge d'un
-Projet* mobile, ET comme *repo* dans Claude Code. C'est la promesse « indépendant d'un outil ».
+**Le folder de contexte vendu = l'actif portable.** Il vit dans le **repo** (atelier de build), et ses
+morceaux utiles sont **bundlés dans le zip** des skills publiées sur le compte de Loïc. C'est la
+promesse « indépendant d'un outil ».
 
 ## Distinction critique à ne pas survendre
 
-- App mobile / Projet : une « skill » = un **Projet bien instruit** (prompt long + Knowledge). Pas de
-  Python, pas de filesystem, pas d'appels API multi-étapes.
-- Claude Code : une skill = `SKILL.md` + scripts qui s'exécutent vraiment. Mais **pas vocal ni mobile**.
+- Surface mobile = **Skill custom uploadée sur le compte claude.ai** : a du code execution + un
+  filesystem **éphémère** (ressources bundlées dans le zip) + un **réseau variable**. Suffisant pour
+  le contexte→texte ; **pas** pour du scraping lourd ou des appels réseau garantis.
+- Engine = le **dossier** sur PC (Claude Code / Cowork) : skills `SKILL.md` + scripts qui s'exécutent
+  vraiment, réseau garanti. C'est là que vit l'asynchrone (scraping, distillation du digest).
+- **Pas de sync entre les deux** : modifier une skill dans le repo n'update PAS celle du compte de
+  Loïc → il faut **re-zipper + re-uploader** (le « process de publication »).
 
 → « une phrase courte déclenche un workflow » est vrai au mobile **seulement pour les tâches
-contexte→texte**. Les workflows à scripts se déclenchent côté engine, en asynchrone.
+contexte→texte**. Les workflows à scripts lourds/réseau se déclenchent côté engine, en asynchrone.
 
 ---
 

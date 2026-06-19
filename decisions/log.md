@@ -69,3 +69,28 @@ Keep it terse. Future-you will thank present-you for capturing the *why*, not ju
 **Alternatives considered:** Garder le remote vers Nate (confusion) ; pas de Git du tout (perte de traçabilité).
 
 **Owner:** Adrien.
+
+## 2026-06-19 — Pont mobile = Skills uploadées sur le compte claude.ai de Loïc
+
+**Decision:** Loïc utilise l'AIOS via des **Skills custom uploadées sur son compte claude.ai**
+(Réglages ▸ Fonctionnalités, en zip ; Pro avec code execution), déclenchées **dans un chat normal**
+de l'app Claude — **téléphone ou desktop, sans Dispatch et sans que son PC soit allumé**. Séparation
+nette : le **dossier (repo) = atelier de build** d'Adrien (skills + engine) ; le **compte claude.ai
+de Loïc = surface d'usage** où l'on **publie** (upload zip) les skills contexte→texte. Loïc ne touche
+jamais Claude Code, Cowork ni Dispatch.
+
+**Why:** C'est le seul modèle où Loïc, non-technique, retrouve ses capacités dans l'app qu'il a déjà,
+partout, sans dépendre d'un PC allumé. La doc Anthropic confirme que les skills du compte claude.ai
+sont rattachées au compte (donc dispo sur mobile). *Changerait d'avis si* le test de Phase A montrait
+qu'une skill custom ne se déclenche pas depuis l'app mobile.
+
+**Contraintes acceptées (doc officielle) :** (1) **pas de sync entre surfaces** → re-zipper +
+re-uploader à chaque modif (process de « publication ») ; (2) **VM claude.ai éphémère et séparée du
+repo** → bundler template/voix/digest dans le zip ; (3) **réseau variable** sur claude.ai → pas de
+scraping lourd côté mobile, l'engine reste dans le dossier sur PC.
+
+**Alternatives considered:** **Dispatch** (tél pilote le PC — rejeté : exige le PC allumé/joignable) ;
+**Projets Claude** Knowledge-only (rejeté : pas de code execution ni ressources bundlées comme une
+vraie skill) ; tout en Claude Code (rejeté : outil de dev, pas pour Loïc).
+
+**Owner:** Adrien.

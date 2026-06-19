@@ -28,11 +28,16 @@
 - [ ] **Claude Pro** souscrit côté Loïc + **Wispr Flow** installé sur son PC Windows.
 - [ ] Mettre à jour `connections.md` (mécanisme + auth + fraîcheur) à chaque branchement.
 
-## Bloc 2 — Système Résumés vocaux / devis (quick win, 100 % mobile)
+## Pont mobile (transverse — cf. decisions/log.md 2026-06-19)
+- [x] Tester qu'une skill custom uploadée se déclenche depuis l'app mobile (skill `test-pont-mobile`). ✅
+- [ ] Supprimer la skill jetable `test-pont-mobile` du compte claude.ai + l'archiver dans le repo.
+- [ ] Pour chaque skill métier : la **publier** = zip + upload sur le compte claude.ai de Loïc (re-upload à chaque modif).
+
+## Bloc 2 — Système Résumés vocaux / devis (quick win, usage mobile)
 - [ ] Rédiger LE **template figé** de résumé (titre / contexte / mesures / matériel / prochaines étapes…).
-- [ ] Créer le **Projet Claude mobile « Cazal — Résumés »** (custom instructions = template).
-- [ ] Gérer les variantes (récap avant-devis / réunion archi / dépannage) dans le même Projet.
-- [ ] Tester sur 2-3 vocaux réels de Loïc → la structure tient ?
+- [ ] Construire le skill **`resume-vocal-devis`** (SKILL.md + template bundlé), zippable pour le compte de Loïc.
+- [ ] Gérer les variantes (récap avant-devis / réunion archi / dépannage) dans le même skill.
+- [ ] Tester sur 2-3 vocaux réels de Loïc → la structure tient ? (validation humaine avant de figer).
 
 ## Bloc 3 — Système Création de contenu (hybride mobile + engine)
 **Socle de contexte portable :**

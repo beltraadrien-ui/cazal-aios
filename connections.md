@@ -11,6 +11,7 @@ Registry of every system your AIOS can reach. Filled by `/onboard` from Q4-Q7 an
 | 5 | Project / task tracking | Interfast (interventions) | not yet connected | — | — |
 | 6 | Meeting intelligence | Vocaux ChatGPT · canevas terrain Interfast (iPad) · Wispr Flow (à installer) | not yet connected | — | — |
 | 7 | Knowledge / files | Apify (scrape Instagram/contenu) · Supabase (base de données contenu) · portail blog du site | not yet connected | — | — |
+| 8 | Surface d'usage (mobile + desktop) | **claude.ai (compte Loïc)** — Skills custom uploadées (zip) | upload manuel (Réglages ▸ Fonctionnalités) | Pro + code execution | 2026-06-19 ✅ pont mobile testé |
 
 **Mechanism options:** `mcp` (MCP server), `script` (Python/Bash hitting an API, in `scripts/`), `export` (CSV/JSON dump pipeline), `key+ref` (`.env` key + `references/{tool}-api.md` guide), `not yet connected`.
 

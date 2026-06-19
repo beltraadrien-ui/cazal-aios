@@ -28,14 +28,21 @@
 
 Avant de construire une capacité, trancher **où elle vit** (cf. `convention-build.md` + `decisions/log.md`) :
 
-- **Surface mobile** (Projet Claude, app) = capacité **contexte→texte** : résumé, génération de post/
-  script. Pas de Python, pas de filesystem, pas d'API multi-étapes. Une « skill » mobile = un **Projet
-  bien instruit** (prompt long + Knowledge). C'est là que Loïc vit (~80 %).
-- **Engine** (ce repo, Claude Code / n8n) = scripts qui s'exécutent vraiment : scraping, distillation
-  du digest de perf, base d'idées, veille. Asynchrone, en coulisse. Loïc n'y touche pas.
+- **Surface d'usage de Loïc** = des **Skills custom uploadées sur son compte claude.ai** (zip ; Pro +
+  code execution), déclenchées dans un **chat normal** (mobile ou desktop, sans PC, sans Dispatch ;
+  pont testé OK le 2026-06-19). Capacité **contexte→texte** : résumé, génération de post/script. La
+  skill **a** du code execution + un filesystem **éphémère** (ressources bundlées dans le zip) + un
+  réseau **variable** → suffisant pour le contexte→texte, pas pour le scraping lourd. C'est là que Loïc
+  vit (~80 %).
+- **Engine** (ce repo sur PC, via Claude Code / Cowork + n8n) = scripts qui s'exécutent vraiment :
+  scraping, distillation du digest de perf, base d'idées, veille. Asynchrone, en coulisse. Loïc n'y touche pas.
+
+**Conséquence build (cf. `decisions/log.md` 2026-06-19) :** une skill destinée à Loïc se construit ici,
+**bundle ses ressources** (template, voix, digest) dans son dossier, puis se **publie** = zip + upload
+sur le compte de Loïc. Pas de sync auto → **re-uploader à chaque modif**.
 
 → Une capacité « déclenchée par une phrase courte » est vraie **au mobile pour les tâches
-contexte→texte uniquement**. Les workflows à scripts vivent côté engine.
+contexte→texte uniquement**. Les workflows à scripts lourds/réseau vivent côté engine.
 
 ## Secrets
 
