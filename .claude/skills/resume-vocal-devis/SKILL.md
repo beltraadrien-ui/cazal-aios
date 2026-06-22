@@ -1,6 +1,6 @@
 ---
 name: resume-vocal-devis
-description: Transforme un vocal de chantier de Loïc en un résumé structuré TOUJOURS au même format, à coller dans Interfast. Se déclenche sur "résume ce vocal", "fais le résumé pour le devis", "récap de visite", "récap avant-devis", "résumé réunion de chantier", "résumé dépannage". Trois variantes gérées : avant-devis, réunion de chantier (archi), dépannage.
+description: Transforme un vocal de chantier de Loïc en un résumé structuré TOUJOURS au même format, à coller dans Interfast. Se déclenche sur "résume ce vocal", "fais le résumé pour le devis", "récap de visite", "récap avant-devis", "résumé réunion de chantier", "résumé dépannage", "résumé entretien". Quatre variantes gérées : avant-devis installation, réunion de chantier (archi), dépannage, entretien/maintenance.
 ---
 
 # Résumé vocal → devis — Cazal Réfrigération
@@ -16,10 +16,11 @@ son irritant n°1 : un assistant générique change la structure à chaque fois.
 ## Étapes
 
 1. **Choisir la variante** (dans `templates/format-resume.md`) :
-   - **A — Avant-devis** (par défaut) : récap d'une visite pour chiffrer.
+   - **A — Avant-devis INSTALLATION** (par défaut) : visite pour chiffrer une pose (mono/multisplit, PAC, hybride…).
    - **B — Réunion de chantier** : si Loïc mentionne un architecte / d'autres corps de métier / une réunion.
    - **C — Dépannage** : si c'est une panne / intervention de réparation.
-   - En cas de doute, demander en une phrase : « C'est un avant-devis, une réunion de chantier ou un dépannage ? »
+   - **D — Entretien / maintenance** : si c'est un chiffrage d'entretien d'un parc existant (nb d'unités, forfait, pas de travaux de pose).
+   - En cas de doute, demander en une phrase : « C'est un avant-devis installation, un entretien, une réunion de chantier ou un dépannage ? »
 
 2. **Remplir le template** de la variante, section par section, **uniquement avec ce qui a été dicté**.
 

@@ -1,46 +1,58 @@
 # Templates figés de résumé — Cazal Réfrigération
 
-> ⚠️ **v1 — brouillon à valider avec Loïc** (Bike Method phase 1). Ne pas figer avant test sur
-> 2-3 vocaux réels. Adapter les champs selon ce qu'il dicte vraiment.
+> **v2 — affiné sur 4 vocaux réels de Loïc (2026-06-22).** Toujours en Bike Method phase 1 :
+> à re-tester avant de figer définitivement.
 >
-> Règle d'or : **structure TOUJOURS identique** (c'est l'irritant qu'on résout — ChatGPT change la
-> forme à chaque fois). Si une info n'a pas été dictée → écrire `— (non précisé)`, ne **jamais
-> inventer**. Sortie destinée à être **copiée-collée dans Interfast** à la main.
+> Règle d'or : **structure TOUJOURS identique** (c'est l'irritant qu'on résout — un assistant
+> générique change la forme à chaque fois). Info non dictée → `— (non précisé)`, ne **jamais
+> inventer** (une fausse donnée se retrouve dans un devis). Sortie en **tirets**, prête à
+> **copier-coller dans Interfast**.
 
 ---
 
-## Variante A — Récap de visite avant-devis (par défaut)
+## Variante A — Avant-devis : INSTALLATION (par défaut)
 
 ```
 RÉSUMÉ DE VISITE — AVANT-DEVIS
 Client : [nom] — [particulier / pro : type]
-Lieu : [adresse / ville] — [type de bâtiment]
+Lieu : [ville] — [type de bâtiment, surface si dite]
 Date de visite : [date]
 
 DEMANDE DU CLIENT
 - [ce qu'il veut, en clair]
 
-CONFIGURATION DES LIEUX
-- [pièces / surfaces / étages concernés]
-- Accès / contraintes : [escaliers, hauteur, cour, stationnement…]
+TYPE D'INSTALLATION
+- [monosplit / multisplit / PAC / PAC hybride / gainable…] — [nb unités int / nb unités ext]
+- [si hybride/relève : logique de fonctionnement, ex. PAC 80 % + chaudière en relais via sonde ext]
 
-MACHINES / ÉQUIPEMENTS ÉVOQUÉS
-- [type (clim, PAC, chambre froide, VMC, boiler thermo…) — quantité — marque/modèle si dit]
+DIMENSIONNEMENT
+- [pièce → surface m² → puissance kW retenue ou à calculer]
+
+ÉQUIPEMENTS / MATÉRIEL
+- Marque / gamme souhaitée : [Daikin Stylish, Atlantic Sérène, Panasonic, Pearl Premium… + couleur]
+- Unité(s) intérieure(s) : [emplacement par pièce]
+- Unité extérieure : [emplacement + support : dalle béton / Bigfoot / plots anti-vibration / toit plat]
+- Ballon tampon / de découplage : [oui + raison / non / sans objet]
 
 TRAVAUX TECHNIQUES À PRÉVOIR
-- Passage des tuyaux : [parcours, longueur estimée, gainage]
+- Liaison frigorifique : [longueur ~X m, parcours : combles / greniers / gaine / façade / tuiles ventilées]
+- Goulotte : [longueur, COULEUR — blanc / anthracite / noir]
 - Carottage / perçage : [nb, emplacement, matériau — ex. mur en pierre]
-- Évacuation des condensats : [vers où]
-- Alimentation électrique : [existant / à créer, tableau]
+- Évacuation des condensats : [gravitaire / pompe de relevage / pompe à condensat — préciser par unité]
+- Alimentation électrique : [distance ~X m, mono / triphasé, tableau, disjoncteur/tubage à prévoir, place au coffret ?]
 
 MOYENS SPÉCIAUX
 - [location de nacelle / échafaudage / autre — ou : aucun]
 
-POINTS D'ATTENTION / SPÉCIFICITÉS
-- [tout ce qui sort de l'ordinaire et impacte le prix ou le planning]
+VARIANTES À CHIFFRER
+- Variante 1 — [marque / puissance / gamme] : [détail par pièce]
+- Variante 2 — [marque / puissance / gamme] : [détail par pièce]
 
-PROCHAINES ÉTAPES / À CHIFFRER
-- [éléments à inclure dans le devis, relances, infos manquantes à obtenir]
+POINTS D'ATTENTION / SPÉCIFICITÉS
+- [contraintes d'accès, état de l'existant, esthétique imposée…]
+
+À OBTENIR DU CLIENT / À CLARIFIER AVANT DE CHIFFRER
+- [code EAN, ampérage au coffret, conso gaz, plan de pose, choix de variante, infos manquantes…]
 ```
 
 ---
@@ -65,7 +77,7 @@ CE QUE CAZAL DOIT FAIRE / FOURNIR
 - [actions à notre charge + échéance]
 
 TRAVAUX TECHNIQUES (rappel)
-- Passage tuyaux / carottage / réservations à prévoir : [détail]
+- Liaison / goulotte / carottage / réservations à prévoir : [détail]
 
 POINTS EN SUSPENS / À CLARIFIER
 - [questions ouvertes, infos attendues, prochaine échéance]
@@ -97,4 +109,35 @@ PIÈCES
 
 RECOMMANDATIONS AU CLIENT
 - [entretien, surveillance, devis complémentaire à prévoir…]
+```
+
+---
+
+## Variante D — Avant-devis : ENTRETIEN / MAINTENANCE
+
+```
+RÉSUMÉ DE VISITE — ENTRETIEN / MAINTENANCE
+Client : [nom] — [contrat / référence si pro, ex. C-pack]
+Lieu : [ville] — Date de visite : [date]
+
+PARC À ENTRETENIR
+- [nb unités intérieures + nb unités extérieures]
+- Répartition unités ext : [ex. 9 sur un toit plat + 14 sur l'autre]
+- Répartition unités int : [ex. 9 à un étage, 11 à un autre, 3 en dessous]
+- Marque / type : [Panasonic… — mono/multisplit]
+- État général / âge : [récent, bon état → durée d'intervention estimée]
+
+MODE DE CHIFFRAGE
+- Forfait : [ex. 185 € le monosplit + X € par split supplémentaire]
+- Frais de déplacement : [oui / non]
+
+CONTRAINTES D'INTERVENTION
+- Horaires : [ex. heures de bureau 7 h – 17 h]
+- Accès : [toits plats, nacelle…]
+
+DEMANDES COMPLÉMENTAIRES
+- [ex. fournir et dimensionner une clim pour un local serveur]
+
+À CLARIFIER
+- [montants exacts, infos manquantes…]
 ```
