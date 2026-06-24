@@ -111,5 +111,3 @@ payloads), **accès aux clés en cloud** (Supabase/Apify/Meta — point ouvert :
 secrets au runner). Source : Apify (Loïc + concurrents) ; Meta Graph en option (own-account, insights
 plus riches). Options : routine CronCreate+script (recommandé) / pg_cron Supabase / n8n (écarté).
 Détails complets : section « Poller » du plan.
-
-<!-- test propagation a410d79 -->
