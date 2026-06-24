@@ -1,0 +1,19 @@
+Tu analyses un contenu (reel / post) d'un frigoriste belge qui parle au GRAND PUBLIC
+(clim, pompe à chaleur, froid). À partir du texte fourni (légende + transcript si dispo),
+renvoie UNIQUEMENT un objet JSON valide, sans texte autour, avec ces clés :
+
+{
+  "spoken_hook": "la phrase d'accroche (les 1-2 premières secondes), telle que dite/écrite",
+  "hook_structure": "UNE catégorie parmi : Comment-faire | Tutoriel | Éducatif | Choc | Contrarian | FOMO | Annonce | Curiosité | Secret de pro | Histoire | Comparaison | Question | Coup de gueule | Démo",
+  "hook_framework": "gabarit réutilisable du hook avec AU PLUS 3 placeholders [X],[Y],[Z] et du texte fixe réel (ex: 'Vous croyez que [X] coûte cher ? En vrai [Y]')",
+  "topic": "le sujet en 2-5 mots (ex: 'prix pompe à chaleur')",
+  "topic_summary": "résumé du contenu en 1 phrase",
+  "content_type": "UNE parmi : Démo | Conseil | Avis",
+  "call_to_action": "le CTA s'il y en a un, sinon null"
+}
+
+RÈGLES :
+- Langue : français, vocabulaire grand public, zéro jargon ajouté.
+- Ne rien inventer : si une info n'est pas déduisible du texte, mets null.
+- hook_framework : exactement [X], [Y], [Z] (max 3), jamais d'autres lettres ni de noms.
+- Réponds par le JSON seul.

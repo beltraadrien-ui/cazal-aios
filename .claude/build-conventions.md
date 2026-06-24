@@ -44,6 +44,28 @@ sur le compte de Loïc. Pas de sync auto → **re-uploader à chaque modif**.
 → Une capacité « déclenchée par une phrase courte » est vraie **au mobile pour les tâches
 contexte→texte uniquement**. Les workflows à scripts lourds/réseau vivent côté engine.
 
+## Double version de chaque skill (repo + zip) — OBLIGATOIRE
+
+Tout skill existe en **deux versions** (cf. `decisions/log.md` 2026-06-22) :
+1. **Version repo** — `.claude/skills/<nom>/SKILL.md` (+ supports). Source de vérité, utilisée dans
+   **Claude Code et Cowork**.
+2. **Version zip** — `active/skills-zip/<nom>.zip`, pour upload sur **Claude Desktop / claude.ai**.
+
+- **Générer** : `python shared/scripts/export_skills.py` (tous) ou `… <nom>` (ciblé). Le script bundle
+  les références nécessaires (mapping `BUNDLE`) et écrit des chemins internes en **slashes `/`**.
+- ⚠️ **Jamais `Compress-Archive`** : antislashs → erreur claude.ai « invalid characters ». Voie Python only.
+- **Pas de sync auto** : modif d'un skill ou d'une référence bundlée → **re-zipper + re-uploader**.
+- Les **`references/*.md`** sont la source de vérité unique ; les copies dans les zips en sont une export.
+
+## Moteur de contenu (markdown-first)
+
+- Moteur (`scraper-contenu-cazal`, `rapport-performance`, `rapport-concurrents`, `veille-niche`) tourne
+  dans Claude Code. Scripts Python dans `shared/scripts/`, config via `shared/config.py`.
+- **Markdown/JSON d'abord** : scrape → `active/contenu/`, rapports → `active/analyse/`, digests →
+  `references/{rapport-perf-digest,base-idees}.md`. Supabase si volume seulement.
+- **Règle d'or nuancée** : biaiser vers ce qui marche, **ré-angler** (pas bannir) ce qui a sous-performé.
+  Digest en deux sections : **À EXPLOITER / À RÉ-ANGLER**.
+
 ## Secrets
 
 - **`.env` à la racine du repo** = point unique des secrets. Mécanique : Claude pose un **placeholder**
