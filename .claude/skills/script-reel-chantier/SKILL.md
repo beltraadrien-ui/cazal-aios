@@ -28,7 +28,10 @@ Google ? (ou plusieurs) ».
 1. **Identifier la variante** (A/B/C, ou plusieurs).
 2. **Lire le contexte** : `references/framework-hook.md` (psycho — obligatoire AVANT d'écrire),
    `references/voice.md` (ton de Loïc), `references/angles-signature-cazal.md` (angles + filtre),
-   `references/rapport-perf-digest.md` (ce qui marche / à ré-angler).
+   et le **digest de perf** (ce qui marche / à ré-angler) — **mode dual** : si le **connecteur
+   Supabase MCP** est disponible, lire le plus récent (`SELECT contenu FROM syntheses WHERE
+   type='digest-perf' ORDER BY run_date DESC LIMIT 1` — toujours frais) ; sinon
+   `references/rapport-perf-digest.md` bundlé (snapshot). Jamais d'écriture dans `syntheses` ici.
 3. **Extraire les faits** du vocal : prestation faite, type de client, lieu/zone, bénéfice client,
    détails visuels (avant/après, le geste, l'unité posée). Ne garder que ce qui est dit ; ne rien inventer.
 4. **Produire** selon le format figé de la variante :

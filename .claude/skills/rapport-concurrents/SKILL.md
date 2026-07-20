@@ -28,6 +28,9 @@ surperforme, **isole la variable gagnante** (hook ? accroche actu ? format ? dur
    même-sujet + gaps de sujets non traités par Loïc).
 5. **Mettre à jour** `references/rapport-perf-digest.md` (À EXPLOITER : patterns gagnants ; À RÉ-ANGLER :
    ce que Loïc a tenté + la piste tirée du concurrent). Verser les gaps prometteurs dans la veille/`idees`.
+6. **Pousser en base** (lecture live par les skills via le connecteur MCP) :
+   - le digest mis à jour : `python shared/scripts/post/upsert_synthese.py --type digest-perf --source rapport-concurrents --file references/rapport-perf-digest.md`
+   - le rapport complet : `python shared/scripts/post/upsert_synthese.py --type rapport-concurrents --source rapport-concurrents --file active/analyse/rapport-concurrents-AAAA-MM-JJ.md`
 
 ## Règles fermes
 - **Toujours comparer à sujet égal** (sinon la variable n'est pas isolée).

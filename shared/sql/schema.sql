@@ -108,6 +108,7 @@ CREATE TABLE idees (
   origine text DEFAULT 'veille',                   -- veille | chantier | manuelle
   compte_id uuid REFERENCES comptes(id),
   notes text,
+  source_url text,                                 -- URL réelle de la source (ou lien recherche Google si pas d'URL de page)
   created_at timestamp DEFAULT now()
 );
 
@@ -187,6 +188,23 @@ CREATE POLICY "Allow all for anon" ON contenu            FOR ALL USING (true) WI
 CREATE POLICY "Allow all for anon" ON contenu_snapshots  FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON compte_stats       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON idees              FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. SYNTHESES — digests & rapports de perf datés, lus en live par les skills (connecteur MCP).
+-- type 'digest-perf' = LE digest que les skills de rédaction lisent (dernier par run_date) ;
+-- types 'rapport-performance' / 'rapport-concurrents' = rapports complets datés (archives).
+CREATE TABLE IF NOT EXISTS syntheses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  type text NOT NULL,
+  titre text,
+  contenu text NOT NULL,                            -- markdown complet
+  run_date date NOT NULL,
+  source text,                                      -- skill producteur
+  created_at timestamp DEFAULT now(),
+  CONSTRAINT syntheses_unique UNIQUE (type, run_date)
+);
+CREATE INDEX IF NOT EXISTS idx_syntheses_type_date ON syntheses(type, run_date DESC);
+ALTER TABLE syntheses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for anon" ON syntheses FOR ALL USING (true) WITH CHECK (true);
 
 -- NOTE pgvector (différé) : pour activer la colonne `embedding`, exécuter d'abord
 --   CREATE EXTENSION IF NOT EXISTS vector;

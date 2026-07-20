@@ -25,8 +25,11 @@ plusieurs variations d'angles** prêtes à passer au scripting. Biaisée vers ce
 
 2. **Choisir le format** : demander → **reel**, **article de blog**, ou **les deux**.
 
-3. **Contexte** : lire `references/rapport-perf-digest.md` (à exploiter / à ré-angler),
-   `references/angles-signature-cazal.md` (angles + filtre), `references/voice.md` (ton).
+3. **Contexte** : lire le **digest de perf** (à exploiter / à ré-angler) — **mode dual**, comme pour
+   les idées : mode Supabase → `SELECT contenu FROM syntheses WHERE type='digest-perf' ORDER BY
+   run_date DESC LIMIT 1` (toujours frais) ; mode snapshot → `references/rapport-perf-digest.md`
+   bundlé. Puis `references/angles-signature-cazal.md` (angles + filtre), `references/voice.md` (ton).
+   Jamais d'écriture dans `syntheses` depuis la surface.
 
 4. **Développer en variations** : décliner le sujet via les **7 cadrages** (en choisir 3-5 pertinents) :
    - Liste · Focus unique · Contrarian · Showcase · Tutoriel · Comparaison · Émotionnel.
@@ -43,6 +46,9 @@ plusieurs variations d'angles** prêtes à passer au scripting. Biaisée vers ce
    - les deux → les deux, à partir des mêmes faits.
    - Mettre à jour le statut de l'idée → `choisie` : en **mode Supabase** via le connecteur MCP
      (`UPDATE idees SET statut='choisie' WHERE id=…`) ; en **mode snapshot**, dans `base-idees.md`.
+   - ⚠️ Le connecteur peut être en **lecture seule** : si l'UPDATE est refusé, **ne pas prétendre
+     avoir écrit** — annoncer « idée notée comme choisie, la base sera mise à jour depuis le PC »
+     et continuer normalement (le choix n'est pas perdu, il est dans la conversation).
 
 ## Règles fermes
 

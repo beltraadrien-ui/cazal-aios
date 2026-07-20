@@ -19,7 +19,10 @@ idée/un angle).
 1. **Récupérer l'idée** : soit fournie par Loïc / `idee-contenu` (sujet + cadrage + angle), soit
    choisie dans `references/base-idees.md`. Confirmer le sujet et l'angle retenu.
 2. **Lire le contexte** : `references/framework-hook.md` (obligatoire avant d'écrire),
-   `references/voice.md`, `references/angles-signature-cazal.md`, `references/rapport-perf-digest.md`.
+   `references/voice.md`, `references/angles-signature-cazal.md`, et le **digest de perf** —
+   **mode dual** : si le **connecteur Supabase MCP** est disponible, lire le plus récent
+   (`SELECT contenu FROM syntheses WHERE type='digest-perf' ORDER BY run_date DESC LIMIT 1`) ;
+   sinon `references/rapport-perf-digest.md` bundlé (snapshot). Jamais d'écriture dans `syntheses` ici.
 3. **3 options de hook** (structures variées, dont 1 contrarian), calées sur ce qui marche → **STOP,
    Loïc choisit**.
 4. **Fiche de tournage** (beats selon le type Démo/Conseil/Avis de `framework-hook.md`), CTA, légende,

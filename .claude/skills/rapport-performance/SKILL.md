@@ -292,4 +292,10 @@ mobile (Section régénération ci-dessous).
 - **Sauvegarder** le rapport complet : `active/analyse/rapport-performance-AAAA-MM-JJ.md`.
 - **Régénérer** `references/rapport-perf-digest.md` (court, 1-3 p., sections À EXPLOITER / À RÉ-ANGLER)
   depuis le Brief.
-- **Rappeler** de re-zipper/uploader les skills (`export_skills.py`) — le digest est bundlé en mobile.
+- **Pousser le digest en base** (lecture live par les skills de surface via le connecteur MCP) :
+  `python shared/scripts/post/upsert_synthese.py --type digest-perf --source rapport-performance --file references/rapport-perf-digest.md`
+- **Archiver le rapport complet en base** :
+  `python shared/scripts/post/upsert_synthese.py --type rapport-performance --source rapport-performance --file active/analyse/rapport-performance-AAAA-MM-JJ.md`
+- **Re-zipper/uploader** (`export_skills.py`) **seulement si la logique d'un skill a changé** — les
+  données de perf, elles, sont désormais lues en live dans la table `syntheses` ; le fichier bundlé
+  ne sert plus que de secours hors-connecteur.

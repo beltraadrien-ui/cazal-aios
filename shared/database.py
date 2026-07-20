@@ -150,9 +150,31 @@ def update_idee_statut(idee_id: str, statut: str) -> dict:
     return res.data[0]
 
 
+# ----------------------------- SYNTHESES -----------------------------
+
+def upsert_synthese(row: dict) -> str:
+    """UPSERT une synthèse (digest ou rapport daté), on_conflict (type, run_date).
+    Champs attendus : type, contenu, run_date (+ titre, source). Retourne l'id."""
+    if not row.get("type") or not row.get("contenu") or not row.get("run_date"):
+        raise ValueError("synthese.type, .contenu ou .run_date manquant")
+    client = get_client()
+    res = client.table("syntheses").upsert(row, on_conflict="type,run_date").execute()
+    if not res.data:
+        raise Exception(f"upsert_synthese échec pour {row['type']}/{row['run_date']}")
+    return res.data[0]["id"]
+
+
+def get_derniere_synthese(type_: str = "digest-perf") -> dict | None:
+    """Retourne la synthèse la plus récente d'un type (None si aucune)."""
+    client = get_client()
+    res = client.table("syntheses").select("*").eq("type", type_).order(
+        "run_date", desc=True).limit(1).execute()
+    return res.data[0] if res.data else None
+
+
 if __name__ == "__main__":
     # Smoke test : compter les lignes de chaque table (vérifie la connexion).
     c = get_client()
-    for t in ("comptes", "contenu", "contenu_snapshots", "compte_stats", "idees"):
+    for t in ("comptes", "contenu", "contenu_snapshots", "compte_stats", "idees", "syntheses"):
         n = len(c.table(t).select("id").limit(1).execute().data or [])
         print(f"{t}: OK (échantillon {n})")

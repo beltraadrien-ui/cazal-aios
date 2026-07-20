@@ -78,8 +78,14 @@
 - [x] Skills moteur branchés Supabase : `scraper-contenu-cazal`, **`analyser-contenu`** (NOUVEAU), `rapport-performance`, `rapport-concurrents`. `veille-niche` (écrit `idees` via MCP, ta version). Zips régénérés.
 - [x] `idee-contenu` : lit `idees` via connecteur Supabase MCP (fallback snapshot). Skills scripting inchangés.
 - [x] **(2026-06-24)** `rapport-performance` réécrit sur le modèle `rapport-performance-shortform` de Master-content : **rapport riche multi-sections affiché DANS LE CHAT** + sauvegarde `.md` daté + régénération digest. Script `list_contenu_scores.py` élargi (expose `hook_framework`, `content_type`, `call_to_action`, `topic_summary`, `reach`, `avg_watch_time`…). Dimensions vides (`duration`/`visual_format`/`text_hook`/`content_structure`) = stubs « à venir ». Décision loggée.
+- [x] **(2026-06-24)** Seed initial : les 17 idées de `base-idees.md` insérées dans `idees` (7 manuelle + 10 veille, toutes `statut='idée'`) → Mode Supabase de `idee-contenu` opérationnel sans attendre Apify. Décision loggée.
+- [x] **(2026-06-24)** Nouveau skill **`ajout-idee`** (capture à la volée → normalise → insère via `insert_idee.py`, pas MCP). Engine PC only. SKILL.md créé.
+- [x] **(2026-06-25)** `veille-niche` : Reddit (Apify) **auto dès que `APIFY_API_TOKEN` SET** (statut `off` = MISSING/plantage seulement) + nouvelle colonne `idees.source_url` (ALTER live) → source **cliquable** par idée (URL réelle ou lien recherche Google) en sortie chat + Supabase. `insert_idee.py` + `schema.sql` à jour ; snapshot `base-idees.md` inchangé (choix Loïc). Décision loggée.
 - [ ] **(reste)** Remplir `APIFY_API_TOKEN` + `OPENAI_API_KEY` dans `.env` → débloque scraper + analyser → 1ᵉʳ run moteur réel.
-- [ ] **(reste)** Plus tard : recréer le schéma sur le **compte Supabase de Loïc** + basculer URL/clés du `.env` ; (mobile) connecter le connecteur Supabase sur son claude.ai (optionnel).
+- [ ] **(reste)** Plus tard : recréer le schéma sur le **compte Supabase de Loïc** + basculer URL/clés du `.env`.
+- [x] **(2026-07-19)** Connecteur Supabase MCP **côté Adrien** : en place sur son compte claude.ai (Desktop/mobile, OAuth ; reco `read_only=true&project_ref=…`). SKILL.md `idee-contenu`/`ajout-idee` ajustés au mode lecture seule, zip `idee-contenu` régénéré (à ré-uploader). Décision loggée.
+- [x] **(2026-07-19)** Table **`syntheses`** (digest-perf + rapports datés) créée en live + `schema.sql` §9 : les skills de surface lisent le digest **en live** via le connecteur MCP (fallback snapshot bundlé) ; les skills moteur poussent en fin de run (`upsert_synthese.py`) ; lecture engine `get_synthese.py`. Seed 2026-06-24 fait. **Le re-zip ne sert plus qu'aux changements de logique des skills, plus aux données.** 6 zips régénérés (idee-contenu, script-reel-chantier, scripter-reel, generateur-hooks, rediger-article, veille-niche) → à ré-uploader sur claude.ai. Décision loggée.
+- [ ] **(phase 2, PAS à la livraison)** Connecteur Supabase sur le claude.ai de **Loïc** — reporté (cf. decisions/log.md 2026-07-19) ; à activer seulement sur frustration réelle (idées périmées mobile / capture en mobilité), après migration du schéma chez lui.
 
 ## Bloc 3ter — Poller de KPIs — 🟢 SCRIPT FAIT & TESTÉ ; reste la routine locale
 > Automate qui rafraîchit périodiquement les KPIs (`contenu`), les stats (`compte_stats`) et écrit un
@@ -156,6 +162,7 @@ type='own'` et ne touche qu'à ces contenus.
 ---
 
 ## Hors-scope (évolutions futures, PAS dans les 800 €)
+- ⏳ Connecteur Supabase MCP sur le claude.ai de Loïc (phase 2 — cf. decisions/log.md 2026-07-19 ; activer sur frustration réelle uniquement).
 - ⏳ Prospection LinkedIn / cold email (~500 € en plus, 3ᵉ espace de travail).
 - ⏳ Génération vidéo (Nano Banana / avant-après immo).
 - ⏳ Pont « vocal sur chantier → déclenche un vrai script » (le plus fragile, reportable).

@@ -16,8 +16,11 @@ varier l'accroche, ou tester des angles. Calé sur `framework-hook.md` et `rappo
 ## Étapes
 
 1. **Lire** `references/framework-hook.md` (formule du hook, structures, placeholders),
-   `references/voice.md` (ton), `references/rapport-perf-digest.md` (ce qui marche / à ré-angler),
-   `references/angles-signature-cazal.md` (angles + filtre).
+   `references/voice.md` (ton), `references/angles-signature-cazal.md` (angles + filtre), et le
+   **digest de perf** (ce qui marche / à ré-angler) — **mode dual** : si le **connecteur Supabase
+   MCP** est disponible, lire le plus récent (`SELECT contenu FROM syntheses WHERE
+   type='digest-perf' ORDER BY run_date DESC LIMIT 1`) ; sinon `references/rapport-perf-digest.md`
+   bundlé (snapshot). Jamais d'écriture dans `syntheses` ici.
 2. **Générer 6 hooks** pour le sujet :
    - **4 best-fit** : structures qui collent au sujet (Question, Comparaison, Secret de pro, Choc,
      Conseil…), chacune **différente**.

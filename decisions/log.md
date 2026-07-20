@@ -182,29 +182,34 @@ construire un skill de test pour vérifier (reporté).
 
 ---
 
-## 2026-06-24 — `veille-niche` aligné sur `veille-quotidienne` (orchestrateur complet)
+## 2026-06-24 — `veille-niche` aligné sur `veille-quotidienne` (orchestrateur complet, branché Supabase)
 
 **Decision:** Réécrire `veille-niche` (jusqu'ici un `SKILL.md` minimal) sur le **modèle complet de
-`veille-quotidienne`** de Master-content : dédup via veille-logs sur 2 jours → scraping multi-sources
-en parallèle → évaluation par les 8 archétypes + scoring + filtre éditorial → Top 10 équilibré par
-track → présentation structurée → sauvegarde du veille-log → `AskUserQuestion` → écriture en base.
-**Sources retenues** (adaptées à la niche clim/PAC, pas IA) : (1) WebSearch Google/PAA, (2) WebSearch
-actus aides/primes BE+FR, (3) forums/Reddit FR via Apify (nouveau `shared/scripts/scrape_forums.py`,
-calqué sur `scrape_reddit.py` de MC). **Tracks** : `b2c` (particuliers, Insta/FB) / `b2b` (pro froid
-commercial, LinkedIn) — équivalent du dual-track business/geek de MC. **Destination** : table Supabase
-`idees` quand elle sera branchée, avec **fallback markdown `base-idees.md`** d'ici là (le skill détecte
-le mode).
+`veille-quotidienne`** de Master-content : dédup (table `idees` + veille-logs sur 2 jours) → sourcing
+multi-sources en parallèle → évaluation par les 8 archétypes + scoring + filtre éditorial → Top 10
+équilibré par track → présentation structurée → sauvegarde du veille-log → `AskUserQuestion` → écriture
+en base. **Le cœur du skill = le sourcing**, avec **4 sources** (niche clim/PAC/froid, pas IA) :
+(A) WebSearch Google/PAA — vraies questions clients (filon principal) ; (B) WebSearch actus
+aides/primes/normes BE+FR ; (C) **forums métier FR via WebFetch** — liste curée `bricozone.be`,
+`forum-chauffage.com`, `forums.futura-sciences.com` (gratuit, le plus riche pour le froid) ; (D) Reddit
+FR via Apify (`shared/scripts/scrape_forums.py`) en **complément optionnel non-bloquant** (Reddit FR
+pauvre sur le froid). **Tracks** : `b2c` (particuliers, Insta/FB) / `b2b` (pro froid commercial,
+LinkedIn). **Destination** : table Supabase `idees` (live) via `shared/scripts/post/insert_idee.py`
+(pattern engine = script déterministe → JSON), + régénération du **snapshot** `references/base-idees.md`
+(lu par `idee-contenu` en fallback mobile). Dédup via nouveau `shared/scripts/search/list_idees.py`.
 
 **Why:** Le skill standard ne câblait aucune source ni mécanique réelle ; `veille-quotidienne` est
-éprouvé et data-driven. Réutiliser son architecture (dédup, archétypes, balance des tracks, research-log,
-checkpoint humain `AskUserQuestion`) donne de meilleurs résultats qu'une idéation ad hoc. Le fallback
-markdown respecte l'amorçage (Supabase/Apify bloqués tant que Loïc n'a pas créé ses comptes — Blocs 1
-& 3bis). *Changerait d'avis si* la niche imposait des sources spécifiques (ex. forums métier dédiés)
-au-delà de Reddit FR.
+éprouvé et data-driven. Réutiliser son architecture (dédup, archétypes, balance des tracks, veille-log,
+checkpoint humain `AskUserQuestion`) donne de meilleurs résultats qu'une idéation ad hoc. Sourcing
+privilégié **gratuit/natif** (WebSearch + WebFetch) car Reddit FR est trop pauvre sur le froid : Apify
+reste un simple complément. Écriture via script déterministe = même pattern que les autres skills moteur
+déjà migrés sur Supabase. *Changerait d'avis si* un forum métier précis s'avérait bien plus productif
+(ajuster la liste WebFetch, qui vit dans le SKILL.md).
 
-**Alternatives considered:** garder le skill minimal (rejeté : aucune source réelle, idéation pauvre) ;
-porter aussi Twitter/GitHub/concurrents Instagram comme sources (rejeté : non pertinents pour clim/PAC) ;
-écrire direct en Supabase sans fallback (rejeté : Supabase bloqué, casserait le skill aujourd'hui).
+**Alternatives considered:** garder le skill minimal (rejeté : aucune source réelle) ; Twitter/GitHub/
+concurrents IG comme sources (rejeté : non pertinents clim/PAC) ; Reddit/Apify comme source forum
+principale (rejeté : trop pauvre — relégué en complément, forums WebFetch en source forum primaire) ;
+écrire en base via MCP `execute_sql` (rejeté : le pattern engine du repo = script Python déterministe).
 
 **Owner:** Adrien.
 
@@ -243,5 +248,131 @@ public)** n'a **pas d'auto-sync GitHub** → re-upload manuel des zips quand une
 demande une action manuelle de Loïc à chaque fois (préférence pour une skill « dans l'AIOS ») ;
 Task Scheduler `git pull` 100 % auto — écarté pour l'instant (Loïc veut déclencher via une skill) ;
 ré-envoi du dossier par Drive (rejeté : c'est exactement le problème à supprimer).
+
+**Owner:** Adrien.
+
+---
+
+## 2026-06-24 — Base d'idées Supabase : seed initial + skill `ajout-idee` (capture)
+
+**Decision:** (1) **Seeder** les 17 idées d'amorçage de `references/base-idees.md` dans la table
+Supabase `idees` (toutes `statut='idée'` ; 7 `origine='manuelle'`, 10 `origine='veille'`) pour rendre
+le « Mode Supabase » de `idee-contenu` opérationnel tout de suite — jusqu'ici la table était vide
+(les idées ne vivaient que dans le snapshot, jamais réconciliées en base). (2) Ajouter un skill engine
+**`ajout-idee`** : Loïc dicte une idée n'importe quand, Claude la normalise (sujet/archétype/format/
+pourquoi) et l'insère via le script Python **existant** `shared/scripts/post/insert_idee.py` — pendant
+« écriture » de `idee-contenu` (lecture).
+
+**Why:** Le skill `idee-contenu` était déjà branché Supabase (lecture MCP + fallback snapshot) mais
+ne renvoyait rien en base car rien n'avait jamais peuplé `idees`. Le seed corrige ce trou,
+indépendamment d'Apify (pas encore branché). `ajout-idee` couvre le besoin « capter une idée à la
+volée sans la perdre ». **Insertion via script Python (pas MCP)** : Loïc n'aura peut-être pas le
+connecteur Supabase MCP → le script + `.env` local est le canal fiable. Aucun nouveau code Python
+(insert_idee.py + database.py existaient et étaient testés) — le skill n'ajoute qu'un SKILL.md.
+
+**Limite assumée :** `ajout-idee` insère via Python/`.env` local → **engine PC uniquement**, pas
+mobile sans MCP (noté dans le SKILL.md).
+
+**Point ouvert (futur) :** sens de vérité idées = Supabase ; régénérer `base-idees.md` **depuis** la
+base (pas l'inverse) pour éviter les doublons au prochain run de veille. À figer si besoin.
+
+**Alternatives considered:** seed via Python `insert_idee.py` (équivalent ; on a pris MCP `execute_sql`
+pour le one-shot car plus direct, sans dépendre du `.env`) ; ne rien seeder et attendre la veille auto
+(rejeté : bloque `idee-contenu` en Mode Supabase tant qu'Apify n'est pas branché).
+
+**Owner:** Adrien.
+
+---
+
+## 2026-06-25 — `veille-niche` : Reddit auto-si-SET + source cliquable par idée
+
+**Decision:** Deux modifs au skill `veille-niche`. (1) **Reddit (Apify) se lance automatiquement
+dès que `APIFY_API_TOKEN` est SET** — plus de saut discrétionnaire « source faible ». Le statut
+`off` dans le header de sortie est désormais réservé aux cas `token MISSING` ou `scrape planté`
+(raison écrite dans le veille-log). (2) **Nouvelle colonne `idees.source_url`** (`ALTER TABLE`
+appliqué en live) : chaque idée porte une source **cliquable** (URL réelle, ou lien de recherche
+Google `https://www.google.com/search?q=…` si pas d'URL de page), affichée en sortie chat et
+persistée à l'insertion. `insert_idee.py` (`ALLOWED`) et `schema.sql` mis à jour ; `list_idees.py`
+inchangé (`select("*")` remonte la colonne).
+
+**Why:** (1) Loïc lisait « Reddit off » comme une panne alors que c'était un choix du modèle — le
+comportement implicite était ambigu, on le rend déterministe. (2) Les idées venaient d'URLs réelles
+jamais persistées : impossible pour Loïc d'aller vérifier la source d'une idée a posteriori. La
+`source_url` ferme ce trou (traçabilité + confiance).
+
+**Scope explicitement exclu:** le snapshot `references/base-idees.md` **n'a pas** de colonne Source
+(choix de Loïc) — la source vit en Supabase + sortie chat uniquement. Les 17 idées existantes ont
+`source_url = NULL` (rétro-remplissage non requis).
+
+**Alternatives considered:** garder Reddit optionnel mais forcer la raison du skip dans le log
+(rejeté : Loïc préfère le lancement systématique) ; tiret « — » pour les idées sans URL (rejeté au
+profit d'un lien de recherche Google actionnable).
+
+**Owner:** Adrien.
+
+---
+
+## 2026-07-19 — Connecteur Supabase MCP : compte Adrien oui, Loïc reporté phase 2
+
+**Decision:** Le « Mode Supabase » des skills de surface s'appuie sur le **connecteur Supabase MCP
+hébergé** (`https://mcp.supabase.com/mcp`), déjà en place sur le **compte claude.ai d'Adrien**
+(Desktop/mobile, OAuth). Configuration recommandée : `?project_ref=ulhdjyhckvamjwmjncwy&read_only=true`.
+**Côté Loïc : rien en V1** — le déploiement du connecteur sur son compte est **reporté en phase 2**.
+Les **écritures** restent par les scripts Python déterministes (`insert_idee.py`, poller) : le
+connecteur ne sert qu'à la lecture → l'écriture est limitée à `idees` *par construction*.
+
+**Why:** Techniquement trivial, mais peu pertinent pour Loïc en V1 : ses deux systèmes vendus
+(résumés vocaux, scripts chantier) n'utilisent pas la base ; l'intelligence vient du digest distillé
+(circuit engine → re-zip hebdo déjà prévu) ; seuls `idee-contenu`/`ajout-idee` y gagneraient, à
+moitié en lecture seule. En face : créer un compte Supabase à Loïc, migrer la base avant OAuth,
+reconnexions — friction disproportionnée pour un non-tech, contraire à la doctrine surface
+simple / engine data (Bike Method : livrer le vélo qui roule d'abord).
+
+**Conditions d'activation phase 2 :** frustration réelle constatée sur des idées périmées en mobile,
+ou besoin avéré de capture d'idées en mobilité. Prérequis : schéma migré sur SON compte Supabase,
+connecteur avec SON `project_ref` + `read_only=true`, OAuth avec SON compte (jamais les identifiants
+d'Adrien chez Loïc).
+
+**Limite produit documentée :** le MCP Supabase n'offre **aucune écriture limitée par table**
+(`read_only` global ou rien) — d'où le choix lecture seule + écritures par scripts. SKILL.md ajustés
+en conséquence (`idee-contenu` : ne jamais prétendre avoir écrit si l'UPDATE est refusé ;
+`ajout-idee` : connecteur = vérif doublons seulement) ; zip `idee-contenu` régénéré.
+
+**Alternatives considered:** connecteur en écriture complète (rejeté : une conversation mobile peut
+modifier la prod) ; MCP local dans `claude_desktop_config.json` avec token personnel (rejeté :
+token dans un fichier + desktop-only, inférieur à l'OAuth hébergé) ; déploiement chez Loïc à la
+livraison (rejeté : cf. Why).
+
+**Owner:** Adrien.
+
+---
+
+## 2026-07-19 — Table `syntheses` : digests & rapports de perf lus en live (fin du re-zip data)
+
+**Decision:** Nouvelle table Supabase **`syntheses`** (id, type, titre, contenu markdown, run_date,
+source ; unique (type, run_date)) qui stocke, datés : le **digest de perf** (`type='digest-perf'` —
+LE contenu que les skills de rédaction lisent) et les **rapports complets**
+(`type='rapport-performance'` / `'rapport-concurrents'`, archives consultables). Les skills moteur
+la remplissent en fin de run via le script déterministe `shared/scripts/post/upsert_synthese.py`
+(--file sur le markdown généré) ; les skills de surface (`idee-contenu`, `script-reel-chantier`,
+`scripter-reel`, `generateur-hooks`, `rediger-article`) lisent **le plus récent en live** via le
+connecteur Supabase MCP (`SELECT … ORDER BY run_date DESC LIMIT 1`), avec fallback sur le snapshot
+bundlé `references/rapport-perf-digest.md`. `veille-niche` (engine) lit via
+`shared/scripts/search/get_synthese.py`. Wrappers `upsert_synthese`/`get_derniere_synthese` ajoutés
+à `shared/database.py`. Table créée en live (API management, SQL idempotent) + ajoutée à
+`schema.sql` (§9) pour la migration Loïc. Seed : digest + rapport du 2026-06-24.
+
+**Why:** Chaque rafraîchissement du digest imposait re-zip + ré-upload de tous les skills de surface
+(friction relevée à l'usage par Adrien) et le mobile raisonnait sur des chiffres figés (digest du
+24/06 vs base au 15/07). Le pattern dual Supabase/snapshot existait déjà pour les idées
+(`idee-contenu`) — on le généralise au digest : le **re-zip ne sert plus qu'aux changements de
+logique**, plus jamais aux données. Le fichier digest reste la source rédigée et le fallback →
+zéro régression si le connecteur manque.
+
+**Alternatives considered:** Supabase Storage/bucket (rejeté : un fichier dans un bucket n'est pas
+requêtable en SQL par le connecteur MCP) ; digest granulaire en `jsonb` une ligne par insight
+(différé en V2 : plus requêtable mais plus de build, le markdown suffit) ; laisser la surface
+recalculer depuis les tables brutes (rejeté : cher en tokens, conclusions incohérentes d'une
+conversation à l'autre).
 
 **Owner:** Adrien.

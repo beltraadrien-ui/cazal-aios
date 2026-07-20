@@ -13,9 +13,14 @@ de contenu à produire, puis tu empiles les meilleurs dans la base d'idées.
 **PAS ton scope :** recherche approfondie sur un sujet, écriture de script, analyse perf
 (c'est `rapport-performance` / `rapport-concurrents`), développement d'une idée (c'est `idee-contenu`).
 
-> ⚙️ **Skill engine** (Claude Code, accès web/réseau/`.env`). Tourne ~1×/semaine. La sortie
-> (`base-idees.md`, ou table Supabase `idees` quand elle sera branchée) est ensuite lue par
-> `idee-contenu` (côté Loïc) qui choisit une idée et la développe.
+> ⚙️ **Skill engine** (Claude Code, accès web/réseau/`.env`). Tourne ~1×/semaine. La sortie (table
+> Supabase `idees`, mirrorée en snapshot `base-idees.md`) est ensuite lue par `idee-contenu`
+> (côté Loïc) qui choisit une idée et la développe.
+
+> 🔧 **Pattern engine (comme les autres skills moteur)** : pour toucher la base ou Apify, on
+> **invoque un script Python déterministe** (`python shared/scripts/...`) qui **renvoie du JSON sur
+> stdout** — on lit ce JSON, on ne fabrique rien. **Secrets** : vérifier la dispo via
+> `python shared/config.py` (affiche `SET`/`MISSING`), **jamais** `cat .env` / `echo $VAR`.
 
 ---
 
@@ -79,7 +84,9 @@ développement majeur (nouvelle aide, nouvelle saison…).
 
 ### 5. Unicité / ré-angle
 - Sujet sur-couvert → besoin d'un angle propre à Cazal.
-- Sujet marqué « à ré-angler » dans `references/rapport-perf-digest.md` → **ne pas bannir**, proposer
+- Sujet marqué « à ré-angler » dans le **digest de perf** (engine : `python
+  shared/scripts/search/get_synthese.py --type digest-perf`, dernier en date ; fallback
+  `references/rapport-perf-digest.md`) → **ne pas bannir**, proposer
   un autre cadrage (règle d'or nuancée : biaiser vers ce qui marche, ré-angler ce qui a sous-performé).
 
 ### Verdict
@@ -89,42 +96,31 @@ développement majeur (nouvelle aide, nouvelle saison…).
 
 ---
 
-## Étape 0 : dédup via veille-logs
+## Étape 0 : dédup (idées existantes + veille-logs)
 
-Lire les fichiers `active/veille-logs/AAAA-MM-JJ.md` des **2 jours précédents** (pas le jour courant —
-sinon le rerun du jour serait bloqué). Si le dossier n'existe pas → le créer, continuer.
+1. **Idées déjà en base** — lire la table `idees` (TOUS statuts, pour ne pas re-proposer une idée déjà
+   choisie/produite/publiée) :
+   ```bash
+   python shared/scripts/search/list_idees.py --statut all --limit 200
+   ```
+   Lire le JSON `{"count":N,"rows":[…]}` → extraire les `sujet` + `archetype`.
+2. **Veille-logs récents** — lire les `active/veille-logs/AAAA-MM-JJ.md` des **2 jours précédents** (pas
+   le jour courant, sinon le rerun du jour serait bloqué). Si le dossier n'existe pas → le créer.
 
-Scanner aussi `references/base-idees.md` (colonne « Idée / sujet ») — et, quand Supabase sera branché,
-la table `idees`. Construire une liste `déjà_vus` (titres + sujets).
+Construire une liste `déjà_vus` (sujets + archétypes) à partir des deux. `base-idees.md` n'est qu'un
+**snapshot** de la base — ne pas s'en servir comme source de dédup (la vérité est dans `idees`).
 
 ---
 
-## Étape 1 : scraping (3 sources en parallèle)
+## Étape 1 : sourcing (4 sources en parallèle) — le cœur du skill
 
-Invoquer les sources **en parallèle** pour minimiser la latence. Chaque source tague ses items avec un
-`track` (`b2c` ou `b2b`).
+C'est l'étape principale : faire remonter **ce qui se passe dans le froid** et **les vraies questions
+clients**. Lancer les sources **en parallèle**. Chaque candidat est tagué d'un `track` (`b2c`/`b2b`).
+Les 3 premières sources sont **gratuites et natives** (pas d'Apify) ; la 4ᵉ est un complément optionnel.
 
-### Source A — Forums / Reddit FR (Apify, **OPTIONNEL tant qu'Apify n'est pas branché**)
+### Source A — Recherches Google / « People Also Ask » (WebSearch, gratuit) — **filon principal**
 
-```bash
-python shared/scripts/scrape_forums.py --max-items 30
-```
-
-Sort : `active/veille/forums_AAAA-MM-JJ.json` (taggé) + `forums_AAAA-MM-JJ.raw.json` (brut, debug).
-
-**Comportement attendu** : lance le script. S'il échoue (token `APIFY_TOKEN` = placeholder non
-rempli, cf. Bloc 1 de `reste-a-faire.md`) ou renvoie 0 item, **note dans le veille-log final que la
-source forums est en panne et continue sans** — ne bloque JAMAIS le run. Les 2 sources WebSearch
-suffisent à un premier run, exactement comme `veille-quotidienne` tient sur WebSearch quand Apify
-tombe.
-
-Subreddits/forums FR ciblés (taggés par track, configurables en tête du script) : voir
-`scrape_forums.py`.
-
-### Source B — Recherches Google / « People also ask » (WebSearch, gratuit)
-
-Utiliser le tool `WebSearch`. Cibler les questions réelles que se posent les clients (track `b2c`
-sauf mention pro) :
+Tool `WebSearch`. Cibler les questions réelles des clients (track `b2c` sauf mention pro) :
 
 - `prix pompe à chaleur 2026 Belgique`
 - `entretien climatisation obligatoire prix`
@@ -132,10 +128,10 @@ sauf mention pro) :
 - `clim réversible consommation été`
 - `pompe à chaleur fonctionne quand il gèle`
 
-Pour chaque recherche, exploiter aussi les **« People also ask » / questions associées** (objections,
-inquiétudes, comparatifs). Track `b2b` (1 requête) : `entretien chambre froide réglementation HACCP`.
+Pour chaque recherche, exploiter aussi les **« People Also Ask » / questions associées** (objections,
+inquiétudes, comparatifs). Track `b2b` (≥1 requête) : `entretien chambre froide réglementation HACCP`.
 
-### Source C — Actus aides / primes (WebSearch, gratuit)
+### Source B — Actus aides / primes / normes (WebSearch, gratuit)
 
 Veille réglementaire **Belgique + France frontalière** (track `b2c` majoritaire) :
 
@@ -144,13 +140,47 @@ Veille réglementaire **Belgique + France frontalière** (track `b2c` majoritair
 - `nouvelle norme chauffage [région] [année]`
 - `fin chaudière gaz [année] Belgique France`
 
-Tagger chaque actu selon l'archétype #6 (« Nouvelle aide / nouvelle norme »).
+Tagger ces candidats sur l'archétype #6 (« Nouvelle aide / nouvelle norme »).
+
+### Source C — Forums métier FR (WebFetch, gratuit) — **le plus riche pour le froid**
+
+Tool `WebFetch` sur une **liste curée de forums chauffage/clim/froid** (bien plus fournis que Reddit FR
+sur ce sujet). Récupérer les pages de **sujets récents** et en extraire les questions/galères
+récurrentes, les objections, les comparatifs qui reviennent :
+
+- `https://www.bricozone.be/` — forum belge bricolage/chauffage/clim (**Belgique ++**, priorité).
+- `https://www.forum-chauffage.com/` — forum FR chauffage / PAC / clim (rubriques récentes).
+- `https://forums.futura-sciences.com/` — section **Habitat / Chauffage & Climatisation**.
+
+> Liste **modifiable** : ajouter/retirer un forum ici au besoin (pas de script à toucher). Si une page
+> est inaccessible (WebFetch échoue), passer au forum suivant — non bloquant. Tagger `b2c` par défaut,
+> `b2b` si le sujet relève du froid commercial / pro.
+
+### Source D — Reddit FR (Apify, complément — non bloquant)
+
+Source d'appoint. **Lancer dès que `APIFY_API_TOKEN` est `SET`** (vérifier via `python shared/config.py`).
+Ce n'est **pas** un choix au cas par cas : si le token est SET, on lance. **On ne saute jamais Reddit « parce
+que la source paraît faible »** — on le lance et on laisse les items filtrer à l'évaluation.
+
+```bash
+python shared/scripts/scrape_forums.py --max-items 30
+```
+
+Sort : `active/veille/forums_AAAA-MM-JJ.json` (taggé) + `forums_AAAA-MM-JJ.raw.json` (brut). Reddit FR
+est **pauvre sur le froid**, donc 0 item utile est normal — ce n'est pas un échec.
+
+**Sémantique du statut** (à reporter dans le header de sortie, Étape 4) :
+- `OK` = `APIFY_API_TOKEN` SET **et** script lancé (peu importe le nombre d'items, même 0).
+- `off` = **uniquement** si `APIFY_API_TOKEN` est `MISSING`, **ou** si le script a planté (token invalide,
+  tous les batches en échec). Dans ce cas → **écrire la raison exacte dans le veille-log** (« token MISSING »,
+  « erreur Apify HTTP 4xx », etc.) et **continuer en WebSearch-only** (non bloquant). Subreddits configurables
+  en tête du script.
 
 ---
 
 ## Étape 2 : évaluation (lecture + scoring + filtre éditorial)
 
-Pour **chaque** candidat (post forum, question PAA, actu) :
+Pour **chaque** candidat (question PAA, actu aide/prime, sujet de forum métier, post Reddit) :
 
 1. **Lire le contenu complet** — pas seulement le titre.
 2. **Noter son `track`** (`b2c` ou `b2b`) depuis le tag de provenance.
@@ -186,7 +216,7 @@ Format de sortie — **court et actionable**, pas de data dump :
 ```
 # Top 10 sujets — [date en français]
 
-**Sources :** Forums/Reddit ([N] posts, [status: OK / panne]), Google/PAA ([N] questions), Actus aides/primes ([N] items)
+**Sources :** Google/PAA ([N] questions), Actus aides/primes ([N]), Forums métier ([N]), Reddit ([N], [OK / off — voir Source D : `off` = token MISSING ou plantage seulement, jamais un choix])
 **Évalués :** [total] candidats → 10 qui valent le coup
 **Track breakdown :** b2c [N] | b2b [N]
 **Skippés (déjà vus / déjà dans la base) :** [N]
@@ -196,7 +226,7 @@ Format de sortie — **court et actionable**, pas de data dump :
 
 ### 1. [Titre du sujet]
 **Track :** b2c | b2b
-**Source :** [Forum/Reddit / Google-PAA / Actu] — [URL réelle, ou "—" si question PAA sans URL]
+**Source :** [lien markdown **cliquable** : `[domaine ou nom-source](URL réelle)`. Si l'item n'a pas d'URL de page (question PAA), mettre un lien de **recherche Google** : `[recherche Google](https://www.google.com/search?q=<requête+encodée>)`. Jamais de fausse URL de page, jamais de "—".]
 **Archétype :** [nom de l'archétype Cazal]
 **Pourquoi c'est un contenu :** [1-2 phrases — intérêt GP + montrable + angle hook, en FR sans jargon]
 **Angle suggéré :** [angle spécifique FR, ton terre-à-terre, bénéfice concret, CTA vers contact/devis]
@@ -240,45 +270,46 @@ Options :
 
 ## Étape 7 : empiler les picks dans la base d'idées (uniquement si l'utilisateur pick)
 
-La destination canonique est la table Supabase **`idees`** (`shared/sql/schema.sql`). Tant que
-Supabase n'est pas branché (Bloc 3bis de `reste-a-faire.md` — **bloqué : compte Loïc requis**), on
-écrit en **markdown** dans `references/base-idees.md`. **Détecter le mode** :
+Destination = table Supabase **`idees`** (live). On écrit via le **script déterministe**, puis on
+régénère le snapshot markdown. **Une seule fois** pour tous les picks :
 
-- Si la connexion Supabase est disponible (vars `.env` Supabase résolues / connecteur MCP actif)
-  → **mode Supabase**.
-- Sinon → **mode markdown** (amorçage actuel — comportement par défaut aujourd'hui).
+**1. Insérer dans Supabase** — construire la liste JSON des picks et la passer à `insert_idee.py` (qui
+met `statut:"idée"` et `origine:"veille"` par défaut) :
 
-### Mode markdown (par défaut aujourd'hui)
-Ajouter **une ligne par pick** au tableau de `references/base-idees.md`, au format EXACT des lignes
-existantes (ne pas casser le tableau) :
-
-```
-| <#> | <Idée / sujet> | <Archétype> | <Pourquoi ça peut marcher> | <Format suggéré> | idée | veille |
+```bash
+python shared/scripts/post/insert_idee.py --json '[
+  {"sujet":"…","archetype":"…","angle":"…","cadrage":"b2c","format":"reel","pourquoi":"…","source_url":"https://…"},
+  {"sujet":"…","archetype":"…","angle":"…","cadrage":"b2b","format":"reel","pourquoi":"…","source_url":"https://www.google.com/search?q=…"}
+]'
 ```
 
-- `#` = continuer la numérotation existante.
-- `Archétype` = un des 8 (libellé tel quel).
-- `Statut` = toujours `idée`. `Origine` = toujours `veille`.
-- Vérifier qu'aucun pick n'est déjà présent (dédup) avant d'écrire.
+Champs (cf. `shared/sql/schema.sql`) : `sujet`, `archetype` (un des 8), `angle` (angle suggéré FR),
+`cadrage` (= track `b2c`/`b2b`), `format` (`reel`/`article`/`both`), `pourquoi` (reasoning),
+**`source_url`** (URL réelle de la source de l'idée, ou lien de recherche Google
+`https://www.google.com/search?q=…` si pas d'URL de page — **obligatoire pour chaque pick**, c'est ce qui
+permet à Loïc d'aller vérifier la source lui-même). Lire le retour `{"inserted":N,"ids":[…]}`.
 
-### Mode Supabase (quand la base sera branchée)
-Insérer les picks dans la table `idees` via le **connecteur MCP Supabase** (`execute_sql`, INSERT) —
-**une seule requête batch**. Mapping colonnes (cf. `schema.sql`) :
+**2. Régénérer le snapshot** `references/base-idees.md` (copie lisible bundlée pour le mobile) : relire
+la base puis réécrire le tableau au format existant (mêmes colonnes/entête) :
 
-| Colonne `idees` | Valeur |
-|---|---|
-| `sujet` | titre du sujet depuis le Top 10 |
-| `archetype` | nom de l'archétype Cazal |
-| `angle` | angle suggéré FR |
-| `cadrage` | track (`b2c` / `b2b`) ou cadrage retenu |
-| `format` | `reel` / `article` / `both` |
-| `statut` | `idée` (exact) |
-| `pourquoi` | reasoning « pourquoi c'est un contenu » |
-| `origine` | `veille` (toujours) |
+```bash
+python shared/scripts/search/list_idees.py --statut all
+```
 
-Après écriture (peu importe le mode), confirmer :
+→ réécrire le tableau de `base-idees.md` (colonnes : `# | Idée/sujet | Archétype | Pourquoi ça peut
+marcher | Format suggéré | Statut | Origine`) à partir du JSON. Ne pas casser l'entête/le préambule.
 
-> « Empilé [N] idée(s) dans la base avec statut 'idée'. `idee-contenu` pourra piocher dedans. »
+**3. Re-publier** les zips (base-idees.md est bundlé dans `veille-niche` et `idee-contenu`) :
+
+```bash
+python shared/scripts/export_skills.py veille-niche idee-contenu
+```
+
+**Fallback** (seulement si Supabase est injoignable — le script lève une erreur) : ajouter directement
+les lignes des picks au tableau de `base-idees.md` (format ci-dessus, `idée`/`veille`) et **noter
+l'incident dans le veille-log** pour re-synchroniser plus tard.
+
+Confirmer : « Empilé [N] idée(s) dans Supabase (`idees`). `idee-contenu` pourra piocher dedans. »
 
 **NE PAS invoquer `idee-contenu` ni un skill de scripting** — la base d'idées est le handoff.
 
@@ -295,22 +326,27 @@ Après écriture (peu importe le mode), confirmer :
 7. **Biaiser vers ce qui marche, ré-angler les sous-performants** — pas de liste noire.
 8. **Distinguer les plateformes** : Insta/Facebook = `b2c` (particuliers) · LinkedIn = `b2b`
    (froid commercial/industriel, HACCP, dépannage).
-9. **Si la source Apify échoue**, noter la défaillance et continuer en WebSearch-only. Ne pas bloquer.
+9. **Reddit (Apify) se lance dès que `APIFY_API_TOKEN` est SET** — pas un choix au cas par cas (cf. Source D).
+   Si le token est MISSING **ou** si le scrape échoue → noter la raison dans le veille-log et continuer en
+   WebSearch-only. Ne jamais bloquer.
+10. **Chaque idée porte une `source_url` cliquable** (URL réelle ou lien de recherche Google) — en sortie chat
+    et à l'insertion Supabase. Loïc doit pouvoir vérifier la source de chaque idée lui-même.
 
 ---
 
 ## Coût approximatif
 
-- Forums/Reddit (Apify) : ~$0.05/run (~75 posts) — **nul tant qu'Apify n'est pas branché**.
-- Google/PAA + Actus (WebSearch) : gratuit.
-- **Total : ~$0.05/run** en régime branché ; **$0** en amorçage WebSearch-only.
+- Sources A-C (WebSearch Google/PAA + actus + forums WebFetch) : **gratuit** (tools natifs).
+- Source D Reddit (Apify, complément) : ~$0.05/run, **lancée automatiquement si `APIFY_API_TOKEN` est SET**.
+- **Total : ~$0.05/run** quand le token Apify est branché (cas normal) ; **$0/run** s'il est MISSING.
 
 ## Place dans le moteur de contenu
 
 ```
-rapport-performance + rapport-concurrents → references/rapport-perf-digest.md (ce qui marche)
+rapport-performance + rapport-concurrents → table Supabase `syntheses` (digest-perf, lu en live)
+                                            + references/rapport-perf-digest.md (snapshot bundlé)
                                    ↓
-veille-niche (ce skill) → idées empilées dans base-idees.md (ou Supabase `idees`)
+veille-niche (ce skill) → idées écrites dans Supabase `idees` (+ snapshot base-idees.md)
                                    ↓
 idee-contenu (côté Loïc) → choisit une idée, choisit un format, génère les variations
                                    ↓

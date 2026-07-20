@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from shared.database import insert_idee  # noqa: E402
 
 ALLOWED = {"sujet", "archetype", "angle", "cadrage", "format", "statut",
-           "pourquoi", "origine", "compte_id", "notes"}
+           "pourquoi", "origine", "compte_id", "notes", "source_url"}
 
 
 def _clean(d: dict) -> dict:

@@ -111,3 +111,13 @@ payloads), **accès aux clés en cloud** (Supabase/Apify/Meta — point ouvert :
 secrets au runner). Source : Apify (Loïc + concurrents) ; Meta Graph en option (own-account, insights
 plus riches). Options : routine CronCreate+script (recommandé) / pg_cron Supabase / n8n (écarté).
 Détails complets : section « Poller » du plan.
+
+---
+
+## MISE À JOUR 2026-07-19 — Table 9 `syntheses`
+
+Le schéma compte désormais une **table 9 `syntheses`** (digests & rapports de perf datés, lus en
+live par les skills via le connecteur MCP — cf. `decisions/log.md` 2026-07-19). Elle est incluse
+dans `shared/sql/schema.sql` (SQL idempotent) : la migration chez Loïc la créera automatiquement
+en rejouant le schéma. Penser à re-seeder le digest sur SA base après migration
+(`python shared/scripts/post/upsert_synthese.py --type digest-perf --file references/rapport-perf-digest.md`).
