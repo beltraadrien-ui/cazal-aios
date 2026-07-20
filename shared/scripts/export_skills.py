@@ -29,6 +29,7 @@ OUT_DIR = ROOT / "active" / "skills-zip"
 # Références à bundler dans chaque skill (pour que le zip soit autonome sur claude.ai).
 # Les skills moteur (engine) n'embarquent rien : ils tournent dans Claude Code.
 BUNDLE: dict[str, list[str]] = {
+    "resume-vocal-devis": [],  # surface ; son template est dans le dossier du skill (templates/)
     "maj-aios": [],
     "scraper-contenu-cazal": [],
     "analyser-contenu": [],
