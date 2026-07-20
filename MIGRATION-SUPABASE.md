@@ -144,9 +144,10 @@ en rejouant le schéma. *(Le re-seed du digest est couvert par la copie de ligne
 4. Loïc crée son **compte Supabase** → nouveau projet (région EU). Récupérer Project URL + anon key
    (+ access token si besoin du connecteur).
 5. SQL Editor → coller **`shared/sql/schema.sql`** (idempotent, crée les 9 objets d'un coup).
-6. `.env` local chez lui (jamais dans le chat) : ÉTAPE 2 ci-dessus + ses clés **Apify / OpenAI
-   créées sur SES comptes** (pas de Gemini — les visuels passent par le Claude CLI, déjà installé
-   en A.1). Vérif : `python shared/config.py` → tout SET.
+6. `.env` local chez lui (jamais dans le chat) : **copier `.env.example` → `.env`** (le modèle est
+   dans le repo, avec le mode d'emploi et où trouver chaque clé) et remplir ses clés **Apify /
+   OpenAI créées sur SES comptes** (pas de Gemini — les visuels passent par le Claude CLI, déjà
+   installé en A.1). Vérif : `python shared/config.py` → tout SET (Meta peut rester MISSING).
 7. **Copie des données** depuis la base d'Adrien — sur le PC d'**Adrien** (qui a les deux jeux de
    clés dans son `.env` : source + `CIBLE_SUPABASE_URL`/`CIBLE_SUPABASE_ANON_KEY`) :
    ```bash
