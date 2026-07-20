@@ -41,10 +41,16 @@ le dossier par mail/Drive.
 
 3. **Réagir aux changements détectés** dans le diff :
    - Si **`requirements.txt`** a changé → relancer `pip install -r requirements.txt`.
-   - Si un **`SKILL.md` d'une skill mobile** a changé (`scraper-contenu-cazal` et autres skills engine
-     n'ont PAS de zip mobile — concernées : `veille-niche`, `idee-contenu`, `script-reel-chantier`,
-     `generateur-hooks`, `scripter-reel`, `rediger-article`) → **prévenir** : « la skill X a changé,
-     Adrien doit te ré-uploader son zip sur claude.ai » (la sync mobile n'est pas automatique).
+   - Si une **skill mobile** a changé — son `SKILL.md` OU un fichier `references/` qu'elle bundle
+     (`scraper-contenu-cazal` et autres skills engine n'ont PAS de zip mobile — concernées :
+     `veille-niche`, `idee-contenu`, `script-reel-chantier`, `generateur-hooks`, `scripter-reel`,
+     `rediger-article`) → **régénérer les zips localement** :
+     ```bash
+     python shared/scripts/export_skills.py <skills concernées>
+     ```
+     puis guider Loïc pas à pas : sur claude.ai → **Réglages ▸ Fonctionnalités**, supprimer
+     l'ancienne version de chaque skill concernée et uploader le nouveau zip depuis
+     `active/skills-zip/<skill>.zip` (la sync mobile n'est pas automatique).
 
 4. **Résumé en 2 lignes** : ce qui a été mis à jour (ou « déjà à jour »), et toute action restante
    (re-upload d'un zip, dépendance réinstallée). En cas d'erreur, message clair, pas de tâtonnement.

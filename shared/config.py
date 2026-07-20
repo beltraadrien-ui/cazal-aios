@@ -51,7 +51,6 @@ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_ACCESS_TOKEN = os.environ.get("SUPABASE_ACCESS_TOKEN", "")
 APIFY_API_TOKEN = os.environ.get("APIFY_API_TOKEN", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 META_ACCESS_TOKEN = os.environ.get("META_ACCESS_TOKEN", "")
 IG_USER_ID = os.environ.get("IG_USER_ID", "")
 IG_HANDLE = os.environ.get("IG_HANDLE", "")
@@ -66,7 +65,7 @@ def status(key: str) -> str:
 if __name__ == "__main__":
     for k in (
         "SUPABASE_PROJECT_URL", "SUPABASE_ANON_KEY", "SUPABASE_ACCESS_TOKEN",
-        "APIFY_API_TOKEN", "OPENAI_API_KEY", "GEMINI_API_KEY",
+        "APIFY_API_TOKEN", "OPENAI_API_KEY",
         "META_ACCESS_TOKEN", "IG_USER_ID", "IG_HANDLE",
     ):
         print(f"{k}: {status(k)}")

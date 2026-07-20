@@ -81,6 +81,13 @@
 - [x] **(2026-06-24)** Seed initial : les 17 idées de `base-idees.md` insérées dans `idees` (7 manuelle + 10 veille, toutes `statut='idée'`) → Mode Supabase de `idee-contenu` opérationnel sans attendre Apify. Décision loggée.
 - [x] **(2026-06-24)** Nouveau skill **`ajout-idee`** (capture à la volée → normalise → insère via `insert_idee.py`, pas MCP). Engine PC only. SKILL.md créé.
 - [x] **(2026-06-25)** `veille-niche` : Reddit (Apify) **auto dès que `APIFY_API_TOKEN` SET** (statut `off` = MISSING/plantage seulement) + nouvelle colonne `idees.source_url` (ALTER live) → source **cliquable** par idée (URL réelle ou lien recherche Google) en sortie chat + Supabase. `insert_idee.py` + `schema.sql` à jour ; snapshot `base-idees.md` inchangé (choix Loïc). Décision loggée.
+- [x] **(2026-07-20)** `analyser-contenu` **v3 — analyse visuelle par Claude CLI** (clonée de
+      Master-content, façon claude-video, SANS le plugin marketplace) : frames hook-dense (ffmpeg,
+      2 fps sur 0-4 s + 4 frames body, 512 px, dans `active/_visual_<id>/`) lues par `claude -p`
+      headless (`shared/scripts/ai/call_claude.py`, prompt `claude_visual.txt`) → `text_hook`,
+      `visual_hook`, `visual_format`, `audio_hook` + `duration` (ffprobe). Échec → champs null,
+      jamais de fallback (`sans_visuel`). **Gemini retiré** (config, docs — n'était branché nulle
+      part). Les contenus analysés avant cette date ont les visuels à null (backfill possible).
 - [ ] **(reste)** Remplir `APIFY_API_TOKEN` + `OPENAI_API_KEY` dans `.env` → débloque scraper + analyser → 1ᵉʳ run moteur réel.
 - [ ] **(reste)** Plus tard : recréer le schéma sur le **compte Supabase de Loïc** + basculer URL/clés du `.env`.
 - [x] **(2026-07-19)** Connecteur Supabase MCP **côté Adrien** : en place sur son compte claude.ai (Desktop/mobile, OAuth ; reco `read_only=true&project_ref=…`). SKILL.md `idee-contenu`/`ajout-idee` ajustés au mode lecture seule, zip `idee-contenu` régénéré (à ré-uploader). Décision loggée.
@@ -96,6 +103,11 @@
 
 - [x] `poller.py` : own only (`type='own'`), reels only, upsert idempotent + snapshot du jour, résumé JSON, try/except par post.
 - [x] Compte own de Loïc inséré dans `comptes` (`cazal_refrigeration`). 5 reels chargés (test quota-friendly `--limit 5`).
+- [x] **(2026-07-20)** Poller **dual-mode** : Meta Graph si `META_ACCESS_TOKEN`+`IG_USER_ID` SET
+      (module `shared/scripts/post/meta_graph.py`, port du n8n `ig-daily-poller` : media paginé +
+      insights/reel, KPIs riches reach/saves/shares/watch time, ms→s), sinon fallback Apify inchangé.
+      Sortie JSON avec `"source"`. Setup Meta côté Loïc : MIGRATION-SUPABASE.md § JOUR J bloc C-bis
+      (optionnel, activable après coup). Décision loggée.
 - [ ] **(reste)** Créer la **routine locale Claude** (Claude Desktop ▸ Routines ▸ Local) : nom `cazal-poller-kpis`,
       dossier `C:\GitHub\_environnement-test\Cazal-1`, planif **Quotidien**, instruction = `python shared/scripts/post/poller.py` +
       résumé 2 lignes. Faire un « Run now » + « toujours autoriser » python pour les runs silencieux.
@@ -130,8 +142,8 @@ type='own'` et ne touche qu'à ces contenus.
       Aucun secret à pousser en cloud.
 - [ ] **PC allumé** : seul prérequis du local. Cocher « exécuter dès que possible après un démarrage
       manqué » (Task Scheduler) ou équivalent pour rattraper si le PC était éteint à l'heure prévue.
-- [ ] **Source** : Apify (compte de Loïc, métriques publiques). Meta Graph en **option** (own-account,
-      insights plus riches : reach, watch time) si Loïc connecte un token Meta.
+- [x] **Source** : dual-mode construit (2026-07-20) — Meta Graph si token connecté (insights riches),
+      sinon Apify (métriques publiques). Reste côté Loïc : le setup Meta (app + token, § JOUR J C-bis).
 - [ ] Options de lancement à confirmer : **routine Claude locale + `poller.py`** (retenu) / Task Scheduler
       Windows + `poller.py` (repli simple, zéro LLM) / pg_cron Supabase (écarté : sort de « tourne dans Claude ») / n8n (écarté).
 
@@ -144,11 +156,15 @@ type='own'` et ne touche qu'à ces contenus.
 - [x] Skill `maj-aios` créé (`.claude/skills/maj-aios/SKILL.md`) : `git pull --ff-only`, réinstall deps si
       `requirements.txt` change, signale les zips mobiles à ré-uploader. Ajouté au `BUNDLE` (engine, `[]`).
 - [x] Repo GitHub **privé `cazal-aios`** créé (compte `beltraadrien-ui`) + push initial. `.env`/`active/` gitignorés (aucun secret poussé).
-- [ ] **(install chez Loïc, en visio)** `git clone` sur son PC → créer le `.env` local (SES clés) →
-      `pip install -r requirements.txt` → recréer le schéma Supabase sur SON compte (`shared/sql/schema.sql`)
-      + basculer URL/clés du `.env` → uploader les zips mobiles sur son claude.ai (une fois).
+- [x] **(2026-07-20)** Déroulé d'installation figé → **§ « JOUR J » de `MIGRATION-SUPABASE.md`**
+      (décisions loggées : clés API = les siennes ; données = copie de lignes via
+      `shared/scripts/post/migrer_donnees.py`, dry-run testé, placeholders `CIBLE_*` posés dans le
+      `.env` d'Adrien ; zips mobiles régénérés côté Loïc — `maj-aios` mis à jour).
+- [ ] **(install chez Loïc, en visio)** dérouler le § « JOUR J » de `MIGRATION-SUPABASE.md`
+      (PC + GitHub → base Supabase à lui + copie des données → zips + connecteur → tests de sortie).
 - [ ] **(quotidien)** Boucle : Adrien `commit`+`push` → Loïc « mets à jour mon AIOS » (`maj-aios`) →
-      si une skill mobile a changé, Adrien régénère le zip (`export_skills.py`) + le ré-uploade.
+      si une skill mobile a changé, `maj-aios` régénère les zips localement et guide Loïc pour le
+      ré-upload sur SON claude.ai.
 
 ## Bloc 4 — Process & friction (avant la formation)
 - [ ] Mini-process « publication contexte repo → Projet mobile » (sync voix de marque).

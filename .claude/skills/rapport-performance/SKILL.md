@@ -26,11 +26,14 @@ section par section (pas seulement écrire un fichier), le sauvegarder, et rég�
 - Compléter avec la **médiane** des vues (calculée sur le JSON), et la **rétention** (`avg_watch_time`,
   `replays`) quand dispo.
 
-## Données disponibles vs non instrumentées (état au 2026-06)
+## Données disponibles vs non instrumentées (état au 2026-07-20)
 - **Remplies** : `spoken_hook`, `hook_structure`, `hook_framework`, `topic`, `topic_summary`,
   `content_type`, `call_to_action` (partiel), `transcript`, `reach`, `avg_watch_time`.
-- **Pas encore instrumentées (0 ligne)** : `duration`, `visual_format`, `text_hook`, `visual_hook`,
-  `content_structure` → afficher un **stub** « 🔧 non instrumenté » dans leur section (cf. Section 9).
+- **Instrumentées depuis le 2026-07-20** (analyse visuelle Claude CLI + ffprobe) : `duration`,
+  `visual_format`, `text_hook`, `visual_hook`, `audio_hook` — remplies au fil des analyses ; les
+  contenus analysés AVANT cette date ont ces champs à `null` (backfill possible plus tard).
+  Si une dimension est majoritairement vide, le dire (« échantillon partiel »), ne pas extrapoler.
+- **Pas encore instrumentée** : `content_structure` → stub « 🔧 non instrumenté » (Section 9).
   Ne JAMAIS inventer de valeur pour ces champs.
 
 ---
@@ -217,11 +220,12 @@ Si `avg_watch_time` / `replays` disponibles : quels formats/sujets retiennent le
 > 🔧 Ces dimensions existent dans le schéma mais ne sont pas encore capturées par le scrape/l'analyse.
 > Elles se rempliront automatiquement quand le pipeline les fournira — la structure est prête.
 
-- **Durée** (`duration`) — 🔧 non instrumenté
-- **Format visuel** (`visual_format`) — 🔧 non instrumenté
-- **Text hook** (texte à l'écran, `text_hook`) — 🔧 non instrumenté
 - **Structure de contenu** (`content_structure`) — 🔧 non instrumenté
 ```
+
+> `duration`, `visual_format`, `text_hook`, `visual_hook`, `audio_hook` sont instrumentés depuis le
+> 2026-07-20 : ils sortent des stubs et rejoignent les vraies sections dès qu'ils ont des données
+> (analyser leur couverture : nombre de lignes non-null vs total).
 
 ### Section 10 — Performance Rankings (synthèse)
 

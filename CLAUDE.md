@@ -50,10 +50,10 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 | **Générer des accroches (hooks)** pour un sujet | `generateur-hooks` | Surface | `framework-hook.md`, `voice.md`, digest |
 | **Veille / trouver des idées neuves** (multi-sources, ~1×/sem) | `veille-niche` | Engine | WebSearch + forums (`shared/scripts/scrape_forums.py`) → table `idees` |
 | **Scraper un compte Instagram** (celui de Loïc ou un concurrent) | `scraper-contenu-cazal` | Engine | Apify → `shared/scripts/post/upsert_contenu_apify.py` → Supabase |
-| **Analyser les contenus scrapés** (hooks, sujets, via IA) | `analyser-contenu` | Engine | `shared/scripts/ai/analyser_contenu.py` → table `contenu` |
+| **Analyser les contenus scrapés** (hooks, sujets + visuels via Claude CLI) | `analyser-contenu` | Engine | `shared/scripts/ai/analyser_contenu.py` (Whisper + GPT + frames lues par Claude) → table `contenu` |
 | **« Qu'est-ce qui marche ? »** — rapport de performance | `rapport-performance` | Engine | vue `contenu_avec_scores` via `shared/scripts/search/list_contenu_scores.py` ; régénère le digest |
 | **Comparaison aux concurrents** | `rapport-concurrents` | Engine | même vue, `--type concurrent` (⚠️ nécessite des concurrents scrapés) |
-| **Rafraîchir les KPIs** (vues, likes… du compte de Loïc) | `python shared/scripts/post/poller.py` | Engine (routine quotidienne) | Apify → tables `contenu` + `contenu_snapshots` |
+| **Rafraîchir les KPIs** (vues, likes… du compte de Loïc) | `python shared/scripts/post/poller.py` | Engine (routine quotidienne) | dual-mode : **Meta Graph** si token dans `.env` (KPIs riches), sinon **Apify** → tables `contenu` + `contenu_snapshots` |
 | **Mettre à jour l'AIOS chez Loïc** (« maj ») | `maj-aios` | Desktop Loïc | `git pull --ff-only` depuis le repo GitHub privé `cazal-aios` |
 | **Publier une skill modifiée sur mobile** | `python shared/scripts/export_skills.py <skill>` | Engine | zip dans `active/skills-zip/` → ré-upload manuel sur claude.ai |
 | **Audit structurel de l'AIOS** (score Four Cs) | `audit` | Engine (côté Adrien) | registres du repo |
@@ -100,8 +100,12 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
   → scripts atomiques sous `shared/scripts/` : `search/list_idees.py` (lister les idées),
   `search/list_contenu_scores.py` (scores/KPIs), `search/get_synthese.py` (dernier digest/rapport),
   `post/insert_idee.py` (insérer une idée), `post/upsert_synthese.py` (pousser digest/rapport),
-  `post/upsert_contenu_apify.py` (scrape → base), `post/poller.py` (rafraîchir KPIs),
-  `ai/analyser_contenu.py` (analyse hooks). Smoke test : `python -m shared.database`.
+  `post/upsert_contenu_apify.py` (scrape → base), `post/poller.py` (rafraîchir KPIs — dual-mode
+  Meta Graph/Apify, client Meta : `post/meta_graph.py`),
+  `ai/analyser_contenu.py` (analyse hooks + visuels — frames ffmpeg lues par Claude CLI via
+  `ai/call_claude.py`, prompt `prompts/claude_visual.txt`), `post/migrer_donnees.py` (one-shot livraison : copie
+  la base vers celle de Loïc — § JOUR J de `MIGRATION-SUPABASE.md`). Smoke test :
+  `python -m shared.database`.
 - **Accès surface** : connecteur Supabase MCP du compte claude.ai (lecture seule possible — ne
   jamais prétendre avoir écrit si l'UPDATE est refusé) ; sinon snapshots bundlés dans les zips.
 - **Fraîcheur** : `poller.py` tourne en routine quotidienne (KPIs + snapshots) ; le digest est

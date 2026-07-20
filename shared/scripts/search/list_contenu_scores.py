@@ -29,10 +29,10 @@ def main() -> None:
     keep = (
         "id", "compte_id", "plateforme", "url", "thumbnail_url", "caption", "post_date",
         "views", "reach", "plays", "replays", "likes", "comments", "shares", "saves",
-        "avg_watch_time", "duration",
+        "avg_watch_time", "total_watch_time", "total_interactions", "duration",
         "spoken_hook", "hook_structure", "hook_framework", "text_hook", "visual_hook",
-        "visual_format", "topic", "topic_summary", "content_structure", "content_type",
-        "call_to_action",
+        "visual_format", "audio_hook", "topic", "topic_summary", "content_structure",
+        "content_type", "call_to_action",
         "calc_outlier_score", "calc_outlier_category", "calc_engagement_rate",
     )
     out = [{k: r.get(k) for k in keep} for r in rows]

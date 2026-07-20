@@ -1,0 +1,31 @@
+You are analyzing the VISUAL side of a short-form vertical video (Instagram reel) posted by a refrigeration & HVAC company (Cazal Réfrigération — climatisation, pompes à chaleur, chambres froides, chantiers). You are given frames extracted from the video (chronological order, absolute timestamps) and the spoken transcript.
+
+FRAMES — read EVERY file below with the Read tool, in order, before answering:
+{frame_list}
+
+SPOKEN TRANSCRIPT (Whisper, context only — never use it to invent visuals):
+{transcript_excerpt}
+
+TASK — output a single strict JSON object with exactly these 4 keys. Write the free-text values ("text_hook" verbatim excepted) in FRENCH:
+
+1. "text_hook": The on-screen overlay text visible in the first 2 seconds (frames with t <= 2.0s), transcribed VERBATIM in its original language. On-screen text = text added in editing (hook title, burned-in captions). If several elements, join with " / ". If no on-screen text in the opening: null.
+
+2. "visual_hook": 1-2 sentences (in French) describing what the viewer SEES in the opening frames (t <= 2.0s) — the element that stops the scroll. Be concrete and specific: subject, action, setting, camera angle, any overlay or graphic. Then, if the shot changes within the hook frames, mention the transition (e.g. "coupe vers un plan machine à ~1.5s"). Describe ONLY what is visible in the frames.
+
+3. "visual_format": exactly one of (keep these English values verbatim):
+   - "Selfie" — a person talks to camera (handheld or tripod) for most of the video
+   - "Screen Recording" — a screen capture (app, website, thermostat app…) fills the frame
+   - "Split Screen" — two zones shown simultaneously (e.g. face + screen)
+   - "B-Roll" — cinematic/action footage without direct address to camera (chantier, machines, avant/après)
+   - "Text Only" — text cards on a plain background
+   - "Mixed" — alternates between several of the above across the video (judge from ALL frames, not just the opening)
+
+4. "audio_hook": The audio style of the opening (in French), inferred from the transcript and visual cues — you CANNOT hear the audio, so stay conservative and never invent music or sound effects. Examples: "Voix seule - face caméra", "Voix off sur images de chantier", "Hook parlé lu sur carte de texte". If nothing can be inferred reliably: null.
+
+RULES:
+- Read ALL frames before answering. Do not skip any.
+- Never describe elements that are not visible in the frames.
+- Output ONLY the JSON object — no backticks, no commentary, no preamble.
+
+Expected shape:
+{{"text_hook": "...", "visual_hook": "...", "visual_format": "...", "audio_hook": "..."}}

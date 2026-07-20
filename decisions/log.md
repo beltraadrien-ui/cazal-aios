@@ -376,3 +376,62 @@ recalculer depuis les tables brutes (rejeté : cher en tokens, conclusions incoh
 conversation à l'autre).
 
 **Owner:** Adrien.
+
+## 2026-07-20 — Livraison chez Loïc : clés à lui, copie de lignes, zips régénérés par Loïc
+
+**Decision:** Trois choix qui figent le déroulé d'installation (§ « JOUR J » de
+`MIGRATION-SUPABASE.md`). (1) **Clés API tierces = les siennes** : comptes Apify, OpenAI et Gemini
+créés par/avec Loïc le jour de l'installation — aucune clé d'Adrien ne part chez lui. (2) **Données
+= copie de lignes** de la base d'Adrien vers la nouvelle base Supabase de Loïc via le script
+one-shot `shared/scripts/post/migrer_donnees.py` (dry-run par défaut, `--go` pour copier ;
+idempotent ; préserve ids/dates/analyses ; cible lue dans `CIBLE_SUPABASE_URL`/
+`CIBLE_SUPABASE_ANON_KEY` du `.env` d'Adrien, placeholders posés). (3) **Zips mobiles régénérés
+côté Loïc** : après un `git pull`, `maj-aios` lance `export_skills.py` localement et guide Loïc
+pour l'upload sur SON claude.ai — la boucle de maj est 100 % autonome chez lui.
+
+**Why:** (1) Facturation et responsabilité chez le client, pas de conso de Loïc sur les comptes
+d'Adrien. (2) Trois semaines d'analyses déjà payées (Whisper/GPT) et l'historique de snapshots sont
+préservés ; repartir de zéro aurait vidé le digest et re-coûté chaque analyse. (3) `export_skills.py`
+est déjà dans le repo → aucun aller-retour avec Adrien pour une simple maj de skill mobile.
+
+**Alternatives considered:** Prêter les clés d'Adrien (rejeté : facture et quotas mélangés) ;
+re-scraper sur la base vierge (rejeté : perte d'historique + re-coût d'analyse) ; pg_dump/restore
+(rejeté : demande le mot de passe DB et un tooling Postgres local — la copie via supabase-py suffit
+pour ~350 lignes) ; Adrien continue d'uploader les zips (rejeté : dépendance inutile, Loïc a tout
+sur son PC).
+
+**Owner:** Adrien.
+
+## 2026-07-20 — Analyse visuelle par Claude CLI (exit Gemini) + poller KPIs dual-mode Meta/Apify
+
+**Decision:** Deux évolutions du moteur data. (1) **Analyse visuelle des reels par Claude CLI
+headless**, clonée du pipeline de Master-content (décision 2026-07-06 du repo racine, « façon
+claude-video ») directement dans `analyser_contenu.py` (v3) : ffmpeg extrait des frames hook-dense
+(2 fps sur les 4 premières secondes + 4 frames à 25/45/65/85 %, 512 px) dans `active/_visual_<id>/`,
+`claude -p` (abonnement, zéro coût API — wrapper `shared/scripts/ai/call_claude.py`, prompt
+`shared/scripts/prompts/claude_visual.txt`) les lit et remplit `text_hook`, `visual_hook`,
+`visual_format` (taxonomie 6 valeurs), `audio_hook` ; `duration` via ffprobe. Échec → champs null,
+jamais de fallback. **Gemini retiré partout** (config.py, placeholders, docs) — il n'était en
+réalité branché nulle part (variable morte + une ligne de doc erronée). (2) **Poller dual-mode** :
+`poller.py` bascule sur **Meta Graph** (own-account) si `META_ACCESS_TOKEN`+`IG_USER_ID` sont SET —
+port Python du workflow n8n `ig-daily-poller` de Master-content (module
+`shared/scripts/post/meta_graph.py` : /media paginé + /insights par reel, v21.0, KPIs riches
+reach/saves/shares/total_interactions/watch times convertis ms→s) — sinon fallback **Apify**
+inchangé (views/likes/comments). Setup Meta côté Loïc documenté au § JOUR J bloc C-bis de
+`MIGRATION-SUPABASE.md` (optionnel, activable après coup ; token longue durée ~60 j, renouvellement
+manuel, erreur OAuthException 190 explicite).
+
+**Why:** (1) Alignement sur l'AIOS d'Adrien (un seul mécanisme d'analyse visuelle à maintenir),
+zéro clé API en plus pour Loïc (le CLI Claude est déjà installé et loggé sur son PC), et les
+colonnes visuelles du schéma cessent d'être des stubs « non instrumenté » dans les rapports.
+(2) Mêmes raisons : parité avec Master-content (Meta = métriques que Apify ne voit pas : reach,
+saves, watch time) sans casser le jour J si le setup Meta (app développeur + token) n'est pas fait.
+
+**Alternatives considered:** Gemini API (rejeté : clé et facturation en plus, mécanisme divergent
+de l'AIOS d'Adrien) ; installer le plugin /watch depuis la marketplace (rejeté : Loïc n'a pas à
+gérer un plugin — on clone le fonctionnement, pas la dépendance ; le skill /watch interactif n'est
+pas répliqué non plus, choix utilisateur) ; bascule totale Meta sans fallback (rejeté : token ~60 j
+à renouvellement manuel = poller mort en silence ; Apify reste nécessaire pour les concurrents de
+toute façon).
+
+**Owner:** Adrien.
