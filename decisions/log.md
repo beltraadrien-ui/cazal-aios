@@ -435,3 +435,37 @@ pas répliqué non plus, choix utilisateur) ; bascule totale Meta sans fallback 
 toute façon).
 
 **Owner:** Adrien.
+
+## 2026-09-25 — `resume-vocal-devis` v3 : variante remplacement frigo, questions de rattrapage, référentiel clim
+
+**Decision:** Retouche gratuite du skill (demandée par Loïc en visio le 2026-09-24, hors devis).
+(1) **Variante E « remplacement d'installation frigorifique »** : motif et projet, un bloc par poste
+(compresseurs, desserte + température, fluide + charge, plaques photographiées), chambres froides,
+local technique et contraintes. (2) **Infos indispensables** listées pour chaque variante
+(`templates/format-resume.md`) : si l'une manque, Claude la redemande sous le résumé (5 questions
+max), puis renvoie le résumé complet mis à jour. (3) **Référentiel clim de Loïc**
+(`references/referentiel-unites-interieures-clim.md`, bundlé dans le zip) : marques libres (liste
+non limitative), correction automatique des erreurs de dictée (« Ayer » → Haier…) seulement dans un
+contexte matériel ; pour une clim à poser présente dans la liste, référence exacte cherchée en ligne
+et couleur vérifiée ; modèle hors liste écrit tel que dicté avec la mention « pas dans ta liste »
+(jamais « n'existe pas ») ; aucune recherche de référence pour un appareil déjà en place. (4) Le
+résumé sort **seul dans un bloc de code** (bouton copier) ; « À vérifier » et « Il te manque » vont
+sous le bloc.
+
+**Why:** Loïc n'utilisait pas le skill pour ses visites de remplacement (aucun format adapté, il
+demandait « résume un peu ») ; il veut qu'on lui repose la question quand il oublie une info
+importante ; son référentiel sert à corriger ses erreurs de prononciation et à fiabiliser les
+références. Marques libres : décision d'Adrien (Loïc pose d'autres marques, la liste = les plus
+fréquentes). Pas de référence pour l'existant : le catalogue actuel ne correspond pas forcément à un
+appareil posé il y a des années. Bloc de code : Loïc copie le résumé sans les remarques. Test à blanc
+sur 2 faux vocaux (variantes A et E) le 2026-09-25 : pièges évités, deux ambiguïtés corrigées
+(pas de doublon « Il te manque » / « À clarifier » ; déduction évidente écrite mais signalée).
+
+**Alternatives considered:** Limiter aux 3 marques du référentiel, comme le proposait le PDF
+(rejeté : les marques doivent rester libres) ; signaler chaque correction de dictée (rejeté : Loïc
+veut une correction automatique, seuls les doutes sont signalés) ; poser les questions avant le
+résumé (rejeté : Loïc les veut « à la fin »).
+
+**Owner:** Adrien. Listes d'infos indispensables à valider avec Loïc sur de vrais vocaux (Bike
+Method phase 1). ⚠️ `maj-aios` ne liste pas `resume-vocal-devis` parmi les skills mobiles à
+ré-uploader : prévenir Loïc à la main pour cette mise à jour.

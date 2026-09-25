@@ -1,12 +1,15 @@
 # Templates figés de résumé — Cazal Réfrigération
 
-> **v2 — affiné sur 4 vocaux réels de Loïc (2026-06-22).** Toujours en Bike Method phase 1 :
-> à re-tester avant de figer définitivement.
+> **v3 (2026-09-25)** — ajout de la variante E (remplacement d'installation frigorifique), des
+> **infos indispensables** de chaque variante (Claude repose la question si elles manquent) et des
+> références exactes pour les clims à poser. v2 affinée sur 4 vocaux réels de Loïc (2026-06-22).
+> Toujours en Bike Method phase 1 : **listes d'infos indispensables à valider avec Loïc**.
 >
 > Règle d'or : **structure TOUJOURS identique** (c'est l'irritant qu'on résout — un assistant
 > générique change la forme à chaque fois). Info non dictée → `— (non précisé)`, ne **jamais
 > inventer** (une fausse donnée se retrouve dans un devis). Sortie en **tirets**, prête à
-> **copier-coller dans Interfast**.
+> **copier-coller dans Interfast**, rendue **seule dans un bloc** (bouton copier). Les remarques
+> « À vérifier » et « Il te manque » vont **sous le bloc, jamais dedans**.
 
 ---
 
@@ -29,8 +32,8 @@ DIMENSIONNEMENT
 - [pièce → surface m² → puissance kW retenue ou à calculer]
 
 ÉQUIPEMENTS / MATÉRIEL
-- Marque / gamme souhaitée : [Daikin Stylish, Atlantic Sérène, Panasonic, Pearl Premium… + couleur]
-- Unité(s) intérieure(s) : [emplacement par pièce]
+- Marque / gamme / couleur souhaitées : [telles que dictées, ex. Daikin Stylish noir mat, Haier Pearl Premium blanc mat…]
+- Unité(s) intérieure(s) : [pièce → marque gamme puissance couleur — réf. exacte si trouvée / « réf. à confirmer »]
 - Unité extérieure : [emplacement + support : dalle béton / Bigfoot / plots anti-vibration / toit plat]
 - Ballon tampon / de découplage : [oui + raison / non / sans objet]
 
@@ -45,8 +48,8 @@ MOYENS SPÉCIAUX
 - [location de nacelle / échafaudage / autre — ou : aucun]
 
 VARIANTES À CHIFFRER
-- Variante 1 — [marque / puissance / gamme] : [détail par pièce]
-- Variante 2 — [marque / puissance / gamme] : [détail par pièce]
+- Variante 1 — [marque / gamme / puissance / couleur — réf. si trouvée] : [détail par pièce]
+- Variante 2 — [marque / gamme / puissance / couleur — réf. si trouvée] : [détail par pièce]
 
 POINTS D'ATTENTION / SPÉCIFICITÉS
 - [contraintes d'accès, état de l'existant, esthétique imposée…]
@@ -54,6 +57,17 @@ POINTS D'ATTENTION / SPÉCIFICITÉS
 À OBTENIR DU CLIENT / À CLARIFIER AVANT DE CHIFFRER
 - [code EAN, ampérage au coffret, conso gaz, plan de pose, choix de variante, infos manquantes…]
 ```
+
+**Infos indispensables (A)** — reposer la question si elles manquent :
+
+1. Type d'installation + nombre d'unités intérieures / extérieures
+2. Pour chaque pièce : surface ou puissance
+3. Marque, gamme et couleur souhaitées
+4. Emplacement de l'unité extérieure + support
+5. Longueur approximative de la liaison frigorifique
+6. Évacuation des condensats
+7. Alimentation électrique (distance, mono / triphasé)
+8. Carottage / perçage : nombre + matériau du mur
 
 ---
 
@@ -83,6 +97,13 @@ POINTS EN SUSPENS / À CLARIFIER
 - [questions ouvertes, infos attendues, prochaine échéance]
 ```
 
+**Infos indispensables (B)** — reposer la question si elles manquent :
+
+1. Présents (noms / rôles)
+2. Décisions prises
+3. Ce que Cazal doit faire + échéance
+4. Prochaine échéance / prochaine réunion
+
 ---
 
 ## Variante C — Dépannage
@@ -110,6 +131,14 @@ PIÈCES
 RECOMMANDATIONS AU CLIENT
 - [entretien, surveillance, devis complémentaire à prévoir…]
 ```
+
+**Infos indispensables (C)** — reposer la question si elles manquent :
+
+1. Appareil concerné (type + marque/modèle si connu)
+2. Panne constatée
+3. Intervention réalisée
+4. Pièces changées / à commander
+5. État à la sortie (résolu / provisoire / retour nécessaire)
 
 ---
 
@@ -141,3 +170,59 @@ DEMANDES COMPLÉMENTAIRES
 À CLARIFIER
 - [montants exacts, infos manquantes…]
 ```
+
+**Infos indispensables (D)** — reposer la question si elles manquent :
+
+1. Nombre d'unités intérieures et extérieures
+2. Marque / type
+3. Accès (toits, nacelle…)
+4. Mode de chiffrage (forfait)
+5. Horaires d'intervention
+
+---
+
+## Variante E — Visite : REMPLACEMENT D'INSTALLATION FRIGORIFIQUE
+
+> Pour les visites avant devis de remplacement ou de modification d'une installation de froid
+> existante (« remodeling ») : centrales, groupes de condensation, chambres froides, changement de
+> gaz. Un bloc par poste, **dans l'ordre des sous-points Interfast**.
+
+```
+RÉSUMÉ DE VISITE — REMPLACEMENT D'INSTALLATION FRIGORIFIQUE
+Client : [nom] — [type : GMS, boucherie, grossiste, restaurant…]
+Lieu : [ville] — Date de visite : [date]
+
+MOTIF ET PROJET
+- Pourquoi on remplace : [ancien gaz interdit, vétusté, pannes, extension…]
+- Ce qu'on envisage : [ex. centrale CO2, groupes au propane… — ou : à définir]
+
+INSTALLATION EXISTANTE — PAR POSTE
+- [Nom du poste, ex. Centrale négative B] : [centrale / groupe de condensation / monobloc]
+  - Compresseurs : [nombre] — plaques photographiées : [oui / non]
+  - Dessert : [chambres / meubles] — température : [consigne]
+  - Fluide : [type] — charge : [X kg]
+  - État / remarques : [...]
+
+CHAMBRES FROIDES
+- [Nom / usage] : [L × l × h ou volume] — [température] — isolation : [état]
+
+AUTRES ÉLÉMENTS LIÉS
+- [chauffage du sol des chambres, chauffage du magasin / récupération de chaleur, évaporateurs, régulation…]
+
+LOCAL TECHNIQUE ET CONTRAINTES
+- Emplacement de la future installation / accès / manutention : [...]
+- Électricité disponible : [...]
+- Contraintes d'exploitation (magasin ouvert, travaux de nuit…) et délais : [...]
+
+À OBTENIR DU CLIENT / À CLARIFIER AVANT DE CHIFFRER
+- [plans, consommations, infos manquantes…]
+```
+
+**Infos indispensables (E)** — reposer la question si elles manquent :
+
+1. Motif du remplacement
+2. Pour chaque poste : nombre de compresseurs
+3. Pour chaque poste : ce qu'il dessert et à quelle température
+4. Pour chaque poste : type de gaz et charge
+5. Pour chaque poste : plaques signalétiques photographiées (oui / non)
+6. Pour chaque chambre froide : dimensions (ou volume) et température
