@@ -469,3 +469,144 @@ résumé (rejeté : Loïc les veut « à la fin »).
 **Owner:** Adrien. Listes d'infos indispensables à valider avec Loïc sur de vrais vocaux (Bike
 Method phase 1). ⚠️ `maj-aios` ne liste pas `resume-vocal-devis` parmi les skills mobiles à
 ré-uploader : prévenir Loïc à la main pour cette mise à jour.
+
+---
+
+## 2026-10-03 — Lancement de la branche « dimensionnement » (v2) : arborescence, skills, choix techniques
+
+**Decision:** Ajout d'une branche `dimensionnement/` à l'AIOS (sous-dossier avec son propre
+`CLAUDE.md`, pattern « Sub-OS folder » d'`EXPANSIONS.md`) pour le **chiffrage des remplacements
+d'installations frigorifiques**. Cinq skills, noms validés :
+- `froid-releve-existant` (PC) : PDF InterFast → dossier créé, photos extraites, tableau de l'existant
+  où chaque valeur porte sa source ; validation de Loïc.
+- `froid-dimensionnement` (PC) : besoins par poste (puissance existante croisée avec l'abaque par
+  volume), pièces à remplacer, conformité du fluide, contrôle de l'écart ; validation de Loïc.
+- `froid-demande-fournisseur` (PC) : PDF léger + page de tableaux pour Outlook + texte du mail +
+  photos triées ; Loïc relit et envoie lui-même.
+- `froid-savoir` (PC) : ingestion d'un document (OCR si scan, images de pages, figures décrites,
+  index, base), carnet de leçons.
+- `froid-question` (mobile, zip + connecteur Supabase lecture seule) : question à la base de savoir
+  depuis le téléphone, réponse sourcée (document + page imprimée + image de la page).
+
+Arborescence : `dimensionnement/savoir/` **versionné** (INDEX.md « par question », `methodes/`,
+`fluides/`, `materiel/`, `abaques/` en CSV vérifiés, `formations/`) ; `bibliotheque/`, `carnet/`,
+`dossiers/` **locaux et gitignorés** (originaux, OCR, images de pages, leçons, un dossier par
+installation). Code partagé par plusieurs skills (recherche dans le savoir, wrappers Supabase,
+`shared/sql/schema_savoir.sql`) dans `shared/` ; scripts propres à un skill dans son dossier.
+
+Base de savoir : un schéma « savoir » dans le **projet Supabase de Loïc** (une ligne par page avec
+recherche plein texte en français **et** vecteurs, descriptions des figures incluses, images de pages
+dans un bucket privé, fonction SQL de recherche en lecture seule). Lue par scripts Python sur PC et
+par le connecteur Supabase MCP (lecture seule) sur mobile. Le socle distillé reste en markdown
+versionné, lu directement (jamais vectorisé) et bundlé dans le zip mobile comme secours.
+
+Quatre choix tranchés par Adrien : (1) **CoolProp installé chez Loïc** (dépendance épinglée dans
+`requirements.txt`, avec son accord) ; (2) **double index, par mots et par sens, pour tout document
+ingéré, dès la V1** côté PC ; le mobile cherche par mots en V1 ; (3) contrôle par **abaque de volume**
+en V1, le bilan thermique détaillé de chambre est reporté en phase 2 ; (4) le dossier **ETS Denis**
+(rapport InterFast IN01834 + conversation Claude de Loïc du 16/09) est le dossier test des étapes 1
+et 2. InterFast : démarrage **sans** MCP (réservé au plan supérieur), le PDF reste la porte
+d'entrée. Ordre de construction : module chiffrage d'abord, module plans 2D ensuite, séparément.
+
+**Why:** Les documents de Loïc sont pour l'essentiel des **scans sans texte** (environ 3 400 pages),
+avec plus d'une page sur deux porteuse d'un schéma ou d'un tableau : un index markdown seul ne tient
+pas, il faut OCR, images et recherche. Supabase est déjà en place chez Loïc et branché à l'engine ;
+le connecteur MCP lecture seule est le seul canal mobile éprouvé dans cet AIOS (décision 2026-06-19
+et 2026-07-19). Vectoriser à l'ingestion coûte quelques centimes et évite de retraiter le corpus plus
+tard. Aucun projet open source ne fait le chiffrage de bout en bout ; seules des briques sont
+reprises (CoolProp, deux fonctions EN 12900 de TESPy, formule et jeu de compresseurs d'EnergyPlus,
+PRP de CoolProp), toutes sous licence MIT ou BSD. Règle inchangée : **tout nombre vient d'un
+script, chaque valeur porte sa source, rien n'est inventé**, validation humaine à chaque étape.
+Deux recherches documentées (base de savoir le 2026-10-01, dépôts open source le 2026-10-02) sont
+conservées par Adrien.
+
+**Alternatives considered:** Projet claude.ai, Cowork ou Claude Code mobile comme accès téléphone
+(rejetés : pas d'accès par script, PC à garder allumé, ou interface de session de code) ; index
+markdown seul (rejeté : pas joignable du téléphone, et les livres sous droits ne vont pas sur
+GitHub) ; tables de fluides précalculées à la place de CoolProp (gardé comme repli si l'installation
+échoue chez Loïc) ; bilan thermique détaillé en V1 (rejeté : données de terrain non relevées, hors
+besoin au stade remise de prix) ; TESPy et python-hvac comme dépendances (rejetés : trop lourds).
+
+**Owner:** Adrien. Aucun envoi automatique, jamais ; Loïc valide et signe (EN 378).
+
+## 2026-10-03 — Base de savoir : OCR par OpenAI, images 1 000 px, Supabase gratuit, figures sans découpe, vectoriel mobile en phase 2
+
+**Decision:** Après le POC de la base de savoir (39 pages chargées dans le Supabase du projet, recherche
+par mots et par sens, skill mobile `froid-question` validé depuis claude.ai), cinq choix sont arrêtés pour
+l'ingestion complète (Lot 4). (1) **L'OCR des scans se fait avec l'API OpenAI** (modèle de vision, Responses
+API, sortie JSON stricte : markdown de la page, numéro de page imprimé, chapitre, pied de page, figures
+signalées par un marqueur `[FIGURE : …]`), clé `OPENAI_API_KEY` du `.env`, modèle par défaut `gpt-5.4-mini`,
+repli `gpt-4.1-mini`. Mistral OCR est abandonné. (2) Les images de pages stockées dans le bucket `savoir-pages`
+sont ramenées à **1 000 px** de large. (3) Le projet Supabase reste sur le **plan gratuit** : le skill mobile
+signale une base en pause et renvoie vers le PC, qui la réveille à la prochaine mise à jour du savoir.
+(4) Les figures ne sont **pas découpées** en V1 : la page entière est l'image de référence. (5) La recherche
+par sens (embeddings) reste côté PC en V1 ; le mobile cherche par mots ; vectoriel mobile en phase 2.
+Le coût d'OCR est mesuré sur un premier lot d'une centaine de pages (tokens comptés par page) avant de
+lancer le corpus entier ; une page déjà transcrite est mise en cache et n'est jamais repayée.
+
+**Why:** L'AIOS attend déjà la clé OpenAI pour Whisper, GPT et les embeddings : un seul fournisseur IA pour
+l'engine, une seule clé à poser chez le client, une seule facture. Un modèle de vision fait en une passe ce
+que Mistral OCR aurait demandé en deux (texte, puis numéro de page, chapitre et figures par un second
+modèle). Le pilote montre une lecture juste (tableau de 45 valeurs exact, page tournée de 90° gérée) pour
+moins d'un demi-centime par page. 1 000 px tiennent dans le Go du plan gratuit pour tout le corpus et
+restent lisibles sur téléphone. La découpe des figures et le vectoriel mobile n'ont pas prouvé leur besoin
+au POC : on attend l'usage réel.
+
+**Alternatives considered:** Mistral OCR (rejeté : second compte et seconde clé, OCR non inclus dans le plan
+gratuit, et seconde passe nécessaire) ; Claude CLI comme au POC (gardé seulement pour les petits ajouts
+de quelques pages : trop lent et consomme le forfait pour un corpus entier) ; OCR local type Tesseract
+(rejeté : tableaux et schémas mal lus, et modèle nécessaire derrière de toute façon) ; Gemini (rejeté : pas
+plus simple, compte et facturation à ouvrir) ; plan Supabase Pro (reporté : seulement si la pause gêne).
+
+**Owner:** Adrien. Les documents sources restent locaux (droits d'auteur) ; seul le code d'ingestion est versionné.
+
+## 2026-10-03 — Lot 1 livré : `froid-releve-existant`, PyMuPDF en dépendance, dossier d'installation comme mémoire
+
+**Decision:** Première brique de la branche « dimensionnement » : le skill moteur `froid-releve-existant` ouvre
+un dossier d'installation (`dimensionnement/dossiers/AAAA-MM-JJ-client/`) à partir du PDF InterFast via
+`scripts/extraire_rapport.py` (texte page par page, sous-points et valeurs lues par motif avec leur page,
+photos extraites et rangées par poste, `structure.json`, squelettes `dossier.md` et `1-existant.md`), puis
+Claude lit les plaques photo par photo, qualifie chaque lecture (sûre / douteuse / illisible), remplit le
+relevé avec une source par valeur et une liste « à confirmer », et lance une **double lecture par un
+sous-agent vérificateur** avant la validation de Loïc. **PyMuPDF** entre dans `requirements.txt` (rendu et
+extraction PDF ; servira aussi au Lot 4). Le socle de savoir démarre avec `savoir/INDEX.md`,
+`methodes/checklist-releve.md` (source unique des infos indispensables, miroir de la variante E du résumé
+vocal) et `materiel/lecture-plaques.md`. `dimensionnement/.gitignore` exclut `bibliotheque/`, `carnet/`,
+`dossiers/`. Le `CLAUDE.md` racine gagne deux lignes de routage ; le manuel de branche est
+`dimensionnement/CLAUDE.md`.
+
+**Why:** Le rapport InterFast est la seule porte d'entrée universelle (API et MCP réservés au plan
+Business). Les images de gabarit du PDF (fond de page, logo) sont ré-embarquées sur chaque page avec un
+identifiant différent : le filtre se fait par empreinte de contenu, pas par identifiant. Les photos sortent
+en 450 × 600 ou 800 × 600 : lisibles pour les plaques Bitzer et Profroid du dossier test, pas pour tout
+(échangeur Alfa Laval illisible), d'où la règle « illisible = demander l'original ». Le volume des chambres
+est le seul calcul de l'étape 1 (L × l × h), signalé comme tel ; tout le reste est une lecture sourcée.
+Sur le dossier test, les 7 compresseurs, les 7 évaporateurs et les 3 volumes concordent avec ce que Loïc
+avait obtenu à la main le 16/09 ; le relevé ajoute ce que la conversation n'avait pas relevé (plaque
+d'ensemble de la centrale B avec R507 d'origine et 21,6 kW, condenseur, régulation détaillée, chauffage).
+
+**Alternatives considered:** `pypdf` seul (rejeté : pas de rendu de page, nécessaire au Lot 4) ; lecture
+des plaques par un modèle de vision via API (rejeté en V1 : Claude Code lit les photos directement, et la
+double lecture par sous-agent remplit le rôle de vérification) ; calcul des puissances dès l'étape 1
+(rejeté : les calculs sont l'étape 2, par script).
+
+**Owner:** Adrien. Validation du relevé ETS Denis par Adrien (comparaison avec la conversation du 16/09) avant commit.
+
+## 2026-10-05 — Le markdown est la mémoire de Claude ; l'humain lit une vue HTML générée
+
+**Decision:** Chaque document d'un dossier d'installation existe en deux formes : le markdown (`dossier.md`,
+`1-existant.md`…), complet et sourcé, relu et écrit par les skills ; et une **vue HTML générée**
+(`froid-releve-existant/scripts/rendu_html.py`, bibliothèque `markdown` ajoutée à `requirements.txt`) avec la
+photo de chaque plaque en vignette cliquable à côté de sa lecture, ouverte dans le navigateur. Les skills
+régénèrent la vue après chaque modification et ne demandent jamais à Loïc de lire du markdown.
+
+**Why:** Au test du Lot 1, Adrien a validé le fond du relevé (tableau des compresseurs identique à celui que
+Loïc avait obtenu le 16/09) mais a jugé le markdown « très pénible à lire » pour un humain, surtout les
+tableaux : impossible de juger la longueur ou la clarté. Un rendu HTML règle le problème sans changer la
+source de vérité, et prépare le modèle HTML unique prévu pour le livrable fournisseur (PDF via Edge).
+
+**Alternatives considered:** Tableaux directement dans la conversation (insuffisant : pas de photos à côté,
+perdu à la session suivante) ; DOCX/PDF générés (plus lourd, pas de clic sur les photos ; le PDF viendra du
+même HTML au Lot 3) ; convertisseur markdown maison sans dépendance (rejeté : fragile, `markdown` est pur Python).
+
+**Owner:** Adrien.
