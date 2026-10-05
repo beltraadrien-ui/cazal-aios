@@ -33,6 +33,7 @@ BUNDLE: dict[str, list[str]] = {
         "referentiel-unites-interieures-clim.md",
     ],
     "maj-aios": [],
+    "froid-question": [],  # surface (mobile) ; son INDEX est dans le dossier du skill (references/), généré par froid-savoir/scripts/index_mobile.py
     "scraper-contenu-cazal": [],
     "analyser-contenu": [],
     "rapport-performance": [],

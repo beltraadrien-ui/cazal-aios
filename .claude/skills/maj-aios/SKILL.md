@@ -44,7 +44,7 @@ le dossier par mail/Drive.
    - Si une **skill mobile** a changé — son `SKILL.md` OU un fichier `references/` qu'elle bundle
      (`scraper-contenu-cazal` et autres skills engine n'ont PAS de zip mobile — concernées :
      `veille-niche`, `idee-contenu`, `script-reel-chantier`, `generateur-hooks`, `scripter-reel`,
-     `rediger-article`) → **régénérer les zips localement** :
+     `rediger-article`, `resume-vocal-devis`, `froid-question`) → **régénérer les zips localement** :
      ```bash
      python shared/scripts/export_skills.py <skills concernées>
      ```

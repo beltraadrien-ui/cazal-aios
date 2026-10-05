@@ -610,3 +610,39 @@ perdu à la session suivante) ; DOCX/PDF générés (plus lourd, pas de clic sur
 même HTML au Lot 3) ; convertisseur markdown maison sans dépendance (rejeté : fragile, `markdown` est pur Python).
 
 **Owner:** Adrien.
+
+## 2026-10-05 — Lot 4 livré : base de savoir complète (`froid-savoir` + `froid-question`), OCR OpenAI sous plafond, sections par titres courants
+
+**Decision:** Les scripts du POC sont réécrits dans le dépôt : skill moteur `froid-savoir` (`catalogue.py`,
+`extraire_pages.py`, `ocr_openai.py`, `sections.py`, `charger_supabase.py`, `ingerer.py`, `rechercher.py`, `lecon.py`,
+`index_mobile.py`), code commun `shared/savoir.py`, schéma `shared/sql/schema_savoir.sql`, outil
+`shared/scripts/sql/appliquer_sql.py`. La bibliothèque vit dans `dimensionnement/bibliotheque/` (local) avec un
+`catalogue.json` (id, titre, fichier, nature, priorité, décalage, pages de sommaire) et un cache `_cache/` (pages,
+OCR, sections, empreintes de chargement) : **une page transcrite n'est jamais repayée**, une page inchangée n'est
+jamais rechargée. L'ingestion se fait par priorité (natifs gratuits d'abord, scans par utilité) sous un **budget
+par exécution** (`--budget-usd`) et s'arrête proprement au plafond mensuel OpenAI (quota) ; les dépenses sont
+estimées dans `_cache/ocr/_depenses.json`. L'OCR (`gpt-5.4-mini`, Responses API, JSON strict) rend en une passe le
+markdown, le numéro de page lu, le chapitre, le type de page et la **description de chaque figure** (sans découpe :
+l'image de référence est la page, stockée à 1 000 px). Les **sections d'un scan viennent des titres courants lus
+sur chaque page** (niveau 1 = `#`, niveau 2 = `##`), exacts page par page ; le sommaire structuré par le modèle et
+les signets PDF ne servent qu'en repli. Le skill mobile `froid-question` est finalisé (INDEX généré depuis la base,
+zip par `export_skills.py`, ajouté à la liste des zips de `maj-aios`). Les PDF natifs n'ont pas de description de
+figures en V1 (texte seul).
+
+**Why:** Première ingestion le 2026-10-05 : 41 documents, 3 431 pages (1 646 natives gratuites, 1 785 scannées
+par OCR), 463 Mo de stockage, toutes vectorisées, pour ≈ 10,7 $ estimés, sous le plafond de 12 $ fixé par Adrien
+pour mesurer le coût réel. Le Kotza complet (1 301 pages) a coûté 8,75 $ ; une notice 0,0037 $/page, une page de
+livre dense 0,0067 $/page. Le sommaire structuré par le modèle (130 puis 538 sections) décalait des chapitres de
+plusieurs pages : les titres courants donnent 1 506 sections justes pour le Kotza, gratuitement. Jeu de contrôle sur
+le livre complet : 6/7 par mots, 7/7 par sens (bonne page dans le top 3). Un arrêt budget en cours d'exécution a
+révélé un blocage de fin de pool de threads (corrigé : drapeau d'arrêt, `shutdown` hors boucle) et une erreur
+d'embedding sur une page trop dense (corrigé : repli à 9 000 caractères). PostgREST tronque à 1 000 lignes :
+toutes les lectures de pages sont paginées ou comptées par document.
+
+**Alternatives considered:** Mistral OCR (abandonné, cf. 2026-10-03) ; Claude CLI pour les sommaires comme au POC
+(écarté : les titres courants suffisent et ne coûtent rien) ; description des figures des natifs par vision
+(reporté : doublerait le coût, à décider à l'usage) ; chunking plus fin qu'une page (reporté : la page est l'unité
+citée et affichée).
+
+**Owner:** Adrien. Reste à ingérer quand le plafond OpenAI le permet : Manuel Frigobase (406 p.), Électrotechnique
+(1 238 p.), Moteurs mono (18 p.), fin de Certif prépa (49 p.) ≈ 11 à 12 $ ; les deux cours EFPME en Word à convertir.

@@ -41,6 +41,16 @@ dimensionnement/
 
 Ce qui est à Loïc (documents, dossiers clients, corrections) ne va **jamais** sur GitHub.
 
+## La base de savoir (livres, formations, notices)
+
+Les documents de Loïc sont **dans sa base Supabase** (tables `savoir_documents`, `savoir_sections`, `savoir_pages`,
+`savoir_chunks`, `savoir_figures`, `savoir_renvois` ; images de pages dans le bucket privé `savoir-pages` ; schéma
+`shared/sql/schema_savoir.sql`). Une ligne par page, recherche **par mots** (`rechercher_savoir`, français sans
+accents) et **par sens** (`rechercher_savoir_vec`, vecteurs OpenAI). Ingestion et entretien : skill `froid-savoir`
+(catalogue `bibliotheque/catalogue.json`, cache `bibliotheque/_cache/`, OCR des scans par OpenAI). Accès depuis le
+téléphone : skill `froid-question` (zip + connecteur Supabase en lecture seule) avec `references/INDEX.md` en secours.
+Code commun : `shared/savoir.py`.
+
 ## Règles de fiabilité (non négociables)
 
 1. **Une source sur chaque chiffre** : `rapport p. 4`, `photo p05-2`, `catalogue Bitzer p. 34`, `web : <lien>`,
