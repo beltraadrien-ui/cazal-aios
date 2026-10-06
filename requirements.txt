@@ -2,3 +2,4 @@ supabase>=2.9.0
 openai>=1.0.0
 pymupdf>=1.26
 markdown>=3.5
+CoolProp==8.0.0  # propriétés des fluides frigorigènes (skill froid-dimensionnement, décision du 2026-10-03)

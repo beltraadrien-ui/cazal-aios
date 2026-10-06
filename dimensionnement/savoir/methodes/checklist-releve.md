@@ -3,7 +3,7 @@
 > Source unique de la liste des informations indispensables. Utilisée par `froid-releve-existant`
 > (étape 1, sur PC) et reflétée dans la variante E de `resume-vocal-devis` (résumé vocal, mobile).
 > Si cette liste change, mettre à jour les deux. v1 du 2026-10-03, d'après la visio du 24/09 et le
-> rapport ETS Denis ; **à valider avec Loïc**.
+> premier rapport InterFast réel d'une visite de remplacement ; **à valider avec Loïc**.
 
 ## Pour le dossier
 

@@ -19,8 +19,20 @@ l'écrit en dernier. Si la conversation est perdue, « on reprend le dossier X �
 
 **Deux formes pour chaque document du dossier.** Le markdown (`dossier.md`, `1-existant.md`…) est la
 **mémoire de Claude** : complet, sourcé, relu par les skills. Pour **Loïc**, on génère toujours la **vue
-HTML** (`rendu_html.py` du skill `froid-releve-existant`) : même contenu, lisible, avec la photo de chaque
+HTML** (`shared/rendu_html.py`, convertisseur commun à toutes les étapes ; `rendu_html.py` du skill
+`froid-releve-existant` n'en est qu'un adaptateur) : même contenu, lisible, avec la photo de chaque
 plaque à côté de sa lecture, ouverte dans le navigateur. On ne demande jamais à Loïc de lire du markdown.
+
+**Étape 2 (dimensionnement).** Claude remplit `2-entrees.json` (une valeur sourcée par donnée, rien
+d'inventé) ; `calculs.py` du skill `froid-dimensionnement` calcule la **puissance existante** de chaque
+compresseur par **deux méthodes** (M1 par la cylindrée de la plaque, M2 par le point catalogue du fabricant
+ramené au fluide et au régime ; M2 retenue si elle existe, l'écart sert de contrôle), la somme par poste, la
+**puissance demandée** (marge de Loïc) et la **conformité F-gas** du fluide, puis écrit les tableaux B, C, D.
+Claude assemble `2-dimensionnement.md` (blocs A à G : projet, compresseurs, besoins, fluide, ce qu'on garde,
+fournitures, hypothèses et questions), un vérificateur le relit, Loïc valide ✋. Chaque chiffre porte un
+**statut** : *sourcé* (lu tel quel), *calculé* (script, entrées sourcées), *hypothèse* (dépend d'une hypothèse
+écrite, marqué « (hyp.) ») ou *à confirmer* (pas de nombre) ; un résultat n'est jamais plus sûr que sa plus
+faible entrée.
 
 ## Où vivent les choses
 

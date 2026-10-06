@@ -671,3 +671,37 @@ corrigés suffisent et ne coûtent rien) ; réduire la résolution des pages dé
 ≈ 240 Mo restent ; le prochain livre scanné se chargera en 800 px ou le projet passera au plan payant).
 
 **Owner:** Adrien. Reste : remplacer le zip `froid-question` sur son claude.ai ; retours de Loïc à l'usage.
+
+## 2026-10-06 — Lot 2 livré : `froid-dimensionnement`, deux méthodes croisées depuis les plaques, sans polynômes ni abaque de volume
+
+**Decision:** L'étape 2 du parcours (dimensionnement du remplacement) est construite : skill `froid-dimensionnement`
+(`calculs.py` lit `2-entrees.json`, écrit `2-resultats.json` et `2-tableaux.md` ; modules `valeur.py`, `unites.py`,
+`controles.py`, `fluides.py` (seul import CoolProp), `compresseurs.py`, `fgas.py` ; 124 tests unittest), socle
+`dimensionnement/savoir/` (PRP, compositions des mélanges, table F-gas, méthode de la puissance existante, règles de
+Loïc, matrice des transitions, fiche Bitzer, 306 points catalogue Bitzer publics) et convertisseur HTML commun
+`shared/rendu_html.py` (le script du Lot 1 devient un adaptateur). **La puissance existante d'un compresseur vient
+de deux méthodes croisées** : M1 par la cylindrée (volume balayé de la plaque, propriétés CoolProp, rendement
+volumétrique par une table ajustée sur les catalogues Bitzer) et M2 par le point catalogue publié, converti au fluide
+de l'installation et corrigé de régime ; l'écart entre les deux est le contrôle de vraisemblance. **Aucun nombre ne
+sort du modèle** : chaque valeur est une `Valeur` qui porte sa source et son statut (sourcé, calculé, hypothèse, à
+confirmer), et un résultat n'est jamais plus sûr que sa plus faible entrée. Le bloc réglementaire ne contient que le
+texte rendu par `fgas.py`. **Pas de polynômes fabricants ni d'abaque de volume en V1** (décisions d'Adrien du
+2026-10-06) : ils sont notés comme options futures avec le bilan thermique. CoolProp 8.0.0 est épinglé dans
+`requirements.txt`. La table F-gas (48 règles) est marquée « non relue » tant que la colonne de relecture est vide.
+
+**Why:** La méthode de Loïc part de la puissance existante, que les plaques ne donnent pas ; au stade de la remise de
+prix, il faut un chiffre traçable avec une marge connue, pas l'exactitude d'un polynôme que seul un export humain par
+modèle fournirait. Sur le dossier test, les deux méthodes se recoupent à moins de 8 % sur sept compresseurs, un
+vérificateur indépendant a retrouvé les plaques à l'aveugle et recalculé deux compresseurs à moins de 0,01 %, et les
+écarts avec les estimations antérieures (+23 %, +13 %, +2 %) sont décomposés et expliqués. Aucune table publique de
+puissance par volume ne couvre les grandes chambres ; la seule table sourcée (Énergie+) a été jugée insuffisante. Le
+rendement volumétrique des livres de Loïc (λ = 1 − 0,05 τ) sous-estime de 27 % en négatif face aux catalogues : la
+table ajustée est le défaut, la formule des livres reste disponible, les deux sourcées. Construction menée par
+sous-agents en trois vagues (cœur, socle, recherche ; calculs ; assemblage, vérificateur) pour préserver le contexte.
+
+**Alternatives considered:** polynômes EN 12900 exportés des logiciels fabricants (option future : précision du mode
+« exécution ») ; abaque de volume Énergie+ (refusé) ; bilan thermique détaillé (phase 2) ; lecture douteuse traitée en
+« à confirmer » (rejeté : si le nombre utilisé est lisible, c'est une hypothèse écrite, sinon le calcul disparaît).
+
+**Owner:** Adrien. Reste : relire la table F-gas, valider la table de rendement volumétrique, obtenir les réponses de
+Loïc aux six questions (la convention de température du mélange pèse jusqu'à 15 % sur M2), retours de Loïc à l'usage.
