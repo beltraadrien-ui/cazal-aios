@@ -646,3 +646,28 @@ citée et affichée).
 
 **Owner:** Adrien. Reste à ingérer quand le plafond OpenAI le permet : Manuel Frigobase (406 p.), Électrotechnique
 (1 238 p.), Moteurs mono (18 p.), fin de Certif prépa (49 p.) ≈ 11 à 12 $ ; les deux cours EFPME en Word à convertir.
+
+## 2026-10-06 — Bibliothèque entièrement ingérée (46 documents, 5 517 pages) ; quatre correctifs d'ingestion
+
+**Decision:** L'ingestion est terminée : 46 documents, 5 517 pages, toutes vectorisées, 763 Mo de pages images sur le Go
+gratuit de Supabase. Quatre correctifs sont intégrés aux scripts : (1) `shared/savoir.texte_propre` neutralise les
+caractères nuls et les espaces de largeur nulle (conversion Word → PDF) que Postgres refuse ; appliqué à l'extraction du
+texte natif, à la lecture du cache au chargement et aux titres de sections. (2) `ingerer.py` conserve la dépense OCR d'un
+document dont le chargement échoue ensuite (bilan et budget de l'exécution justes). (3) `sections.py` : les numéros de
+page lus par l'OCR sont validés contre la médiane locale des écarts PDF − imprimé (un numéro de figure ne peut plus
+étirer une section sur mille pages), le titre courant du livre lui-même et les rubriques récurrentes (« Solution »,
+« Notes personnelles », « Sommaire ») ne font pas de section, un titre numéroté « 40.14 … » lu en `#` est un sous-titre.
+(4) Index sur les clés étrangères `savoir_pages.section_id` et `savoir_sections.parent_id` (schéma + appliqué) et
+suppression des sections par lots de 300 : sans cela, remplacer les 1 733 sections d'un livre dépasse le délai PostgREST.
+
+**Why:** Coût réel mesuré : 1 711 pages scannées pour 11,22 $ (0,0066 $/page ; estimation 11,2 à 12,7 $), total OCR de
+la bibliothèque ≈ 22,4 $. Les deux cours EFPME convertis depuis Word portaient des puces en caractère nul sur toutes
+leurs pages (erreur 22P05). Électrotechnique : 1 733 sections dont des sections de 1 100 pages (97 numéros de page lus
+faux sur 1 238, « ÉLECTROTECHNIQUE » en titre courant sur 159 pages) → 1 252 sections, la plus longue 42 pages ; Kotza
+régénéré avec les nouvelles règles et identique sur ses 9 pages de contrôle.
+
+**Alternatives considered:** sommaire structuré par le modèle pour Électrotechnique (écarté : les titres courants
+corrigés suffisent et ne coûtent rien) ; réduire la résolution des pages déjà chargées pour gagner du stockage (reporté :
+≈ 240 Mo restent ; le prochain livre scanné se chargera en 800 px ou le projet passera au plan payant).
+
+**Owner:** Adrien. Reste : remplacer le zip `froid-question` sur son claude.ai ; retours de Loïc à l'usage.

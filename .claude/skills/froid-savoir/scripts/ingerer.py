@@ -35,8 +35,12 @@ def ingerer_un(d: dict, budget_restant: float | None, sans_vecteurs: bool, worke
         except (BudgetDepasse, QuotaEpuise) as e:
             arret = e
             depense += json.loads(str(e)).get("usd", 0.0)
-    sections.run(doc_id)
-    r = charger_supabase.run(doc_id, sans_vecteurs=sans_vecteurs)
+    try:
+        sections.run(doc_id)
+        r = charger_supabase.run(doc_id, sans_vecteurs=sans_vecteurs)
+    except BaseException as e:   # l'OCR déjà payé reste compté dans le bilan et le budget de l'exécution
+        e.usd_depense = depense
+        raise
     depense += r.get("usd", 0.0)
     if arret:
         raise arret
@@ -103,11 +107,13 @@ def main() -> None:
             bilan.append((d["id"], f"ARRÊT plafond OpenAI · OCR {json.loads(str(e)).get('ocr_total')}/{json.loads(str(e)).get('pages_total')} pages · chargé ce qui est prêt"))
             break
         except SystemExit as e:
+            depense += getattr(e, "usd_depense", 0.0)
             print(f"{d['id']}: ERREUR {e}", flush=True)
-            bilan.append((d["id"], f"ERREUR {e}"))
+            bilan.append((d["id"], f"ERREUR {e} · {getattr(e, 'usd_depense', 0.0):.3f} $ d'OCR déjà payés (en cache)"))
         except Exception as e:
+            depense += getattr(e, "usd_depense", 0.0)
             print(f"{d['id']}: ERREUR {type(e).__name__} {str(e)[:300]}", flush=True)
-            bilan.append((d["id"], f"ERREUR {type(e).__name__} {str(e)[:160]}"))
+            bilan.append((d["id"], f"ERREUR {type(e).__name__} {str(e)[:160]} · {getattr(e, 'usd_depense', 0.0):.3f} $ d'OCR déjà payés (en cache)"))
     print(f"\n===== Bilan ({time.time()-t0:.0f}s, {depense:.3f} $ dépensés cette fois, registre total {depenses_total():.2f} $)", flush=True)
     for doc_id, b in bilan:
         print(f"  {doc_id:40s} {b}", flush=True)

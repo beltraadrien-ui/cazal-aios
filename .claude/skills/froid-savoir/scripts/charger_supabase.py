@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from shared.savoir import (BUCKET, SIGNED_SECONDS, MODELE_EMBEDDING, charger_catalogue, sauver_catalogue, document,  # noqa: E402
+from shared.savoir import (texte_propre, BUCKET, SIGNED_SECONDS, MODELE_EMBEDDING, charger_catalogue, sauver_catalogue, document,  # noqa: E402
                            dossier_pages, dossier_ocr, dossier_texte, fichier_sections, fichier_charge, lire_json,
                            ecrire_json, supabase_client, openai_client, embeddings, cout_usd, depenses_ajouter,
                            project_ref, sortie_utf8)
@@ -49,13 +49,13 @@ def contenu_page(doc_id: str, nature: str, m: dict) -> dict | None:
         j = lire_json(dossier_ocr(doc_id) / f"{p:04d}.json")
         if not j:
             return None
-        return {"texte": (j.get("markdown") or "").strip(), "page_lue": j.get("page_lue"), "chapitre": j.get("chapitre"),
+        return {"texte": texte_propre(j.get("markdown") or "").strip(), "page_lue": j.get("page_lue"), "chapitre": j.get("chapitre"),
                 "type": j.get("type_page") or "texte", "confiance": j.get("confiance"), "figures": j.get("figures") or [],
                 "ocr": j.get("model")}
     f = dossier_texte(doc_id) / f"{p:04d}.txt"
     if not f.exists():
         return None
-    return {"texte": f.read_text(encoding="utf-8").strip(), "page_lue": None, "chapitre": None, "type": "texte",
+    return {"texte": texte_propre(f.read_text(encoding="utf-8")).strip(), "page_lue": None, "chapitre": None, "type": "texte",
             "confiance": None, "figures": [], "ocr": None}
 
 
@@ -92,10 +92,18 @@ def run(doc_id: str, sans_vecteurs: bool = False, max_w: int = 1000, qualite: in
 
     # sections : remplacées à chaque chargement (les pages gardent leur section par recalcul)
     secs = lire_json(fichier_sections(doc_id), [])
-    sb.table("savoir_sections").delete().eq("document_id", doc_id).execute()
+    anciennes, debut = [], 0
+    while True:   # pagination : PostgREST tronque à 1 000 lignes
+        lot = sb.table("savoir_sections").select("id").eq("document_id", doc_id).range(debut, debut + 999).execute().data
+        anciennes += [r["id"] for r in lot]
+        if len(lot) < 1000:
+            break
+        debut += 1000
+    for i in range(0, len(anciennes), 300):   # par lots : une suppression massive dépasse le délai d'exécution de PostgREST
+        sb.table("savoir_sections").delete().in_("id", anciennes[i:i + 300]).execute()
     sec_ids = []
     for i in range(0, len(secs), 200):
-        rows = [{"document_id": doc_id, "titre": s["titre"][:300], "niveau": s.get("niveau", 1),
+        rows = [{"document_id": doc_id, "titre": texte_propre(s["titre"])[:300], "niveau": s.get("niveau", 1),
                  "page_debut": s.get("page_debut"), "page_fin": s.get("page_fin")} for s in secs[i:i + 200]]
         res = sb.table("savoir_sections").insert(rows).execute()
         sec_ids += [(r["id"], r["niveau"], r["page_debut"], r["page_fin"], r["titre"]) for r in res.data]

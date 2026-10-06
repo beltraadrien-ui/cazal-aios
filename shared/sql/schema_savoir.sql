@@ -45,6 +45,7 @@ create table if not exists savoir_sections (
   parent_id   bigint references savoir_sections(id) on delete set null
 );
 create index if not exists savoir_sections_doc on savoir_sections (document_id, page_debut);
+create index if not exists savoir_sections_parent on savoir_sections (parent_id);   -- clé étrangère : indispensable aux suppressions
 
 create table if not exists savoir_pages (
   id                   bigserial primary key,
@@ -79,6 +80,7 @@ create table if not exists savoir_chunks (
 );
 create index if not exists savoir_chunks_fts on savoir_chunks using gin (fts);
 create index if not exists savoir_chunks_page on savoir_chunks (page_id);
+create index if not exists savoir_pages_section on savoir_pages (section_id);   -- clé étrangère (on delete set null) : indispensable aux suppressions
 create index if not exists savoir_chunks_embedding on savoir_chunks using hnsw (embedding extensions.vector_cosine_ops);
 
 create table if not exists savoir_figures (

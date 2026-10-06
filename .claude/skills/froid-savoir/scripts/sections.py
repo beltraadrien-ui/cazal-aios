@@ -14,11 +14,13 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import statistics
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from shared.savoir import (MODELE_OCR, charger_catalogue, document, chemin_document, dossier_pages, dossier_ocr,  # noqa: E402
+from shared.savoir import (texte_propre, MODELE_OCR, charger_catalogue, document, chemin_document, dossier_pages, dossier_ocr,  # noqa: E402
                            dossier_texte, fichier_sections, lire_json, ecrire_json, cout_usd, depenses_ajouter,
                            openai_client, sortie_utf8)
 
@@ -75,26 +77,57 @@ def nettoyer_titre(t: str) -> str:
     return sentence_case(t)[:160]
 
 
+NUMERO_SOUS_TITRE = re.compile(r"^\d{1,2}\.\d{1,2}\b")   # « 40.14 Autres méthodes… » : sous-titre, même lu en #
+TITRES_IGNORES = {"solution", "solutions", "exercice", "exercices", "notespersonnelles", "notes", "sommaire",
+                  "tabledesmatieres", "index", "resume", "conclusion"}
+
+
 def normaliser(t: str | None) -> str:
-    return re.sub(r"[^a-z0-9]+", "", (t or "").lower())
+    t = unicodedata.normalize("NFKD", t or "")
+    return re.sub(r"[^a-z0-9]+", "", "".join(c for c in t if not unicodedata.combining(c)).lower())
 
 
-def sections_par_titres_courants(doc_id: str, manifest: list[dict], decalage: int) -> list[dict]:
+def pages_imprimees_fiables(pages: list[tuple[int, int | None]], decalage: int) -> list[int]:
+    """Numéro imprimé de chaque page PDF : le numéro lu par l'OCR, sauf s'il s'écarte de plus de 5 du décalage
+    local (médiane des écarts PDF − lu sur ±10 pages) : un numéro de figure pris pour un numéro de page ne doit
+    pas étirer une section sur mille pages."""
+    offs = {p: p - pl for p, pl in pages if pl is not None}
+    out = []
+    for p, pl in pages:
+        w = [offs[q] for q in range(p - 10, p + 11) if q in offs and q != p]
+        off = statistics.median(w) if len(w) >= 3 else decalage
+        attendu = int(round(p - off))
+        out.append(pl if pl is not None and abs(pl - attendu) <= 5 else attendu)
+    return out
+
+
+def sections_par_titres_courants(doc_id: str, manifest: list[dict], decalage: int, titre_doc: str = "") -> list[dict]:
     """Scan avec titres courants : niveau 1 = premier « # » de la page, niveau 2 = premier « ## » ; les pages
     sans titre prolongent la section en cours. Rend [] si moins de 40 % des pages portent un « # »."""
-    pages = []
+    brut = []
     for m in manifest:
-        f = dossier_ocr(doc_id) / f"{m['page_pdf']:04d}.json"
-        j = lire_json(f)
+        j = lire_json(dossier_ocr(doc_id) / f"{m['page_pdf']:04d}.json")
         if not j:
             continue
         md = j.get("markdown") or ""
         h1 = re.search(r"^#\s+(.+)$", md, re.M)
         h2 = re.search(r"^##\s+(.+)$", md, re.M)
-        pi = j.get("page_lue") if j.get("page_lue") is not None else m["page_pdf"] - decalage
-        pages.append((pi, h1.group(1).strip() if h1 else None, h2.group(1).strip() if h2 else None))
-    if not pages or sum(1 for _, h1, _ in pages if h1) < 0.4 * len(pages):
+        brut.append((m["page_pdf"], j.get("page_lue"), h1.group(1).strip() if h1 else None, h2.group(1).strip() if h2 else None))
+    if not brut or sum(1 for _, _, h1, _ in brut if h1) < 0.4 * len(brut):
         return []
+    nums = pages_imprimees_fiables([(p, pl) for p, pl, _, _ in brut], decalage)
+    n_titre = normaliser(titre_doc)
+    pages = []
+    for (_, _, h1, h2), pi in zip(brut, nums):
+        n1 = normaliser(h1)
+        # titre courant du livre lui-même (pages de gauche) ou rubrique récurrente : pas une section
+        if h1 and (n1 in TITRES_IGNORES or (len(n1) >= 6 and n1 in n_titre)):
+            h1 = None
+        if h1 and NUMERO_SOUS_TITRE.match(h1):   # « 40.14 … » lu en # : c'est un sous-titre
+            h2, h1 = h1, None
+        if h2 and normaliser(h2) in TITRES_IGNORES:
+            h2 = None
+        pages.append((pi, h1, h2))
     secs, cur1, cur2 = [], None, None
     for pi, h1, h2 in pages:
         if h1 and normaliser(h1) != normaliser(cur1["brut"] if cur1 else None):
@@ -102,6 +135,10 @@ def sections_par_titres_courants(doc_id: str, manifest: list[dict], decalage: in
             if cur1: cur1["page_fin"] = max(cur1["page_fin"], pi - 1)
             cur1 = {"titre": nettoyer_titre(h1), "brut": h1, "niveau": 1, "page_debut": pi, "page_fin": pi}
             secs.append(cur1)
+        if h2 and not cur1:   # sous-titre avant tout chapitre : il ouvre la première section
+            cur1 = {"titre": nettoyer_titre(h2), "brut": h2, "niveau": 1, "page_debut": pi, "page_fin": pi}
+            secs.append(cur1)
+            h2 = None
         if h2 and cur1 and normaliser(h2) != normaliser(cur2["brut"] if cur2 else None):
             if cur2: cur2["page_fin"] = max(cur2["page_fin"], pi - 1)
             cur2 = {"titre": f"{cur1['titre']} — {nettoyer_titre(h2)}", "brut": h2, "niveau": 2, "page_debut": pi, "page_fin": pi}
@@ -118,12 +155,12 @@ def titre_de_page(doc_id: str, m: dict) -> str:
     txt = dossier_texte(doc_id) / f"{m['page_pdf']:04d}.txt"
     t = ""
     if md.exists():
-        t = re.sub(r"<!--.*?-->\n?", "", md.read_text(encoding="utf-8"))
+        t = texte_propre(re.sub(r"<!--.*?-->\n?", "", md.read_text(encoding="utf-8")))
         mm = re.search(r"^#+\s*(.+)$", t, re.M) or re.search(r"^\*\*(.+?)\*\*", t, re.M)
         if mm:
             return mm.group(1).strip()[:120]
     elif txt.exists():
-        t = txt.read_text(encoding="utf-8")
+        t = texte_propre(txt.read_text(encoding="utf-8"))
     for l in t.strip().split("\n"):
         l = l.strip(" #*|-")
         if 3 <= len(l) <= 90 and not re.fullmatch(r"[\d\s.,/%°-]+", l):
@@ -144,7 +181,7 @@ def run(doc_id: str, modele: str = MODELE_OCR, forcer: bool = False, effort: str
     secs, source = [], ""
 
     if d.get("nature") == "scan":
-        secs = sections_par_titres_courants(doc_id, manifest, decalage)
+        secs = sections_par_titres_courants(doc_id, manifest, decalage, d.get("titre") or "")
         if secs:
             source = "titres courants des pages (OCR)"
     som = d.get("sommaire_pages")

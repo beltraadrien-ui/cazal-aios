@@ -1,6 +1,6 @@
-# INDEX de la base de savoir — 41 documents, 3431 pages
+# INDEX de la base de savoir — 46 documents, 5517 pages
 
-> Généré le 2026-10-05 depuis la base Supabase (projet `gdrqfeyeoqdxoiviggnf`). Les numéros sont des **pages imprimées**.
+> Généré le 2026-10-06 depuis la base Supabase (projet `gdrqfeyeoqdxoiviggnf`). Les numéros sont des **pages imprimées**.
 > Pour chercher : `select * from rechercher_savoir('mots clés', 5, '<id du document>')` (3ᵉ argument facultatif).
 
 ## Les documents (id · titre · pages)
@@ -20,6 +20,8 @@
 - `advansor-webinaire-agroalimentaire` · **Advansor — webinaire agroalimentaire et boissons (2026)** · formation · Advansor · 35 p. dans la base (natif, fr)
 - `advansor-webinaire-entrepots` · **Advansor — webinaire entrepôts efficaces (2026)** · formation · Advansor · 35 p. dans la base (natif, fr)
 - `advansor-webinaire-pac-reseaux-chaleur` · **Advansor — webinaire pompes à chaleur pour réseaux de chaleur (2026)** · formation · Advansor · 43 p. dans la base (natif, fr)
+- `efpme-cours-bases` · **EFPME — Cours de bases (froid)** · formation · EFPME · 163 p. dans la base (natif, fr)
+- `efpme-cours-perfectionnement` · **EFPME — Cours de perfectionnement (froid)** · formation · EFPME · 212 p. dans la base (natif, fr)
 - `co2-afce-fiche-04` · **AFCE — fiche 04 : le CO2 (R744)** · guide · AFCE · 5 p. dans la base (natif, fr)
 - `co2-bitzer-refrigerant-report-21` · **Bitzer — Refrigerant Report 21 (EN)** · guide · Bitzer · 46 p. dans la base (natif, en)
 - `co2-carel-commerce-detail` · **Carel — solutions CO2 pour le commerce de détail** · guide · Carel · 24 p. dans la base (natif, fr)
@@ -31,11 +33,14 @@
 - `co2-evapco-manuel-transcritique` · **EVAPCO — manuel de formation CO2 transcritique** · guide · EVAPCO · 42 p. dans la base (natif, fr)
 - `co2-pac-transcritique-manuel-technicien` · **Pompes à chaleur R744 transcritiques — manuel du technicien (EN)** · guide · 62 p. dans la base (natif, en)
 - `arbre-des-pannes` · **Arbre des pannes (une page)** · livre · 1 p. dans la base (scan, fr)
-- `certif-prepa` · **Préparation à la certification (fluides)** · livre · 87 p. dans la base (scan, fr)
+- `certif-prepa` · **Préparation à la certification (fluides)** · livre · 136 p. dans la base (scan, fr)
 - `depannage-froid` · **Dépannage froid** · livre · 55 p. dans la base (scan, fr)
+- `electrotechnique` · **Électrotechnique, 4e édition** · livre · 1238 p. dans la base (scan, fr)
 - `kotza` · **Le Kotza — Manuel du dépanneur, 6e édition** · livre · 1301 p. dans la base (scan, fr)
+- `manuel-frigobase` · **Manuel Frigobase** · livre · 406 p. dans la base (scan, fr)
 - `moteur-asynchrone-triphase` · **Moteur asynchrone triphasé (cours, École polytechnique de Montréal)** · livre · 83 p. dans la base (scan, fr)
 - `moteur-asynchrone-triphase-1` · **Moteur asynchrone triphasé — complément** · livre · 21 p. dans la base (scan, fr)
+- `moteurs-mono` · **Moteurs monophasés** · livre · 18 p. dans la base (scan, fr)
 - `technicien-du-froid` · **Technicien du froid — fiches pédagogiques** · livre · 160 p. dans la base (scan, fr)
 - `danfoss-ak-cc-55` · **Danfoss AK-CC 55 — fiche** · notice · Danfoss · 23 p. dans la base (natif, fr)
 - `danfoss-ak-cc-55-manuel` · **Danfoss AK-CC 55 — manuel** · notice · Danfoss · 80 p. dans la base (natif, fr)
@@ -1055,18 +1060,266 @@
 - Pannes du régleur de niveau d'huile — p. 422
   - Pannes du régleur de niveau d'huile — Si le niveau d'huile est trop élevé — p. 422
 
+## Électrotechnique, 4e édition (`electrotechnique`)
+
+- Chez le même éditeur — p. 3 à 6
+- Avant-propos — p. 7 à 11
+- 5 circuits simples à courant continu 51 — p. 12 à 14
+- 14 circuits magnétiques — p. 15
+- 18 induction électromagnétique 220 — p. 15 à 16
+- Partie II machines électriques et transformateurs — p. 17
+- 29 pertes, échauffement et rendement des machines électriques — p. 18 à 20
+- 38 moteurs monophasés 660 — p. 21 à 23
+- Hacheurs continu-continu — p. 24
+- 44 commande électronique des moteurs à courant alternatif 906 — p. 24
+- Problèmes – chapitre 1 — p. 24
+- Centrales hydrauliques — p. 25
+- Notions de mecanique et de thermodynamique — p. 25 à 26
+- 47 distribution de l'énergie électrique — p. 26 à 27
+- Nature de l'électricité — p. 27 à 31
+- Partie I — p. 28
+- 50 contrôleurs statiques de réseaux 1139 — p. 28
+- Notions de mécanique et de thermodynamique — p. 29 à 38
+- Tableau 2-1 composition atomique de quelques éléments — p. 32
+- Problèmes - chapitre 2 — p. 33
+- 3 — p. 34
+- LOI d'ohm — p. 35
+- Sources d’électricité — p. 36 à 38
+- Tableau 1-5 — formules du moment d’inertie J autour d’un AXE de rotation — p. 39 à 42
+- LOI d'ohm — p. 39 à 43
+- Thermodynamique — p. 43 à 44
+- Puissance et énergie électrique — p. 44 à 49
+- Notions de mécanique et de thermodynamique — p. 45
+- Problèmes - chapitre 4 — p. 50
+- 5 Circuits simples à courant continu — p. 51 à 54
+- Circuits simples à courant continu — p. 55 à 60
+- Appareils de mesure — p. 61 à 67
+- Problèmes - chapitre 6 — p. 68 à 69
+- Conventions de signes — p. 70 à 79
+- Problèmes - chapitre 7 — p. 80
+- Solution des circuits à courant continu — p. 81 à 92
+- Problèmes - chapitre 8 — p. 93 à 94
+- Solution des circuits à courant continu — p. 95
+- Isolants — p. 96 à 100
+- Tableau 9-2 — classes d’isolants — p. 101 à 102
+- Tableau 9-3 — propriétés des matériaux isolants — p. 103 à 104
+- Isolants — p. 105
+- 10 — p. 106
+- Conducteurs et résistances — p. 107
+- Tableau 10-1 — propriétés des conducteurs ronds en cuivre — p. 108
+- Conducteurs et résistances — p. 109
+- Tableau 10-2 — résistivité des conducteurs — p. 110
+- Conducteurs et résistances — p. 111 à 113
+- Isolement des conducteurs — p. 114
+- Conducteurs et résistances — p. 115 à 121
+- Résistances — p. 122
+- Conducteurs et résistances — p. 123 à 131
+- Piles et accumulateurs — p. 132 à 133
+- Tableau 11-1 — p. 134
+- Piles et accumulateurs — p. 135 à 137
+- Piles primaires — p. 138
+- Piles et accumulateurs — p. 139 à 144
+- Piles à combustible — p. 145 à 146
+- Piles et accumulateurs 147 — p. 147 à 148
+- 12 Magnétisme — p. 149 à 151
+- Exemple 12-1 — p. 152
+- Magnétisme — p. 153 à 156
+- Problèmes – chapitre 12 — p. 157
+- 13 — p. 158
+- Courants électriques et champs magnétiques — p. 159 à 169
+- Circuits magnétiques — p. 170 à 183
+- Problèmes – chapitre 14 — p. 184
+- Niveau avancé — p. 185
+- 15 — p. 186
+- Hystérisés et aimants permanents — p. 187 à 188
+- Hystérisis et aimants permanents — p. 189 à 190
+- Hystérésis et aimants permanents — p. 191 à 196
+- Problèmes – chapitre 15 — p. 197
+- 16 — p. 198
+- Forces électromagnétiques — p. 199 à 203
+- 2. Force sur les spires d’une bobine — p. 204 à 207
+- 17 — p. 208
+- Tension induite dans un conducteur — p. 209 à 219
+- 18 — p. 220
+- Induction électromagnétique — p. 221 à 225
+- Exemple 18-2 — p. 226
+- Induction électromagnétique — p. 227 à 229
+- Inductance — p. 230
+- Exemple 19-1 — p. 231 à 234
+- Inductance — p. 235 à 241
+- Exemple 19-8 — p. 242
+- Formules pour calcul d’inductances — p. 243 à 245
+- Problèmes - chapitre 19 — p. 246 à 247
+- Niveau avancé — p. 248
+- Michael faraday — p. 249
+- Phénomènes électrostatiques — p. 250 à 263
+- 21 — p. 264
+- Capacitance — p. 265 à 275
+- Tableau 21-4 ondes de choc — p. 276
+- Capacitance — p. 277
+- Problèmes – chapitre 21 — p. 278
+- Capacitance — p. 279
+- 22 — p. 280
+- Circuits simples à courant alternatif — p. 281 à 284
+- Circuit capacitif — p. 285 à 286
+- Circuits simples à courant alternatif — p. 287
+- Circuit inductif — p. 288 à 290
+- Circuits simples à courant alternatif — p. 291
+- Tableau 22-1 — propriétés des circuits R, L, C — p. 292 à 294
+- Exemple 22-8 — p. 295 à 296
+- Circuits simples à courant alternatif — p. 297 à 298
+- Diagrammes vectoriels — p. 299 à 303
+- Exemple 23-2 — p. 304 à 308
+- Diagrammes vectoriels — p. 309 à 312
+- Problèmes – chapitre 23 — p. 313
+- Niveau intermédiaire — p. 314
+- Diagrammes vectoriels — p. 315
+- Solution des circuits à courant alternatif — p. 316 à 321
+- Exemple 24-5 — p. 322
+- Solution des circuits à courant alternatif — p. 323 à 329
+- Exemples de vecteurs et de tensions triphasées — p. 330
+- Solution des circuits à courant alternatif — p. 331 à 333
+- 25 — p. 334 à 336
+- Puissance active, réactive et apparente — p. 337 à 339
+- Exemple 25-3 — p. 340
+- Puissance active, réactive et apparente — p. 341 à 349
+- Calcul vectoriel — p. 350
+- Puissance active, réactive et apparente — p. 351 à 355
+- 26 — p. 356
+- Circuits triphasés — p. 357 à 372
+- Problèmes – chapitre 26 — p. 373 à 374
+- Partie II — p. 375 à 376
+- 27 — p. 377 à 380
+- Génératrices à courant continu — p. 381 à 383
+- Propriétés d’une génératrice à c.c. — p. 384
+- Génératrices à courant continu — p. 385 à 393
+- Problèmes – chapitre 27 — p. 394
+- Niveau avancé — p. 395
+- 28 — p. 396
+- Moteurs à courant continu — p. 397
+- Exemple 28-1 — p. 398
+- Moteurs à courant continu — p. 399 à 413
+- Principes fondamentaux des entraînements électriques — p. 414
+- Moteurs à courant continu — p. 415 à 421
+- 29 — p. 422
+- Pertes, échauffement, rendement et dimensions des machines électriques — p. 423
+- Les pertes dans le fer sont attribuables au phénomène — p. 424
+- Pertes, échauffement, rendement et dimensions des machines électriques — p. 425 à 427
+- Tableau 29-1 pertes et rendement d’un moteur à c.c. — p. 428
+- Pertes, échauffement, rendement et dimensions des machines électriques — p. 429 à 435
+- Exemple 29-6 — p. 436
+- Pertes, échauffement, rendement et dimensions des machines électriques — p. 437 à 439
+- 30 Transformateurs — p. 440
+- Transformateurs — p. 441 à 443
+- Le transformateur idéal — p. 444
+- Transformateurs — p. 445 à 462
+- Forme d'onde du courant d'excitation — p. 463 à 464
+- Transformateurs — p. 465 à 474
+- Problèmes – chapitre 30 — p. 475 à 476
+- Transformateurs — p. 477
+- Transformateurs spéciaux — p. 478 à 490
+- Exemple 31-5 — p. 491 à 492
+- Transformateurs spéciaux — p. 493 à 503
+- Transformateurs triphasés — p. 504 à 521
+- Problèmes – chapitre 32 — p. 522
+- Transformateurs triphasés — p. 523
+- 33 — p. 524
+- Moteurs asynchrones triphasés — p. 525 à 554
+- Nikola tesla — p. 555
+- Applications des machines asynchrones triphasées — p. 556 à 584
+- La machine asynchrone — p. 585 à 586
+- La machine asynchrone: circuit équivalent et variation de la vitesse — p. 587 à 596
+- Variation de la vitesse d’un moteur asynchrone — p. 597 à 598
+- La machine asynchrone: circuit équivalent et variation de la vitesse — p. 599 à 615
+- 36 — p. 616
+- Alternateurs triphasés — p. 617 à 639
+- Problèmes – chapitre 36 — p. 640
+- Alternateurs triphasés — p. 641 à 642
+- Moteurs synchrones — p. 643 à 656
+- Problèmes – chapitre 37 — p. 657 à 658
+- Moteurs synchrones — p. 659
+- 38 — p. 660
+- Moteurs monophasés — p. 661 à 676
+- Circuit équivalent d’un moteur monophasé à cage — p. 677 à 678
+- Moteurs monophasés — p. 679 à 681
+- Problèmes – chapitre 38 — p. 682 à 683
+- 39 — p. 684 à 686
+- Moteurs PAS à PAS — p. 687 à 691
+- Specifications — p. 692 à 694
+- Moteurs PAS à PAS 695 — p. 695
+- Enroulement unipolaire. — p. 696 à 698
+- Moteurs PAS à PAS — p. 699 à 703
+- Partie III — p. 704 à 705
+- 40 — p. 706
+- Tableau 40-1 composants de base pour circuits de commande — p. 707 à 708
+- Commande industrielle des moteurs — p. 709
+- Tableau 40-1 — p. 710 à 712
+- Commande industrielle des moteurs — p. 713 à 715
+- Tableau 40-2 — symboles graphiques pour diagrammes électriques — p. 716
+- Commande industrielle des moteurs — p. 717 à 728
+- Automates programmables — p. 729 à 730
+- Commande industrielle des moteurs — p. 731 à 741
+- Modernisation d’une industrie — p. 742 à 746
+- Commande industrielle des moteurs — p. 747
+- Problèmes – chapitre 40 — p. 748
+- Commande industrielle des moteurs — p. 749 à 750
+- Les harmoniques — p. 751 à 759
+- Correction du facteur de puissance — p. 760
+- Effet des harmoniques — p. 761
+- Exemple 41-5 — p. 762
+- Les harmoniques — p. 763 à 766
+- Exemple 41-9 — p. 767 à 768
+- Les harmoniques — p. 769 à 780
+- Problèmes – chapitre 41 — p. 781 à 782
+- Les harmoniques — p. 783
+- 42 — p. 784
+- Électronique de puissance — p. 785 à 793
+- Exemple 42-3 — p. 794
+- Électronique de puissance — p. 795 à 799
+- Le thyristor — p. 800
+- Électronique de puissance — p. 801 à 803
+- Circuits de base utilisant des thyristors — p. 804
+- Tableau 42-3 — p. 805 à 811
+- Convertisseur triphasé contrôlé à thyristors — p. 812
+- Électronique de puissance — p. 813 à 826
+- Hacheurs continu-continu — p. 827 à 830
+- Électronique de puissance — p. 831 à 872
+- 43 — p. 873 à 874
+- Entraînement électronique des moteurs à courant continu — p. 875 à 883
+- Figure 43-15 — p. 884
+- Entraînement électronique des moteurs à courant continu — p. 885 à 889
+- Exemple 43-7 — p. 890
+- Entraînement électronique des moteurs à courant continu — p. 891 à 894
+- Exemple 43-10 — p. 895 à 896
+- Entraînement électronique des moteurs à courant continu — p. 897 à 903
+- Niveau avancé — p. 904
+- Entraînement électronique des moteurs à courant continu — p. 905
+- Commande électronique des moteurs à courant alternatif — p. 906 à 907
+- Variateurs de vitesse à commutation naturelle — p. 908
+- Commande électronique des moteurs à courant alternatif — p. 909 à 917
+- Figure 44-17 — p. 918
+- Commande électronique des moteurs à courant alternatif — p. 919 à 926
+- Variateurs de vitesse utilisant des onduleurs autonomes — p. 927 à 928
+- Commande électronique des moteurs à courant alternatif — p. 929 à 933
+- Exemple 44-5 — p. 934
+- Commande électronique des moteurs à courant alternatif — p. 935 à 936
+- Variateurs de vitesse à MLI — p. 937 à 938
+- Commande électronique des moteurs à courant alternatif — p. 939
+- Exemple 44-6 — p. 940
+- Commande électronique des moteurs à courant alternatif — p. 941
+- Tableau 44-1 — harmoniques ligne à ligne — p. 942
+- Commande électronique des moteurs à courant alternatif — p. 943 à 949
+- Contrôle vectoriel — p. 950
+- Commande électronique des moteurs à courant alternatif — p. 951 à 956
+
 ## Le Kotza — Manuel du dépanneur, 6e édition (`kotza`)
 
 - Manuel pratique de dépannage — p. 0
-- Avertissement — p. 1 à 2
-- Sommaire — p. 3
+- Avertissement — p. 1 à 3
 - Quiz n°6 — p. 4
-- Quiz n°10 — p. 5
-- Sommaire — p. 6
-- Quiz n°26 — p. 7
-- Sommaire — p. 8 à 9
-- Quiz n°52 — p. 10
-- Sommaire — p. 11
+- Quiz n°10 — p. 5 à 6
+- Quiz n°26 — p. 7 à 9
+- Quiz n°52 — p. 10 à 11
 - La régulation PID — p. 12
 - La relation pression-température — p. 13
 - Froid — p. 14 à 17
@@ -1128,8 +1381,7 @@
 - Le train thermostatique du détendeur est percé. — p. 114
 - Panne du détendeur trop petit : aspect pratique — p. 115 à 116
 - Le diaphragme du distributeur est trop petit. — p. 117
-- Le bulbe du détendeur est mal positionné. — p. 118 à 119
-- Notes personnelles — p. 120
+- Le bulbe du détendeur est mal positionné. — p. 118 à 120
 - Quiz n°6 — p. 121
 - Problème des fuites de fluide frigorigène — p. 122 à 123
 - Recherche des fuites — p. 124 à 127
@@ -1150,9 +1402,7 @@
 - Panne de l’évaporateur trop petit — p. 166 à 167
 - C) Répercussions sur l’ensemble compresseur / condenseur — p. 168
 - D) Évaporateur trop petit, 2 familles distinctes de pannes — p. 169
-- Panne de l’évaporateur trop petit — p. 170
-- Panne de l’evaporateur trop petit — p. 171
-- Panne de l’évaporateur trop petit — p. 172 à 175
+- Panne de l’évaporateur trop petit — p. 170 à 175
 - Correction de l’exercice n° 19 — p. 176 à 177
 - La perte de charge du réseau aéraulique — p. 178 à 180
 - Le ventilateur de l’évaporateur tourne à l’envers. — p. 181 à 182
@@ -1308,8 +1558,7 @@
 - Correction de l’exercice 79 — p. 460 à 461
 - Exercice 80 — p. 462
 - Exercice 82 — p. 463 à 464
-- Correction de l’exercice 80 — p. 465
-- Notes personnelles — p. 466
+- Correction de l’exercice 80 — p. 465 à 466
 - Les moteurs monophasés — p. 467 à 469
 - Un enroulement peut être à la masse. — p. 470
 - Quiz n°21 — p. 471 à 472
@@ -1357,8 +1606,7 @@
 - Démarrage statorique — p. 560
 - Exercice n°112 — p. 561
 - Correction de l’exercice n° 112 — p. 562
-- Par résistance électrolytique — p. 563
-- Notes personnelles — p. 564
+- Par résistance électrolytique — p. 563 à 564
 - Démarrage étoile-triangle — p. 565
 - Correction de l’exercice n° 113 — p. 566 à 570
 - Démarrage étoile-triangle — p. 571
@@ -1402,8 +1650,7 @@
 - Correction de l’exercice n° 138 — p. 630 à 631
 - La technologie VRV 3 tubes — p. 632 à 633
 - Correction de l’exercice n° 140 — p. 634 à 638
-- La technologie VRV 3 tubes — p. 639
-- Notes personnelles — p. 640
+- La technologie VRV 3 tubes — p. 639 à 640
 - Quiz n°31 — p. 641
 - Les moteurs triphasés à 2 vitesses — p. 642
 - Exercice n° 143 — p. 643
@@ -1423,8 +1670,7 @@
 - Bien que le niveau d'huile soit correct, le pressostat coupe. — p. 680
 - B) le pressostat d’huile coupe : niveau d’huile trop faible. — p. 681 à 682
 - Le niveau d'huile est trop faible : test de retour d'huile. — p. 683 à 684
-- Quiz n°35 — p. 685
-- Notes personnelles — p. 686
+- Quiz n°35 — p. 685 à 686
 - La vanne a EAU pressostatique — p. 687
 - Fonctionnement de la vanne a EAU pressostatique — p. 688
 - Réglage de la vanne a EAU pressostatique — p. 689 à 690
@@ -1549,6 +1795,498 @@
 - Courbe de réseau — p. 868
 - Mesure de la HMT a débit NUL — p. 869
 - Correction de l’exercice n°215 — p. 870 à 871
+- Quiz n°49 — p. 872
+- Pannes frigorifiques des — p. 873
+- Correction de l’exercice n°216 — p. 874
+- Exercice n° 217 — p. 875
+- Correction de l’exercice n°217 — p. 876
+- Pannes frigorifiques des refroidisseurs de liquide — p. 877
+- Correction de l’exercice n°218 — p. 878
+
+## Manuel Frigobase (`manuel-frigobase`)
+
+- Manuel — p. 1
+- Présentation — p. 1
+  - Manuel — frigobase — p. 1
+  - Présentation — Les bases — p. 1
+- Les bases — p. 2
+- Sommaire — p. 3 à 9
+  - Sommaire — La notice technique : les puissances — p. 4
+  - Sommaire — Problèmes soulevés par les nouveaux fluides frigorigènes — p. 5 à 8
+- Le réfrigérateur, introduction — p. 7
+  - Le réfrigérateur, introduction — 1. Le rôle du réfrigérateur — p. 7
+- Les bases — p. 8 à 11
+  - Sommaire — Exercice .................................................... 304 — p. 9
+  - Les bases — 3. Qu’est-ce que la chaleur ? — p. 9 à 11
+- 4. Le transfert de chaleur — p. 11
+  - 4. Le transfert de chaleur — Le réfrigérateur, introduction — p. 11
+- Les bases — p. 12 à 14
+  - Les bases — Le réfrigérateur, introduction — p. 12 à 14
+- Exercice de synthèse — p. 15
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 15
+- Le phénomène d’ébullition — p. 16
+  - Le phénomène d’ébullition — 1. Expérience — p. 16
+- Les bases — p. 17 à 25
+  - Les bases — 2. Étude — p. 18
+  - Les bases — Le phénomène d’ébullition — p. 19 à 22
+  - Les bases — 3. Conclusion — p. 23 à 25
+- Le phénomène d’ébullition — p. 26
+- L’eau bout-elle toujours à 100 °c ? — p. 27
+- Les bases — p. 28 à 31
+- La relation pression - température — p. 31
+- Les bases — p. 32 à 40
+  - Les bases — Pression relative et pression absolue — p. 38 à 40
+- L’eau est-elle un BON fluide frigorigène ? — p. 41
+  - L’eau est-elle un BON fluide frigorigène ? — Rappelez-vous ces 2 règles fondamentales — p. 41
+- Les bases — p. 42
+- Le fluide frigorigène R22 — p. 43
+- Les bases — p. 44 à 49
+- Les manomètres du frigoriste — p. 50
+  - Les manomètres du frigoriste — 1) Pour quelle raison le manomètre indique-t-il 0 bar quand il n’est pas raccordé ? — p. 50
+- Les bases — p. 51 à 52
+  - Les bases — 2) Pour quelle raison l'aiguille indique-t-elle −42 °C sur l'échelle de température quand le manomètre n'est pas raccordé ? — p. 51
+  - Les bases — 3) Pour quelle raison a-t-on mis une échelle de température sur ce manomètre de frigoriste ? — p. 52
+- 4) La température indiquée par l’aiguille du manomètre correspond — p. 53 à 54
+- Les bases — p. 55
+- L’évaporation du R22 — p. 55
+  - Les bases — 5) Quelle est la plage d’utilisation de ce manomètre, c’est à dire quelles sont les pressions minimale et maximale d’utilisation ? — p. 55
+- Les bases — p. 56 à 61
+  - Les bases — QUE se passe-t-il dans l’échangeur froid (le freezer) ? — p. 58
+  - Les bases — [FIGURE : schéma-circuit] — p. 59 à 61
+- Exercice de synthèse — p. 61
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 61
+- Le phénomène de condensation — p. 62
+- Les bases — p. 63 à 69
+  - Les bases — Comment expliquer ce phénomène ? — p. 64 à 68
+- Le rôle du compresseur — p. 67 à 68
+- Les bases — p. 69 à 73
+  - Les bases — Le phénomène de condensation est donc très exactement l’inverse du phénomène d’évaporation. — p. 69
+  - Les bases — L’appareil qui permet de comprimer le fluide frigorigène s’appelle le compresseur. — p. 69
+  - Les bases — Figure A, le compresseur est à l’arrêt et le piston est positionné tout en bas du cylindre (ce point particulier, en-dessous duquel le piston ne peut pas descen — p. 70 à 71
+  - Les bases — Le rôle du compresseur — p. 72 à 73
+- Le rôle du détendeur — p. 74
+- Relation pression-température du R22 — p. 75
+- Les bases — p. 76
+  - Les bases — Le rôle du détendeur — p. 76
+- L’appareil qui provoque une importante chute de pression (c’est à — p. 77 à 78
+  - L’appareil qui provoque une importante chute de pression (c’est à — Le rôle du détendeur — p. 77 à 78
+- Les bases — p. 79 à 84
+  - Les bases — Le rôle du détendeur — p. 79 à 82
+  - Les bases — Résumons-nous — p. 83
+  - Les bases — Le rôle du détendeur — p. 84
+- Exercice de synthèse — p. 85
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 85
+- Le cycle frigorifique — p. 86
+  - Le cycle frigorifique — L’évaporateur — p. 86
+- Le compresseur — p. 87
+- Le circuit — p. 88
+- Exercice 1 — p. 89
+  - Exercice 1 — 1) Sur un réfrigérateur — p. 89
+- Le circuit — p. 90
+  - Le circuit — Correction de l’exercice 1 — p. 90
+- Exercice 2 — p. 91
+- Le circuit — p. 92
+- En résumé — p. 93
+- Le circuit — p. 94
+- Conclusion — p. 95
+- Le circuit — p. 96
+  - Le circuit — EXERCICE DE SYNTHÈSE : Ces affirmations sont-elles exactes ? — p. 96
+- Du réfrigérateur au climatiseur — p. 97
+- Le circuit — p. 98 à 102
+- Le climatiseur monobloc — p. 103
+- Le circuit — p. 103 à 113
+  - Le circuit — à l’extérieur — p. 105 à 112
+  - Le circuit — Corrigé de l’exercice — p. 113
+- Le climatiseur split système — p. 114
+- Le circuit — p. 115 à 119
+  - Le circuit — Commençons par examiner l’unité intérieure — p. 115
+  - Le circuit — Repère 11 : La grille. — p. 116
+  - Le circuit — Remarques — p. 117 à 118
+  - Le circuit — Maintenant que vous avez bien compris le principe de fonctionnement d’un climatiseur, nous allons pouvoir passer aux choses sérieuses et parler des pressions et — p. 119
+- Le compresseur à pistons — p. 120 à 121
+  - Le compresseur à pistons — Fonctionnement normal — p. 120
+  - Le compresseur à pistons fonctionnement normal — Le circuit — p. 121
+- Le condenseur à AIR : fonctionnement normal — p. 122
+- Le circuit — p. 123 à 124
+  - Le circuit — Point A — p. 124
+- Le condenseur a AIR : fonctionnement normal — p. 125
+- Le circuit — p. 126
+- Du point A au point B — p. 127
+- Le circuit — p. 128 à 130
+  - Le circuit — Le condenseur à AIR : fonctionnement normal — p. 128 à 129
+  - Le circuit — Du point B au point C — p. 130
+- Du point C au point D — p. 131
+- Le circuit — p. 132
+  - Le circuit — Du point D au point E — p. 132
+- Fonctionnement du condenseur du côté fluide frigorigène : Résumé. — p. 133
+- Le circuit — p. 134
+- Maintenat, regardons ce qui se passe du côté de l’air. — p. 135
+  - Maintenat, regardons ce qui se passe du côté de l’air. — Le condenseur à AIR : fonctionnement normal — p. 135
+- Le circuit — p. 136 à 143
+  - Le circuit — Évolution du fluide frigorigène et de l’air au passage du condenseur — p. 137
+  - Le circuit — ΔT₁ = Tas - Tae = 5 à 10°C — p. 138 à 139
+  - Le circuit — Exercice de synthèse — p. 140 à 143
+- Le détendeur capillaire : fonctionnement normal — p. 144
+- Le circuit — p. 145 à 146
+  - Le circuit — La résistance du capillaire dépend de son diamètre. — p. 145 à 146
+- Le détendeur capillaire : fonctionnement normal — p. 147
+  - Le détendeur capillaire : fonctionnement normal — Le débit de fluide frigorigène, et donc la puissance frigorifique, dépendent de deux facteurs : les caractéristiques dimensionnelles du capillaire et la différe — p. 147
+- Le circuit — p. 148 à 150
+  - Le circuit — Le détendeur capillaire : fonctionnement normal — p. 148 à 150
+- Exercice de synthese — p. 151 à 152
+  - Exercice de synthese — Ces affirmations sont-elles exactes ? — p. 151 à 152
+- L’évaporateur : fonctionnement normal — p. 153
+- Frigobase — p. 153
+  - Frigobase — Le froid et la “clim” expliqués au débutant — p. 153
+  - L’évaporateur : fonctionnement normal — L’évaporateur : fonctionnement normal — p. 153
+- Le circuit — p. 154 à 156
+  - Le circuit — Point F — p. 155
+  - Le circuit — Du point F au point H — p. 156
+- Du point H au point I — p. 157
+- Le circuit — p. 158
+- Résumé du fonctionnement de l’évaporateur coté fluide frigorigène — p. 159
+- Le circuit — p. 160
+  - Le circuit — Texte explicatif — p. 160
+- Maintenant, nous allons regarder comment évolue l’air lors de sa traversée de l’évaporateur. — p. 161
+- Le circuit — p. 162 à 163
+  - Le circuit — En résumé — p. 162 à 163
+- Corrigé de l’exercice — p. 164
+- Le circuit — p. 165
+  - Le circuit — Ces affirmations sont-elles exactes ? — p. 165
+- Circuit complet : fonctionnement normal — p. 166
+  - Circuit complet : fonctionnement normal — Côté BP (Basse Pression) — p. 166
+- Le circuit — p. 167
+  - Le circuit — Evolution des pressions dans un circuit frigorifique — p. 167
+- La notice technique : généralités — p. 168
+- Le circuit — p. 169
+- La notice technique : les puissances — p. 170
+  - La notice technique : les puissances — Température sèche et température humide — p. 170
+- Le circuit — p. 171 à 177
+  - Le circuit — La puissance frigorifique — p. 174 à 176
+- [texte imprimé à l'envers] — p. 177
+  - Le circuit — La puissance de déshumidification — p. 177
+- Le circuit — p. 178 à 180
+  - Le circuit — Le problème de l’évacuation des condensats doit impérativement être analysé lors du choix de l’emplacement de l’unité intérieure. — p. 180
+- La puissance absorbée — p. 181
+- Le circuit — p. 182
+  - Le circuit — Exercice de synthese — p. 182
+- Notice technique : l’unité intérieure — p. 183
+  - Notice technique : l’unité intérieure — Grandeurs — p. 183
+- Le circuit — p. 184 à 188
+  - Le circuit — Les unités consoles — p. 184
+  - Le circuit — [texte imprimé à l'envers] — p. 185
+  - Le circuit — Les dimensions, le poids — p. 186
+  - Le circuit — La commande à distance — p. 187
+  - Le circuit — Arrêt : pour arrêter le climatiseur — p. 188
+- Les modes de fonctionnement d’un climatiseur — p. 189
+  - Les modes de fonctionnement d’un climatiseur — Le fonctionnement en ventilation (FAN) — p. 189
+- Le fonctionnement en chauffage (HEAT) — p. 190
+  - Le fonctionnement en chauffage (HEAT) — Cas des résistances électriques — p. 190
+- Le circuit — p. 191 à 192
+  - Le circuit — Le niveau sonore — p. 191
+  - Le circuit — Les ventilateurs — p. 192
+- Les filtres — p. 193
+- La notice technique — p. 194
+  - La notice technique — L’unité extérieure — p. 194
+- Les dimensions, le poids, le niveau sonore, les ventilateurs — p. 195 à 196
+- Les compresseurs rotatifs — p. 197
+- Fonctionnement du compresseur rotatif — p. 197 à 198
+  - Les compresseurs rotatifs — Le circuit — p. 197
+  - Fonctionnement du compresseur rotatif — Figure A — p. 197 à 198
+- Le circuit — p. 199
+- L’huile frigorigène — p. 199
+  - Le circuit — Le réfrigérant à utiliser — p. 199
+- Les divers raccordements — p. 200
+  - Les divers raccordements — Les tubes de qualité frigorifique — p. 200
+- Le circuit — p. 201 à 208
+  - Le circuit — Les raccords frigorifiques de type Quick — p. 201
+  - Le circuit — Les divers raccordements — p. 202 à 205
+  - Le circuit — Côté unité extérieure, — p. 206
+  - Le circuit — Côté unité intérieure — p. 207
+  - Le circuit — Les liaisons frigorifiques — p. 208
+- La différence de dénivelé — p. 209
+  - La différence de dénivelé — Qu’est-ce que la pré-détente ? — p. 209
+- Le circuit — p. 210 à 211
+  - Le circuit — D'où viennent les chutes de pression ? — p. 210 à 211
+- L’isolation des tuyauteries — p. 212
+  - L’isolation des tuyauteries — Le tube d’aspiration — p. 212
+- Faut-il isoler le tube liquide ? — p. 213
+  - Faut-il isoler le tube liquide ? — Quelle est la température du liquide ? — p. 213
+- Le circuit — p. 214
+  - Le circuit — Les climatiseurs réversibles — p. 214
+- Exercice de synthèse — p. 215
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 215
+- L’installation du split-système — p. 216
+  - L’installation du split-système — L’installation de l’unité intérieure — p. 216
+- Le circuit — p. 217 à 218
+  - Le circuit — L’installation de l’unité extérieure — p. 217
+  - Le circuit — Les liaisons — p. 218
+- Raccordements Flare, utilisation des vannes de service — p. 219
+  - Raccordements Flare, utilisation des vannes de service — En position 1 — p. 219
+- Le circuit — p. 220 à 223
+  - Le circuit — L’utilisation de la prise de pression — p. 221
+  - Le circuit — Vanne de service avec prise de pression sans valve — p. 222
+  - Le circuit — En position 2 — p. 223
+- Les manipulations frigorifiques — p. 224
+  - Les manipulations frigorifiques — [FIGURE : schéma d’unités split et liaisons frigorifiques] — p. 224
+- La purge de l’air par la méthode de la chasse — p. 225
+- L’évacuation de l’air par la technique du tirage au vide — p. 226
+- Le circuit — p. 227 à 230
+  - Le circuit — Le Manifold du frigoriste — p. 227
+  - Le circuit — Fermer la vanne HP et ouvrir la vanne BP du manifold. — p. 228
+  - Le circuit — Laisser tirer au vide pendant que vous terminez les autres raccordements. — p. 229
+  - Le circuit — Vérifier le raccordement électrique. — p. 230
+- Exercice de synthèse — p. 231
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 231
+- Le contrôle des conditions de fonctionnement — p. 232
+  - Le contrôle des conditions de fonctionnement — Montage des manomètres - Cas de Raccordements Quick. — p. 232
+- Le circuit — p. 233 à 234
+  - Le circuit — Contrôle du fonctionnement côté unité intérieure. — p. 233
+  - Le circuit — Le contrôle des conditions normales de fonctionnement — p. 234
+- Démontage des manomètres (prise de pression avec valve) — p. 235
+- Le circuit — p. 236 à 238
+- FRIGODEP4 — p. 239
+- Interprétation des valeurs de la surchauffe et du sous refroidissement — p. 239
+  - FRIGODEP4 — L’apprentissage du dépannage pour Windows 95/98/Me/NT/2000/XP — p. 239
+  - Interprétation des valeurs de la surchauffe et du sous refroidissement — La surchauffe. — p. 239
+- Dépannage — p. 240
+  - Dépannage — Surchauffe trop faible (inférieure à 5°C) — p. 240
+- Le sous refroidissement — p. 241
+  - Le sous refroidissement — En fonctionnement normal, les vapeurs à environ 70°C pénètrent dans le condenseur (point A). — p. 241
+- Dépannage — p. 242
+  - Dépannage — Sous refroidissement trop faible (inférieur à 4°C) — p. 242
+- Exercice de synthèse — p. 243
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 243
+- Les nouveaux fluides frigorigènes — p. 244
+  - Les nouveaux fluides frigorigènes — [FIGURE : caricature R11 / R22 / R502] — p. 244
+- Problèmes généraux posés par les HFC sur les installations neuves. — p. 245
+  - Problèmes généraux posés par les HFC sur les installations neuves. — Les huiles — p. 245
+- Les bases — p. 246
+- Le circuit — p. 247
+- Glissement, surchauffe et sous refroidissement avec le R407C — p. 248
+  - Glissement, surchauffe et sous refroidissement avec le R407C — Sous refroidissement avec le R407C — p. 248
+- B) Mesure de la surchauffe avec le R407C. — p. 249
+- Dépannage — p. 250 à 251
+- Exercice de synthèse — p. 252
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 252
+- C) Mesure du sous refroidissement avec le R407C. — p. 253
+  - C) Mesure du sous refroidissement avec le R407C. — 18 bar — p. 253
+- Dépannage — p. 254
+- Exercice de synthèse — p. 255
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 255
+- Glissement, surchauffe et sous refroidissement avec le R410A — p. 256
+  - Glissement, surchauffe et sous refroidissement avec le R410A — Dépannage — p. 256
+- Dépannage — p. 257 à 258
+- Basse pression anormalement faible — p. 259
+  - Basse pression anormalement faible — Notez également qu’on appelle “pannes BP” toutes les pannes provoquant une BP trop faible. A l’inverse, on appelle “pannes HP” toutes celles entraînant une HP t — p. 259
+- La panne de la pré-détente — p. 260
+  - La panne de la pré-détente — Analyse de la panne. — p. 260
+- Prédétente : explication des symptômes. — p. 261
+  - Prédétente : explication des symptômes. — Manque de puissance frigorifique. — p. 261
+- Dépannage — p. 262
+  - Dépannage — Symptômes caractéristiques de la panne de la pré-détente. — p. 262
+- Panne de la pré-détente : quelques exemples. — p. 263
+  - Panne de la pré-détente : quelques exemples. — La vanne liquide est étranglée — p. 263
+- Dépannage — p. 264
+  - Dépannage — La ligne liquide traverse un endroit très chaud — p. 264
+- La panne du détendeur trop petit — p. 265 à 266
+  - La panne du détendeur trop petit — Analyse de la panne. — p. 265 à 266
+- Dépannage — p. 267
+- Sympômes caractéristiques de la panne du détendeur trop petit. — p. 267
+  - Sympômes caractéristiques de la panne du détendeur trop petit. — Remarque — p. 267
+  - Dépannage — Détendeur trop petit : explication des symptômes. — p. 267
+- Dépannage — p. 268
+  - Dépannage — Panne du détendeur trop petit : quelques exemples. — p. 268
+- La HP est trop faible — p. 269
+  - La HP est trop faible — Remarques — p. 269
+- La panne du manque de fluide — p. 270
+  - La panne du manque de fluide — Analyse de la panne. — p. 270
+- Manque de Fluide : explication des symptômes. — p. 271
+  - Manque de Fluide : explication des symptômes. — Surchauffe trop élevée. — p. 271
+- Dépannage — p. 272
+  - Dépannage — Symptômes caractéristiques de la panne du manque de fluide. — p. 272
+- La panne du manque de fluide : aspect pratique. — p. 273 à 274
+  - La panne du manque de fluide : aspect pratique. — La fuite — p. 273 à 274
+- La panne de l’évaporateur trop petit — p. 275
+- Evaporateur trop petit : explication des symptômes. — p. 275
+  - Evaporateur trop petit : explication des symptômes. — Le manque de débit d’air — p. 275
+  - La panne de l’évaporateur trop petit — Analyse de la panne. — p. 275
+- Dépannage — p. 276
+  - Dépannage — Symptômes caractéristiques de la panne de l’évaporateur trop petit. — p. 276
+- Panne de l’évaporateur trop petit : quelques exemples. — p. 277
+  - Panne de l’évaporateur trop petit : quelques exemples. — Les filtres sont sales — p. 277
+- Dépannage — p. 278
+  - Dépannage — Il y a un recyclage parasite — p. 278
+- Exercice de synthèse — p. 279
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 279
+- La panne du condenseur trop petit — p. 280
+  - La panne du condenseur trop petit — Analyse de la panne — p. 280
+- Condenseur trop petit : deux familles de pannes. — p. 281
+- Dépannage — p. 282
+  - Dépannage — Symptômes caractéristiques des pannes HP. — p. 282
+- L’emplacement du condenseur est mal choisi — p. 283
+  - L’emplacement du condenseur est mal choisi — L’hélice du ventilateur patine sur son arbre — p. 283
+- Dépannage — p. 284
+  - Dépannage — Le ventilo-condenseur tourne à l’envers — p. 284
+- La panne du condenseur trop petit — p. 285
+  - La panne du condenseur trop petit — Il va à une prise d’air entre le condenseur et le ventilateur — p. 285
+- Dépannage — p. 286
+  - Dépannage — De nombreuses ailettes sont écrasées — p. 286
+- La panne de l'excès de charge — p. 287
+  - La panne de l'excès de charge — Analyse de la panne — p. 287
+- Dépannage — p. 288
+  - Dépannage — Excès de charge : explication des symptômes. — p. 288
+- La charge en fluide frigorigène — p. 289
+- La panne des incondensables — p. 290
+  - La panne des incondensables — Quelle est l’influence des incondensables ? — p. 290
+- Comment des incondensables peuvent-ils pénétrer dans le circuit ? — p. 291
+- Dépannage — p. 292
+  - Dépannage — Analyse de la panne — p. 292
+- Panne des incondensables : explication des symptômes. — p. 293
+  - Panne des incondensables : explication des symptômes. — La panne des incondensables présente exactement les mêmes symptômes que la panne de l’excès de charge étudiée page 287. — p. 293
+- Dépannage — p. 294
+- La panne du compresseur trop petit — p. 295
+  - La panne du compresseur trop petit — Analyse de la panne. — p. 295
+- Panne du compresseur trop petit : explication des symptômes — p. 296
+  - Panne du compresseur trop petit : explication des symptômes — Manque de puissance frigorigifique. — p. 296
+- Symptômes caractéristiques. — p. 297
+- Récapitulatif des principales pannes frigorifiques. — p. 298
+  - Récapitulatif des principales pannes frigorifiques. — Récapitulatif des principales pannes frigorifiques. — p. 298
+- Exercice de synthèse — p. 299
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 299
+- Dépannage — p. 300
+  - Dépannage — Récapitulatif des principales pannes frigorifiques — p. 300
+- Le climatiseur réversible — p. 301
+- Le circuit — p. 302
+- Le fonctionnement « hiver » — p. 303
+- Exercice — p. 304
+  - Exercice — Été — p. 304
+- Correction de l’exercice — p. 305
+- Dépannage — p. 306
+  - Dépannage — Cycle frigorifique « été » — p. 306
+- Quelques risques de pannes des vannes à 4 voies — p. 307
+- Dépannage — p. 308
+- Depannage — p. 309
+- Le circuit — p. 310
+  - Le circuit — Or, l’échauffement d’un récepteur électrique dépend du carré de l’intensité. Dans le cas de la bobine, cela signifie qu’elle s’échauffe alors 9 fois plus que la — p. 310
+- La bouteille anti-coups de liquide — p. 311
+- Le circuit — p. 312
+  - Le circuit — Le filtre déshydrateur bidirectionnel — p. 312
+- Exercice de synthèse — p. 313
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 313
+- Les moteurs monophasés — p. 314
+  - Les moteurs monophasés — Les moteurs monophasés, généralités — p. 314
+- Dépannage — p. 315
+- Comment tester électriquement un moteur ? — p. 316
+  - Comment tester électriquement un moteur ? — Un des enroulements peut être coupé. — p. 316
+- Dépannage — p. 317 à 318
+  - Dépannage — Un enroulement peut être à la masse. — p. 317
+  - Dépannage — Les Condensateurs de marche et de démarrage — p. 318
+- Comment reconnaître le type de condensateur ? — p. 319
+- Dépannage — p. 320
+- Comment tester les condensateurs ? — p. 321
+  - Comment tester les condensateurs ? — Depannage — p. 321
+- Dépannage — p. 322
+- ATTENTION : Afin d’éviter tout risque d’accident, il faut impérativement tester sérieusement le condensateur à l’ohmmètre avant de réaliser ce montage. — p. 323
+- Les systèmes de démarrage utilisés en clim de confort — p. 324 à 325
+  - Les systèmes de démarrage utilisés en clim de confort — Démarrage avec un condensateur permanent — p. 324 à 325
+- Les bases — p. 326
+  - Les bases — Exercice de synthèse — p. 326
+- Moteurs monophasés multi-vitesses — p. 327
+  - Moteurs monophasés multi-vitesses — Variation de la vitesse par réduction de la tension. — p. 327
+- Les bases — p. 328 à 329
+  - Les bases — Moteurs monophasés multi-vitesses — p. 328
+  - Les bases — Moteur du compresseur — p. 329
+- Dépannage — p. 330
+  - Dépannage — Correction de l’exercice — p. 330
+- Câblage du climatiseur Window — p. 331
+  - Câblage du climatiseur Window — [texte imprimé à l'envers] — p. 331
+- Les bases — p. 332
+  - Les bases — Quelques rappels sur le courant alternatif. — p. 332
+- Variation de vitesse par hachage du courant. — p. 333
+- Les bases — p. 334 à 338
+  - Les bases — Quelques notions d’électronique. — p. 334
+  - Les bases — En 1, alimentée en 220 V alternatif, — p. 335 à 336
+  - Les bases — Cependant, dès la mise sous tension, l’ampoule 220 V~ grille bien que l’alimentation alternative soit en 220 V ! Que s’est-il passé ? — p. 337 à 338
+- Principe de fonctionnement du système inverter — p. 339
+- Le manuel du dépanneur — p. 339
+  - Le manuel du dépanneur — La "bible" du dépannage — p. 339
+  - Principe de fonctionnement du système inverter — Les bases — p. 339
+- Les bases — p. 340 à 343
+- Exercice de synthèse — p. 344
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 344
+- Principe de fonctionnement du détendeur électronique — p. 345
+  - Principe de fonctionnement du détendeur électronique — Quelques rappels de magnétisme. — p. 345
+- Le circuit — p. 346 à 347
+  - Le circuit — Principe de fonctionnement du détendeur électronique — p. 346
+  - Le circuit — Exercice — p. 347
+- Correction de l’exercice — p. 348
+- Le circuit — p. 349 à 350
+- Exercice de synthèse — p. 351 à 352
+  - Exercice de synthèse — Ces affirmations sont-elles exactes ? — p. 351 à 352
+- Le split inverter froid seul — p. 353
+  - Le split inverter froid seul — Exercice — p. 353
+- Le circuit — p. 354 à 356
+  - Le circuit — Correction de l’exercice — p. 354
+  - Le circuit — La sonde B a pour rôle de mesurer la température ambiante du local climatisé. — p. 355 à 356
+- Le split inverter réversible — p. 357
+- Le circuit — p. 358 à 360
+  - Le circuit — Ne négligez jamais l’évacuation des condensats, que ce soit sur l’unité intérieure (voir page 179) ou sur l’unité extérieure. — p. 360
+- Comment procéder pour récupérer le fluide frigorigène ? — p. 361
+- Les bases — p. 362 à 363
+  - Les bases — A) Les bouteilles de récupération — p. 362 à 363
+- C) Récupération du fluide en gaz — p. 364
+- Le circuit — p. 365 à 367
+  - Le circuit — D) A quelle pression faut-il arrêter le groupe de transfert ? — p. 366 à 367
+- E) Récupération du fluide en liquide — p. 368
+- Problème de la charge en fluide frigorigène. — p. 369
+  - Problème de la charge en fluide frigorigène. — Problème de la charge en fluide frigorigène. — p. 369
+- Dépannage — p. 370
+- Depannage — p. 371 à 372
+- FRIGODIAG4 — p. 373
+  - FRIGODIAG4 — Le simulateur de pannes frigorifiques pour Windows 95/98/Me/NT/2000/XP — p. 373
+- Clim pratique — p. 374
+  - Clim pratique — Abonnez-vous à clim pratique — p. 374
+- FRIGOBASE Le froid et la “clim” expliqués au débutant — p. 375
+- Index alphabétique — p. 375
+- B — p. 376 à 377
+  - B — BP — p. 377
+- C — p. 378
+- Chapitre — p. 379
+- Sommaire — p. 380
+- Condenseur à eau — p. 381
+- D — p. 382
+- Demarrage — p. 383
+- E — p. 384
+  - E — Détente — p. 384
+- Eau — p. 385
+- Étanchéité — p. 386
+- F — p. 387
+  - F — Fenêtre — p. 387
+- Fuite — p. 388
+- I — p. 389
+  - I — Heliocoïde — p. 389
+- Impulsion — p. 390
+- K — p. 391
+- Maintenance — p. 392
+  - Maintenance — Miscibilité — p. 392
+- Moteur — p. 393
+- P — p. 394
+  - P — PAC — p. 394
+- Percuteur — p. 395
+- Principal — p. 396
+- R407C — p. 397
+- Recyclage — p. 398
+- S — p. 399
+  - S — Saisons — p. 399
+- Sifflement — p. 400
+- T — p. 401
+  - T — Surface — p. 401
+- U — p. 402
+- V — p. 403
+  - V — Unité — p. 403
+- Zone — p. 404 à 406
+  - Zone — Comment fonctionne un réfrigérateur ? — p. 406
 
 ## Moteur asynchrone triphasé (cours, École polytechnique de Montréal) (`moteur-asynchrone-triphase`)
 
@@ -1651,6 +2389,30 @@
   - Le montage étoile devient donc — Symbole : D ou Δ — p. 19
 - Couplage du moteur asynchrone en fonction du réseau électrique — p. 20
 - Avantages d'un moteur asynchrone — p. 21
+
+## Moteurs monophasés (`moteurs-mono`)
+
+- Moteurs monophasés — p. 1 à 2
+  - Moteurs monophasés — Chapitre 6 — p. 1 à 2
+- Te6-1 — p. 3 à 4
+  - Te6-1 — La question est simple — p. 3
+  - Te6-1 — T6-3 — p. 4
+- Te6-5 — p. 5 à 9
+- 6 — p. 6 à 9
+  - 6 — Te6-11 — p. 6 à 9
+- Questionnaire a — p. 8
+  - Te6-5 — Te6-8 — p. 9
+- Te-10 — p. 10
+- Te6-13 — p. 10
+- Te6-15 — p. 11
+  - Te6-15 — Caractéristiques des capacités — p. 11
+- TEl-17 — p. 12
+- Te6-19 — p. 13
+- Questionnaire B — p. 14 à 15
+  - Questionnaire B — Te6-21 — p. 15
+- Te6-23 — p. 16
+- Tee-25 — p. 17
+- Questionnaire C — p. 18
 
 ## Technicien du froid — fiches pédagogiques (`technicien-du-froid`)
 
@@ -1985,6 +2747,8 @@
 
 *Chercher directement dans la base avec leur `id` en troisième argument.*
 
+- `efpme-cours-bases` · EFPME — Cours de bases (froid) · 163 p.
+- `efpme-cours-perfectionnement` · EFPME — Cours de perfectionnement (froid) · 212 p.
 - `co2-afce-fiche-04` · AFCE — fiche 04 : le CO2 (R744) · 5 p.
 - `co2-carel-commerce-detail` · Carel — solutions CO2 pour le commerce de détail · 24 p.
 - `co2-danfoss-recuperation-chaleur` · Danfoss — récupération de chaleur en CO2 transcritique (EN) · 6 p.

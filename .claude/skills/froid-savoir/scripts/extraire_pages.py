@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
-from shared.savoir import (charger_catalogue, sauver_catalogue, document, chemin_document, dossier_pages,  # noqa: E402
+from shared.savoir import (texte_propre, charger_catalogue, sauver_catalogue, document, chemin_document, dossier_pages,  # noqa: E402
                            dossier_texte, lire_json, ecrire_json, sortie_utf8)
 
 
@@ -74,7 +74,7 @@ def run(doc_id: str, pages: str = "", max_w: int = 1800) -> dict:
         entree = {"doc": doc_id, "page_pdf": p, "page_imprimee_attendue": p - int(d.get("decalage_page") or 0),
                   "fichier": str(f), "ko": f.stat().st_size // 1024, "px": list(im.size)}
         if natif:
-            texte = page.get_text("text") or ""
+            texte = texte_propre(page.get_text("text") or "")
             (dest_txt / f"{p:04d}.txt").write_text(texte, encoding="utf-8")
             entree["caracteres"] = len(texte.strip())
         manifest.append(entree)

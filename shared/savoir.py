@@ -75,6 +75,12 @@ def slugifier(texte: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]+", "-", t).strip("-").lower() or "document"
 
 
+def texte_propre(t: str) -> str:
+    """Texte sûr pour Postgres : le caractère nul (puce Word après conversion .doc → PDF) devient une puce,
+    les espaces de largeur nulle disparaissent."""
+    return (t or "").replace("\x00", "•").replace("\u200b", "")
+
+
 def dossier_pages(doc_id: str) -> Path:
     return CACHE / "pages" / doc_id
 
