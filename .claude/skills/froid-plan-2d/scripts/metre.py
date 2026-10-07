@@ -103,6 +103,23 @@ NOMS_CALQUES = {
     "clim_cuivres": "Clim – cuivres",
 }
 ORDRE_RESEAUX = ("froid_cuivres", "electricite", "clim_cuivres")
+# Vue lisible (plan.md / plan.html, lue par Loïc) : noms de réseau sans tiret et en-têtes des tableaux par réseau.
+# generer.py les écrit, verifier_plan.py (E6) les relit.
+NOMS_RESEAUX_LISIBLES = {
+    "froid_cuivres": "Froid : cuivres et condensats",
+    "electricite": "Électricité (froid et clim)",
+    "clim_cuivres": "Clim : cuivres",
+}
+COL_TRONCON = "Tronçon"
+COL_TYPE = "Type"
+COL_PLAN = "En plan (m)"
+COL_DONT_CHEMIN = "dont chemin de câbles (m)"
+COL_MONTEES = "Montées et descentes (m)"
+COL_RESERVE = "Réserve (m)"
+COL_TOTAL = "Total (m)"
+COL_DIAMETRE = "Diamètre"
+COL_RESEAU = "Réseau"
+TITRE_RECAPITULATIF = "Récapitulatif"
 LIBELLES_TYPES = {
     "aspiration": "Aspiration", "liquide": "Liquide", "condensats": "Condensats",
     "clim_gaz": "Clim gaz", "clim_liquide": "Clim liquide",
@@ -218,6 +235,12 @@ def nom_calque(cle: str, plan: dict | None = None) -> str:
         return NOMS_CALQUES[cle]
     libre = _calques_libres(plan or {}).get(cle)
     return (libre or {}).get("nom") or cle
+
+
+def nom_reseau_lisible(cle: str, plan: dict | None = None) -> str:
+    """Nom d'un réseau dans plan.md (titre de son tableau, récapitulatif) : sans tiret pour les réseaux standard,
+    le `nom` du calque libre sinon."""
+    return NOMS_RESEAUX_LISIBLES.get(cle) or nom_calque(cle, plan)
 
 
 def libelle_type(type_: str, plan: dict | None = None) -> str:
@@ -559,6 +582,7 @@ def _metrer_ligne(ligne: dict, ctx: _Contexte) -> dict:
 
     return {
         "plan_m": plan_m, "plan_brut_m": plan_brut, "chemin_m": chemin_m, "chemin": chemin_id,
+        "tableau": tableau_id if chemin_id is not None and bout is not None else None,
         "vertical_m": vertical_m, "reserve_m": reserve_m, "total_m": total_m, "formule": formule,
         "type": type_, "libelle_type": libelle_type(type_, ctx.plan),
         "calque": calque, "reseau": calque, "nom_reseau": nom_calque(calque, ctx.plan),

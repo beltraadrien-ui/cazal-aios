@@ -42,8 +42,9 @@ fenêtres, pièces et équipements « autre » vont sur le plan de base ; le tab
 
 ## 4. Identifiants
 
-- Identifiant de cellule = identifiant du modèle (`M1`, `D1`, `F1`, `CF1`, `EV1`, `L1`, `C1`, `X1`, `P1`…),
-  uniques sur tout le plan. Sous-éléments : `-txt` étiquette, `-int` paroi intérieure de chambre,
+- Identifiant de cellule = identifiant du modèle (`M1`, `D1`, `F1`, `CF1`, `EV1`, `L1`, `CT1`, `X1`, `P1`…),
+  uniques sur tout le plan. Cotes : préfixe **`CT`** (`CT1`, `CT2`…), jamais `C1…` : les repères `C1…Cn` écrits sur
+  le plan sont ceux des câbles. Sous-éléments : `-txt` étiquette, `-int` paroi intérieure de chambre,
   `-porte` et `-porte-ouv` porte de chambre et son ouverture, `-ouv` ouverture du mur sous une porte,
   `-v1…` ventilateurs, `-fl` flèche de soufflage, `-a1` / `-a2` lignes d'attache d'une cote,
   `-contour` contour pointillé d'une pièce.

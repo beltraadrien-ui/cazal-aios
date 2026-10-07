@@ -87,16 +87,16 @@
      "dimensions": [11.8, 0.9], "etiquette": "Comptoir / vitrines de vente (hors étude froid)"}
   ],
   "cotes": [
-    {"id": "C1", "de": [0, 11], "a": [16, 11], "valeur": 16.0, "source": "telemetre", "cote": "bas", "decalage": 0.6},
-    {"id": "C2", "de": [0, 0], "a": [0, 11], "valeur": 11.0, "source": "telemetre", "cote": "gauche", "decalage": 0.7},
-    {"id": "C3", "de": [15.8, 0.2], "a": [15.8, 3.4], "valeur": 3.2, "source": "telemetre", "cote": "droite", "decalage": 2.2},
-    {"id": "C4", "de": [15.8, 3.5], "a": [15.8, 6.5], "valeur": 3.0, "source": "telemetre", "cote": "droite", "decalage": 2.2},
-    {"id": "C5", "de": [15.8, 6.6], "a": [15.8, 10.8], "valeur": 4.2, "source": "telemetre", "cote": "droite", "decalage": 2.2},
-    {"id": "C6", "de": [10.1, 0.2], "a": [12.9, 0.2], "valeur": 2.8, "source": "telemetre", "cote": "haut", "decalage": 0.44},
-    {"id": "C7", "de": [13.0, 0.2], "a": [15.8, 0.2], "valeur": 2.8, "source": "telemetre", "cote": "haut", "decalage": 0.44},
-    {"id": "C8", "de": [0.4, 3.4], "a": [4.4, 3.4], "valeur": 4.0, "source": "telemetre", "cote": "bas", "decalage": 1.44},
-    {"id": "C9", "de": [4.6, 3.4], "a": [7.1, 3.4], "valeur": 2.5, "source": "telemetre", "cote": "bas", "decalage": 1.44},
-    {"id": "C10", "de": [7.3, 2.9], "a": [9.8, 2.9], "valeur": 2.5, "source": "telemetre", "cote": "bas", "decalage": 1.94}
+    {"id": "CT1", "de": [0, 11], "a": [16, 11], "valeur": 16.0, "source": "telemetre", "cote": "bas", "decalage": 0.6},
+    {"id": "CT2", "de": [0, 0], "a": [0, 11], "valeur": 11.0, "source": "telemetre", "cote": "gauche", "decalage": 0.7},
+    {"id": "CT3", "de": [15.8, 0.2], "a": [15.8, 3.4], "valeur": 3.2, "source": "telemetre", "cote": "droite", "decalage": 2.2},
+    {"id": "CT4", "de": [15.8, 3.5], "a": [15.8, 6.5], "valeur": 3.0, "source": "telemetre", "cote": "droite", "decalage": 2.2},
+    {"id": "CT5", "de": [15.8, 6.6], "a": [15.8, 10.8], "valeur": 4.2, "source": "telemetre", "cote": "droite", "decalage": 2.2},
+    {"id": "CT6", "de": [10.1, 0.2], "a": [12.9, 0.2], "valeur": 2.8, "source": "telemetre", "cote": "haut", "decalage": 0.44},
+    {"id": "CT7", "de": [13.0, 0.2], "a": [15.8, 0.2], "valeur": 2.8, "source": "telemetre", "cote": "haut", "decalage": 0.44},
+    {"id": "CT8", "de": [0.4, 3.4], "a": [4.4, 3.4], "valeur": 4.0, "source": "telemetre", "cote": "bas", "decalage": 1.44},
+    {"id": "CT9", "de": [4.6, 3.4], "a": [7.1, 3.4], "valeur": 2.5, "source": "telemetre", "cote": "bas", "decalage": 1.44},
+    {"id": "CT10", "de": [7.3, 2.9], "a": [9.8, 2.9], "valeur": 2.5, "source": "telemetre", "cote": "bas", "decalage": 1.94}
   ],
   "lignes": [
     {"id": "LA1", "type": "aspiration", "de": "EV1", "a": "CP1", "faisceau": "EV1-CP1", "diametre": "à définir",

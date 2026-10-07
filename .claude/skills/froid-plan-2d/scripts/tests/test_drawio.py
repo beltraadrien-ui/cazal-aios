@@ -227,7 +227,7 @@ class TestAllerRetourBoucherie(_AvecDossier):
             for e in getattr(self.plan, col):
                 self.assertIn(e["id"], ids)
         for sous in ("EV1-txt", "EV1-v1", "EV1-v2", "EV1-fl", "CF1-int", "CF1-porte", "CF1-porte-ouv", "CF1-txt",
-                     "D1-ouv", "C1-a1", "C1-a2", "LE1-txt", "barre-echelle", "barre-echelle-txt", "regle-controle",
+                     "D1-ouv", "CT1-a1", "CT1-a2", "LE1-txt", "barre-echelle", "barre-echelle-txt", "regle-controle",
                      "regle-controle-txt", "regle-controle-g1", "cartouche-titre", "cartouche-mention"):
             self.assertIn(sous, ids)
         self.assertNotIn("LE3-txt", ids)            # étiquette vide demandée
@@ -466,9 +466,9 @@ class TestRobustesseLecture(_AvecDossier):
         self.assertEqual([e["id"] for e in ecarts], ["M5"])
 
     def test_cote_modifiee(self):
-        self._cellule("C1").set("value", "16,10 m")
+        self._cellule("CT1").set("value", "16,10 m")
         ecarts = drawio.comparer(self.plan, self._relire(), TOL)
-        self.assertEqual([(e["id"], e["categorie"]) for e in ecarts], [("C1", "cote")])
+        self.assertEqual([(e["id"], e["categorie"]) for e in ecarts], [("CT1", "cote")])
         self.assertIn("16,10 m", ecarts[0]["message"])
 
     def test_equipement_deplace_a_la_souris(self):

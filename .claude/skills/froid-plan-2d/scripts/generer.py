@@ -1,11 +1,15 @@
-"""Génère le plan 2D d'un dossier : `plan.json` → `plan.drawio`, `plan.md` + `plan.html`, `plan.pdf` + `plan.png`,
-`plan-base.json`, copie `versions/plan-vN.*`, ligne datée dans `journal.md`.
+"""Génère le plan 2D d'un dossier : `plan.json` → `plan.drawio`, `plan.md` + `plan.html`, `metre-detail.md`,
+`plan.pdf` + `plan.png`, `plan-base.json`, copie `versions/plan-vN.*`, ligne datée dans `journal.md`.
 
 Chaîne : charger → valider (erreurs → code 1, rien n'est écrit) → métré (A2) → croisements + recouvrements (A2),
 regroupés (≤ 0,50 m, repères G) et injectés dans le modèle (un cercle par groupe) → échelle normalisée (A1, boîte englobante croisements compris) → `drawio.ecrire` (page
-« Plan » + page « Métré » : tableaux de métré et des croisements) → rendu PDF/PNG mesuré (`rendu.py`) → `plan.md`
-(identité, comment vérifier l'échelle, cotes, hauteurs, métré, croisements, calques, questions ouvertes, journal)
-→ `plan.html` (`shared/rendu_html.py`) → `plan-base.json` (contrat du Lot 6 : un point (x, y) du modèle en m
+« Plan » + page « Métré » : tableaux de métré et des croisements) → rendu PDF/PNG mesuré (`rendu.py`) → `plan.md`,
+lisible d'abord (Loïc le lit en `plan.html`) : le plan en image, ce qu'il contient (chambres, équipements et leur
+emplacement en mots), le métré par réseau en noms (aucun code de ligne) et son récapitulatif, les croisements en
+mots, les cotes et ce qu'elles mesurent, les hauteurs de pose, les questions ouvertes, des détails techniques courts
+→ `metre-detail.md` (mémoire, non rendue : métré par ligne avec codes et formules, par diamètre, hauteurs,
+croisements un par un, calques, notes du relevé ; relu par verifier_plan.py E6 et E7)
+→ `plan.html` (`shared/rendu_html.py`, image du plan en pleine largeur) → `plan-base.json` (contrat du Lot 6 : un point (x, y) du modèle en m
 tombe sur la page en `origine_mm + (x, y) × 1000 / S` mm) → versions → journal.
 
 Usage (depuis la racine du dépôt) :
@@ -20,6 +24,7 @@ import json
 import re
 import shutil
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -35,6 +40,7 @@ from echelle import ErreurEchelle, PT_PAR_MM, choisir_echelle, nombre_fr  # noqa
 ROOT = Path(__file__).resolve().parents[4]          # racine du dépôt (…/.claude/skills/<skill>/scripts/)
 HYP = " (hyp.)"
 TITRE_TABLEAU_CROISEMENTS = "Croisements entre réseaux"
+TITRE_CROISEMENTS_MD = "Croisements"           # section de plan.md (une ligne par repère G, en mots)
 ENTETES_RESEAUX = ["Réseau", "Ligne", f"De {mtr.FLECHE} À", "Type", "En plan (m)", "Dans le chemin (m)", "Vertical (m)",
                    "Réserve (m)", "Total (m)", "Diamètre"]
 ALIGN_RESEAUX = ["g", "g", "g", "g", "d", "d", "d", "d", "d", "g"]
@@ -132,66 +138,523 @@ def lire_journal(dossier: Path) -> list[str]:
     return [l for l in chemin.read_text(encoding="utf-8").splitlines() if l.startswith("- ")]
 
 
-def questions_ouvertes(plan: mod.Plan, m: mtr.Metre) -> list[str]:
+# ======================================================================
+# Vue lisible (plan.md → plan.html, lue par Loïc) : noms en mots, emplacements, ce que mesure une cote
+# ======================================================================
+MOIS = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+        "novembre", "décembre")
+ARTICLE_PAR_TYPE = {"evaporateur": "l'", "centrale": "la ", "groupe": "le ", "condenseur": "le ", "split": "le ",
+                    "moteur": "le ", "tableau": "le ", "chambre_froide": "la "}
+MOT_PAR_TYPE = {"evaporateur": "evaporateur", "centrale": "centrale", "groupe": "groupe", "condenseur": "condenseur",
+                "split": "split", "moteur": "moteur", "tableau": "tableau", "chambre_froide": "chambre"}
+LIGNE_AVEC_ARTICLE = {"aspiration": "l'aspiration", "liquide": "le liquide", "condensats": "les condensats",
+                      "clim_gaz": "le gaz clim", "clim_liquide": "le liquide clim",
+                      "chemin_cables": "le chemin de câbles"}
+COTE_DU_PLAN = {"haut": "en haut du plan", "bas": "en bas du plan", "gauche": "à gauche du plan",
+                "droite": "à droite du plan"}
+FACADE = {"haut": "façade du haut", "bas": "façade du bas", "gauche": "façade de gauche", "droite": "façade de droite"}
+TOL_COTE = 0.03          # m : extrémité d'une cote confondue avec un bout de mur, un bord de chambre ou de pièce
+VOYELLES = "aeiouyàâäéèêëîïôöùûüAEIOUYÀÂÄÉÈÊËÎÏÔÖÙÛÜ"
+VERSIONS_MONTREES = 5    # « Détails techniques » : les dernières versions seulement (toutes dans journal.md)
+NOTE_HYP_METRE = ("Les montées et descentes utilisent les hauteurs de pose ci-dessous, à valider (question 13) : "
+                  "les totaux sont marqués (hyp.) tant qu'elles ne le sont pas.")
+NOTE_VALIDEES_METRE = "Les montées et descentes utilisent les hauteurs de pose ci-dessous, validées."
+
+
+def _sans_accent(t: str) -> str:
+    return unicodedata.normalize("NFD", t).encode("ascii", "ignore").decode().lower()
+
+
+def _maj(t: str) -> str:
+    return t[:1].upper() + t[1:]
+
+
+def date_fr(texte: str) -> str:
+    """« 2026-10-07 » → « 7 octobre 2026 » ; un autre texte est rendu tel quel."""
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", (texte or "").strip())
+    if not m or not 1 <= int(m.group(2)) <= 12:
+        return texte
+    return f"{int(m.group(3))} {MOIS[int(m.group(2)) - 1]} {m.group(1)}"
+
+
+def nombre_court(x: float) -> str:
+    """1.0 → « 1 » ; 1.3333 → « 1,33 » ; 0.5 → « 0,5 »."""
+    t = nombre_fr(x, 2)
+    return t.rstrip("0").rstrip(",")
+
+
+def de_(groupe: str) -> str:
+    """« de » devant un groupe nominal, avec contraction (le → du, les → des)."""
+    if groupe.startswith("le "):
+        return "du " + groupe[3:]
+    if groupe.startswith("les "):
+        return "des " + groupe[4:]
+    return "de " + groupe
+
+
+def enumerer(items: list[str]) -> str:
+    items = [i for i in items if i]
+    if not items:
+        return ""
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " et " + items[-1]
+
+
+def source_en_mots(source) -> str:
+    """Source d'une cote en mots : « télémètre », « plan d'architecte (p. 2) », « croquis », « relevé InterFast »."""
+    if not source:
+        return "non précisée"
+    s = _sans_accent(str(source))
+    page = re.search(r"\bp\.\s*(\d+)", str(source))
+    suffixe = f" (p. {page.group(1)})" if page else ""
+    if "telemetre" in s:
+        return "télémètre"
+    if "architecte" in s:
+        return "plan d'architecte" + suffixe
+    if "croquis" in s:
+        return "croquis"
+    if "interfast" in s or "rapport" in s:
+        return "relevé InterFast" + suffixe
+    return str(source)
+
+
+class Vue:
+    """Ce que plan.md dit en mots, calculé depuis le modèle : noms des équipements (le code entre parenthèses
+    seulement s'il est écrit sur le plan), emplacement d'un point, ce que mesure une cote, description d'un tronçon
+    ou d'un croisement. Aucun code de ligne (LA1, LE1…) n'en sort."""
+
+    def __init__(self, plan: mod.Plan):
+        self.plan = plan
+        self.equipements = {q["id"]: q for q in plan.equipements}
+        self.chambres = {c["id"]: c for c in plan.chambres_froides}
+        self.pieces = {p["id"]: p for p in plan.pieces}
+        self.lignes = {l["id"]: l for l in plan.lignes}
+        self.rang_ligne = {l["id"]: i for i, l in enumerate(plan.lignes)}
+        self.murs = {m["id"]: m for m in plan.murs}
+        exterieurs = [m for m in plan.murs if m.get("type") == "exterieur"] or list(plan.murs)
+        pts = [tuple(p) for m in exterieurs for p in (m["de"], m["a"])]
+        if not pts:
+            pts = [tuple(p) for e in list(plan.pieces) + list(plan.chambres_froides) for p in e["polygone"]]
+        self.bati = geo.boite_englobante(pts) if pts else None
+
+    # -- noms ------------------------------------------------------------------------------------------------
+    @staticmethod
+    def _contient_code(texte: str, ident: str) -> bool:
+        return bool(re.search(rf"(?<![\w-]){re.escape(ident)}(?![\w-])", texte or ""))
+
+    def code_ecrit(self, e: dict) -> bool:
+        """Vrai si l'identifiant de l'élément est écrit sur le plan (son étiquette, sinon son nom, sinon l'id)."""
+        dessine = e.get("etiquette") if e.get("etiquette") is not None else (e.get("nom") or e["id"])
+        return self._contient_code(dessine, e["id"])
+
+    def _avec_code(self, e: dict, base: str) -> str:
+        if self.code_ecrit(e) and not self._contient_code(base, e["id"]):
+            return f"{base} ({e['id']})"
+        return base
+
+    def nom(self, ident) -> str:
+        """Nom dans un tableau : « Évaporateur CF1 (EV1) », « Centrale positive », « chemin de câbles »."""
+        if ident is None:
+            return mtr.TIRET_VIDE
+        e = self.equipements.get(ident) or self.chambres.get(ident)
+        if e is not None:
+            return self._avec_code(e, e.get("nom") or ident)
+        if ident in self.lignes:
+            return self.nom_ligne(self.lignes[ident], article=False)
+        if ident in self.pieces:
+            return f"« {self.pieces[ident].get('nom') or ident} »"
+        if ident in self.murs:
+            return f"mur {ident}"
+        return str(ident)
+
+    def nom_article(self, ident) -> str:
+        """Nom dans une phrase : « l'évaporateur CF1 (EV1) », « la centrale positive », « le TD-F (tableau froid) »."""
+        e, type_ = self.equipements.get(ident), None
+        if e is not None:
+            type_ = e.get("type")
+        elif ident in self.chambres:
+            e, type_ = self.chambres[ident], "chambre_froide"
+        if e is None:
+            return self.nom_ligne(self.lignes[ident], article=True) if ident in self.lignes else self.nom(ident)
+        base = e.get("nom") or ident
+        mots = base.split()
+        if MOT_PAR_TYPE.get(type_) and mots and _sans_accent(mots[0]) == MOT_PAR_TYPE[type_]:
+            base = base[0].lower() + base[1:]
+        elif type_ == "chambre_froide":
+            base = f"chambre « {base} »"
+        article = ARTICLE_PAR_TYPE.get(type_, "")
+        if article in ("le ", "la ") and base[:1] in VOYELLES:
+            article = "l'"
+        return article + self._avec_code(e, base)
+
+    def nom_ligne(self, l: dict, article: bool) -> str:
+        t = l.get("type")
+        if t == "cable":
+            return ("le câble" if article else "câble") + (f" {l['repere']}" if l.get("repere") else "")
+        if t in LIGNE_AVEC_ARTICLE:
+            return LIGNE_AVEC_ARTICLE[t] if article else mtr.libelle_type(t, self.plan.donnees).lower()
+        nom = mtr.libelle_type(t, self.plan.donnees)
+        return f"le réseau « {nom} »" if article else f"réseau « {nom} »"
+
+    def decrire_lignes(self, ids: list[str]) -> tuple[str, bool]:
+        """(« l'aspiration, le liquide et les condensats de l'évaporateur CF1 (EV1) », pluriel ?) : lignes
+        regroupées par équipement de départ, dans l'ordre de plan.json."""
+        par_origine: dict = {}
+        for lid in sorted(dict.fromkeys(ids), key=lambda i: self.rang_ligne.get(i, len(self.rang_ligne))):
+            l = self.lignes.get(lid) or {"id": lid, "type": None}
+            origine = None if l.get("type") == "chemin_cables" else l.get("de")
+            noms = par_origine.setdefault(origine, [])
+            n = self.nom_ligne(l, article=True) if l.get("type") else str(lid)
+            if n not in noms:
+                noms.append(n)
+        morceaux = []
+        for origine, noms in par_origine.items():
+            texte = enumerer(noms)
+            if origine is not None:
+                texte += " " + de_(self.nom_article(origine))
+            morceaux.append(texte)
+        noms_tous = [n for noms in par_origine.values() for n in noms]
+        return enumerer(morceaux), len(noms_tous) > 1 or (bool(noms_tous) and noms_tous[0].startswith("les "))
+
+    # -- emplacements ----------------------------------------------------------------------------------------
+    def ref_chambre(self, c: dict) -> str:
+        return f"la chambre {c['id']}" if self.code_ecrit(c) else f"la chambre « {c.get('nom') or c['id']} »"
+
+    @staticmethod
+    def ref_piece(p: dict) -> str:
+        return f"« {p.get('nom') or p['id']} »"
+
+    def contenant(self, point) -> tuple[str | None, dict | None]:
+        """La plus petite chambre, sinon la plus petite pièce, qui contient le point."""
+        for genre, collection in (("chambre", self.chambres.values()), ("piece", self.pieces.values())):
+            dedans = [e for e in collection if geo.point_dans_polygone(tuple(point), e["polygone"])]
+            if dedans:
+                return genre, min(dedans, key=lambda e: geo.surface_polygone(e["polygone"]))
+        return None, None
+
+    def lieu(self, point) -> str:
+        """« dans la chambre CF1 », « dans « Cuisine » », « à l'extérieur, en haut du plan, au droit de la chambre CF1 »."""
+        genre, e = self.contenant(point)
+        if genre == "chambre":
+            return "dans " + self.ref_chambre(e)
+        if genre == "piece":
+            return "dans " + self.ref_piece(e)
+        if self.bati is None:
+            return "hors des pièces dessinées"
+        x0, y0, x1, y1 = self.bati
+        exces = {"haut": y0 - point[1], "bas": point[1] - y1, "gauche": x0 - point[0], "droite": point[0] - x1}
+        cote, d = max(exces.items(), key=lambda kv: kv[1])
+        if d <= 1e-9:
+            return "dans le bâtiment, hors des pièces dessinées"
+        repere = self._au_droit(point, cote)
+        return f"à l'extérieur, {COTE_DU_PLAN[cote]}" + (f", au droit de {repere}" if repere else "")
+
+    def _au_droit(self, point, cote: str) -> str | None:
+        """Chambre (sinon pièce) la plus proche du point, côté `cote`, dont l'étendue contient sa position."""
+        axe = 0 if cote in ("haut", "bas") else 1
+        for collection, ref in ((self.chambres.values(), self.ref_chambre), (self.pieces.values(), self.ref_piece)):
+            candidats = []
+            for e in collection:
+                b = geo.boite_englobante(e["polygone"])
+                if b[axe] - 1e-9 <= point[axe] <= b[axe + 2] + 1e-9:
+                    bord = {"haut": b[1], "bas": b[3], "gauche": b[0], "droite": b[2]}[cote]
+                    candidats.append((abs(point[1 - axe] - bord), ref(e)))
+            if candidats:
+                return min(candidats, key=lambda c: c[0])[1]
+        return None
+
+    # -- cotes -----------------------------------------------------------------------------------------------
+    def _cote_du_bati(self, point) -> str:
+        x0, y0, x1, y1 = self.bati
+        d = {"haut": abs(point[1] - y0), "bas": abs(point[1] - y1), "gauche": abs(point[0] - x0),
+             "droite": abs(point[0] - x1)}
+        return min(d, key=d.get)
+
+    def ce_que_mesure(self, c: dict) -> str:
+        """« mur M1, façade du haut », « cloison M6 », « largeur de la chambre CF1 », « profondeur de la pièce
+        « Cuisine » », sinon « entre deux points du plan »."""
+        de, a = tuple(c["de"]), tuple(c["a"])
+
+        def memes(p, q) -> bool:
+            return ((geo.distance(p, de) <= TOL_COTE and geo.distance(q, a) <= TOL_COTE)
+                    or (geo.distance(p, a) <= TOL_COTE and geo.distance(q, de) <= TOL_COTE))
+        for m in self.plan.murs:
+            coins = mod.coins_mur(m)
+            segments = [(tuple(m["de"]), tuple(m["a"])), mod.axe_mur(m)]
+            segments += [(coins[i], coins[(i + 1) % 4]) for i in range(4)]
+            if any(memes(p, q) for p, q in segments):
+                if m.get("type") == "exterieur" and self.bati is not None:
+                    milieu = ((m["de"][0] + m["a"][0]) / 2.0, (m["de"][1] + m["a"][1]) / 2.0)
+                    return f"mur {m['id']}, {FACADE[self._cote_du_bati(milieu)]}"
+                return f"cloison {m['id']}" if m.get("type") == "cloison" else f"mur {m['id']}"
+        horizontal, vertical = abs(de[1] - a[1]) <= TOL_COTE, abs(de[0] - a[0]) <= TOL_COTE
+        for collection, ref in ((self.chambres.values(), self.ref_chambre),
+                                (self.pieces.values(), lambda p: "la pièce " + self.ref_piece(p))):
+            for e in collection:
+                x0, y0, x1, y1 = geo.boite_englobante(e["polygone"])
+                xs, ys = sorted((de[0], a[0])), sorted((de[1], a[1]))
+                if (horizontal and abs(xs[0] - x0) <= TOL_COTE and abs(xs[1] - x1) <= TOL_COTE
+                        and y0 - TOL_COTE <= de[1] <= y1 + TOL_COTE):
+                    return f"largeur de {ref(e)}"
+                if (vertical and abs(ys[0] - y0) <= TOL_COTE and abs(ys[1] - y1) <= TOL_COTE
+                        and x0 - TOL_COTE <= de[0] <= x1 + TOL_COTE):
+                    return f"profondeur de {ref(e)}"
+        return "entre deux points du plan"
+
+    # -- contenu ---------------------------------------------------------------------------------------------
+    @staticmethod
+    def _temperature(c: dict) -> str | None:
+        for texte in (c.get("etiquette"), c.get("nom")):
+            m = re.search(r"([+\-−]?)\s?(\d+(?:[.,]\d+)?)\s?°\s?C", texte or "")
+            if m:
+                signe = {"-": mtr.MOINS}.get(m.group(1), m.group(1))
+                return f"{signe}{m.group(2).replace('.', ',')}{mtr.ESPACE}°C"
+        return None
+
+    def rangs_chambres(self) -> list[list[str]]:
+        rangs = []
+        for c in self.plan.chambres_froides:
+            x0, y0, x1, y1 = geo.boite_englobante(c["polygone"])
+            dims = f"{mtr.nombre_fr(x1 - x0)} × {mtr.nombre_fr(y1 - y0)}{mtr.ESPACE}m"
+            if not geo.est_rectangle_aligne(c["polygone"], 1e-3):
+                dims += " (encombrement, forme non rectangulaire)"
+            regime = {"positif": "positif", "negatif": "négatif"}.get(c["regime"], c["regime"])
+            t = self._temperature(c)
+            evaps = [q for q in self.plan.equipements if q["type"] == "evaporateur" and q.get("chambre") == c["id"]]
+            production = []
+            for ev in evaps:
+                for l in self.plan.lignes:
+                    if l["type"] in ("aspiration", "liquide") and ev["id"] in (l.get("de"), l.get("a")):
+                        autre = l.get("a") if l.get("de") == ev["id"] else l.get("de")
+                        if autre and autre not in production:
+                            production.append(autre)
+            rangs.append([self.nom(c["id"]), dims, regime + (f", {t}" if t else ""),
+                          ", ".join(self.nom(q["id"]) for q in evaps) or "aucun",
+                          ", ".join(self.nom(p) for p in production) or "non reliée"])
+        return rangs
+
+    def autres_equipements(self) -> list[str]:
+        return [f"- **{self.nom(q['id'])}** : {self.lieu(q['position'])}" for q in self.plan.equipements
+                if q["type"] not in ("evaporateur", "autre")]
+
+    def troncon(self, l: dict) -> str:
+        """Tronçon d'une ligne du métré, en noms : « Évaporateur CF1 (EV1) → Centrale positive »."""
+        t, de, a = l["type"], l.get("de"), l.get("a")
+        libre = "extrémité libre"
+        if t == "chemin_cables":
+            bout = de or a
+            return "Le chemin lui-même" + (f", depuis {self.nom(bout)}" if bout else "")
+        depart = self.nom(de) if de else libre
+        if t == "cable" and l.get("tableau"):
+            return f"{depart} {mtr.FLECHE} {self.nom(l['tableau'])}, par le chemin de câbles"
+        arrivee = self.nom(a) if a else ("évacuation à préciser" if t == "condensats" else libre)
+        return f"{depart} {mtr.FLECHE} {arrivee}"
+
+    def type_ligne(self, lid: str, l: dict) -> str:
+        repere = (self.lignes.get(lid) or {}).get("repere")
+        return l["libelle_type"] + (f" {repere}" if l["type"] == "cable" and repere else "")
+
+    def phrase_groupe(self, g: dict, par_id: dict) -> str:
+        """« - **G1**, dans « Laboratoire de découpe » : l'aspiration, le liquide et les condensats de
+        l'évaporateur CF1 (EV1) croisent le chemin de câbles. »"""
+        paires = [par_id[x]["lignes"] for x in g["croisements"] if x in par_id]
+        communes = [lid for lid in paires[0] if all(lid in p for p in paires)] if paires else []
+        if communes:
+            pivot = communes[-1]
+            autres = [lid for p in paires for lid in p if lid != pivot]
+            gauche, pluriel = self.decrire_lignes(autres)
+            droite, _ = self.decrire_lignes([pivot])
+            texte = f"{gauche} {'croisent' if pluriel else 'croise'} {droite}"
+        else:
+            morceaux = []
+            for la, lb in paires:
+                ga, pluriel = self.decrire_lignes([la])
+                morceaux.append(f"{ga} {'croisent' if pluriel else 'croise'} {self.decrire_lignes([lb])[0]}")
+            texte = " ; ".join(morceaux)
+        return f"- **{g['id']}**, {self.lieu(g['point'])} : {texte}."
+
+
+def questions_ouvertes(plan: mod.Plan, m: mtr.Metre, vue: Vue | None = None) -> list[str]:
+    """Questions pour Loïc, en mots (aucun code de ligne)."""
+    vue = vue or Vue(plan)
     q = []
     for l in plan.lignes:
         if l["type"] == "chemin_cables":
             continue                              # un chemin de câbles a naturellement une extrémité libre
-        libelle = mtr.libelle_type(l["type"], plan.donnees)
-        for cle, bout, point in (("de", "départ", l["points"][0]), ("a", "arrivée", l["points"][-1])):
-            if not l.get(cle):
-                if l["type"] == "condensats" and cle == "a":
-                    q.append(f"{l['id']} ({libelle}) : évacuation libre en {_pt(point)} m : où se raccordent les "
-                             "condensats (siphon, descente, regard) ?")
-                else:
-                    q.append(f"{l['id']} ({libelle}) : {bout} libre en {_pt(point)} m : à quel équipement la "
-                             "relier ?")
+        desc, pluriel = vue.decrire_lignes([l["id"]])
+        for cle, bout, point in (("de", "au départ", l["points"][0]), ("a", "à l'arrivée", l["points"][-1])):
+            if l.get(cle):
+                continue
+            if l["type"] == "condensats" and cle == "a":
+                q.append(f"{_maj(desc)} s'arrêtent {vue.lieu(point)} : où se raccordent-ils (siphon, descente, "
+                         "regard) ?")
+            else:
+                verbe = "n'ont" if pluriel else "n'a"
+                q.append(f"{_maj(desc)} {verbe} pas d'équipement {bout} "
+                         f"({vue.lieu(point)}) : à quel équipement {'les' if pluriel else 'la'} relier ?")
     a_definir = [l["id"] for l in plan.lignes if mtr.normaliser_diametre(l.get("diametre")) == mtr.A_DEFINIR
                  and l["type"] not in ("chemin_cables",)]
     if a_definir:
-        q.append(f"Diamètres et sections à définir par le dimensionnement ({len(a_definir)} lignes : "
-                 f"{', '.join(a_definir)}).")
-    hyp = [h for h in m.hypotheses if h["statut"] == mtr.HYPOTHESE]
-    if hyp:
-        q.append("Hauteurs de pose à faire valider par le frigoriste (question 13) : "
-                 + " ; ".join(f"{h['libelle']} {mtr.longueur_fr(h['valeur'])}" for h in hyp) + ".")
+        q.append(f"Diamètres des tuyaux et sections des câbles : à définir par le dimensionnement "
+                 f"({len(a_definir)} lignes).")
+    if any(h["statut"] == mtr.HYPOTHESE for h in m.hypotheses):
+        q.append("Hauteurs de pose à valider (question 13) : tableau « Hauteurs de pose » ci-dessus.")
     for cle, v in plan.exigences.items():
         if isinstance(v, dict):
-            details = ", ".join(f"{k} : {w}" for k, w in v.items() if k != "motif")
-            q.append(f"Exception admise pour {cle} ({details}) : {v.get('motif') or 'motif à écrire'}.")
+            details = ", ".join(f"{k} {str(w).replace('_', ' ')}" for k, w in v.items() if k != "motif")
+            q.append(f"Exception admise pour {vue.nom(cle)} ({details}) : {v.get('motif') or 'motif à écrire'}.")
     return q
 
 
+def tableaux_metre_lisibles(m: mtr.Metre, vue: Vue) -> list[str]:
+    """Un tableau par réseau (« ### <réseau> » : Tronçon | Type | En plan | [dont chemin de câbles] | Montées et
+    descentes | [Réserve] | Total, ligne de total) puis le récapitulatif « Réseau | Total ». « (hyp.) » après chaque
+    valeur qui dépend d'une hauteur non validée ; jamais sur la longueur en plan."""
+    statuts = statuts_hauteurs(m)
+    morceaux, recap = [], []
+    for cle, r in m.par_reseau.items():
+        lignes = [(lid, m.lignes[lid]) for lid in r["lignes"]]
+        avec_chemin = r["chemin_m"] > 0
+        avec_reserve = r["reserve_m"] > 0
+        avec_diametre = any(l["diametre"] != mtr.A_DEFINIR for _, l in lignes if l["type"] != "chemin_cables")
+        entetes = ([mtr.COL_TRONCON, mtr.COL_TYPE] + ([mtr.COL_DIAMETRE] if avec_diametre else []) + [mtr.COL_PLAN]
+                   + ([mtr.COL_DONT_CHEMIN] if avec_chemin else []) + [mtr.COL_MONTEES]
+                   + ([mtr.COL_RESERVE] if avec_reserve else []) + [mtr.COL_TOTAL])
+        aligne = ["g", "g"] + (["g"] if avec_diametre else []) + ["d"] * (len(entetes) - 2 - avec_diametre)
+        rangs, hv_res, hr_res = [], False, False
+        for lid, l in lignes:
+            hv, hr = ligne_en_hypothese(l, statuts)
+            hv_res, hr_res = hv_res or hv, hr_res or hr
+            support = l["type"] == "chemin_cables"
+            rang = [vue.troncon(l), vue.type_ligne(lid, l)]
+            if avec_diametre:
+                rang.append("" if support else l["diametre"])
+            rang.append(mtr.nombre_fr(mtr.arrondi(l["plan_m"] + l["chemin_m"])))
+            if avec_chemin:
+                rang.append("" if support else mtr.nombre_fr(l["chemin_m"]))
+            rang.append(mtr.nombre_fr(l["vertical_m"]) + (HYP if hv else ""))
+            if avec_reserve:
+                rang.append("" if support else mtr.nombre_fr(l["reserve_m"]) + (HYP if hr else ""))
+            rang.append(mtr.nombre_fr(l["total_m"]) + (HYP if hv or hr else ""))
+            rangs.append(rang)
+        total = ["Total", ""] + ([""] if avec_diametre else []) + [mtr.nombre_fr(mtr.arrondi(r["plan_m"] + r["chemin_m"]))]
+        if avec_chemin:
+            total.append(mtr.nombre_fr(r["chemin_m"]))
+        total.append(mtr.nombre_fr(r["vertical_m"]) + (HYP if hv_res else ""))
+        if avec_reserve:
+            total.append(mtr.nombre_fr(r["reserve_m"]) + (HYP if hr_res else ""))
+        total.append(mtr.nombre_fr(r["total_m"]) + (HYP if hv_res or hr_res else ""))
+        rangs.append(total)
+        nom = mtr.nom_reseau_lisible(cle, vue.plan.donnees)
+        morceaux += [f"### {nom}", "", _table_md(entetes, rangs, aligne, {len(rangs) - 1}), ""]
+        recap.append([nom, mtr.nombre_fr(r["total_m"]) + (HYP if hv_res or hr_res else "")])
+    morceaux += [f"### {mtr.TITRE_RECAPITULATIF}", "",
+                 _table_md([mtr.COL_RESEAU, mtr.COL_TOTAL], recap, ["g", "d"]), ""]
+    return morceaux
+
+
 # ======================================================================
-# plan.md
+# plan.md (lu par Loïc, via plan.html) et metre-detail.md (mémoire de Claude, non rendu)
 # ======================================================================
 def ecrire_plan_md(chemin: Path, plan: mod.Plan, ech, m: mtr.Metre, liste_x: list[dict], recouv: list[dict],
                    version: int, maintenant: datetime, rendu_info: dict | None, journal: list[str],
-                   groupes: list[dict] | None = None) -> Path:
+                   groupes: list[dict] | None = None, sans_image: str | None = None) -> Path:
+    """plan.md, lisible d'abord : le plan (image), ce qu'il contient, le métré par réseau en noms, les croisements
+    en mots, les cotes, les hauteurs, les questions, puis des détails techniques courts. `sans_image` : raison
+    pour laquelle plan.png n'est pas montré (pas de rendu à cette génération)."""
+    vue = Vue(plan)
+    groupes = groupes if groupes is not None else crx.regrouper(liste_x)
     titre = plan.titre or "Plan 2D"
-    w_mm, h_mm = ech.page_mm
-    morceaux = [f"<!-- titre: Plan 2D : {titre} -->", "", f"# {titre}", ""]
+    infos = ([f"Dossier {plan.dossier}"] if plan.dossier else []) + (
+        [f"relevé du {date_fr(plan.date)}"] if plan.date else []) + [
+        f"version {version}", f"échelle 1:{ech.S}", f"{ech.format} {ech.orientation}"]
+    morceaux = [f"<!-- titre: Plan : {titre} -->", "", f"# {titre}", "", " · ".join(infos), ""]
 
-    morceaux += ["## Identité", "", _table_md(["Champ", "Valeur"], [
-        ["Titre", titre], ["Dossier", plan.dossier or mtr.TIRET_VIDE], ["Date du relevé", plan.date or mtr.TIRET_VIDE],
-        ["Version", f"v{version}, générée le {maintenant:%Y-%m-%d à %H:%M}"],
-        ["Échelle", f"1:{ech.S} (1 m du bâtiment = {nombre_fr(1000.0 / ech.S, 1)} mm sur le papier)"],
-        ["Orientation", ech.orientation], ["Page", f"{ech.format} ({nombre_fr(w_mm, 0)} × {nombre_fr(h_mm, 0)} mm)"],
-        ["Fichiers", "`plan.drawio` (à ouvrir dans draw.io), `plan.pdf` (à imprimer), `plan.png` (aperçu)"],
-    ]), ""]
+    # 2. le plan
+    morceaux += ["## Le plan", ""]
+    if sans_image:
+        morceaux += [f"Image du plan non produite à cette génération ({sans_image}) : relancer `generer.py` "
+                     "avec le rendu.", ""]
+    else:
+        morceaux += ["![Plan](plan.png)", ""]
+    morceaux += [f"Imprimer `plan.pdf` à 100 % (taille réelle). Sur le papier, la règle de contrôle du cartouche doit "
+                 f"mesurer 100 mm, et 1 m du bâtiment fait {nombre_court(100.0 / ech.S)} cm.", ""]
 
-    # comment vérifier l'échelle
-    murs = sorted(plan.murs, key=lambda mu: -geo.distance(*mod.axe_mur(mu)))
-    barre_cm = ech.barre_echelle_mm / 10.0
-    morceaux += ["## Comment vérifier l'échelle", "",
-                 "- Imprimer `plan.pdf` **à 100 %** (« Taille réelle »), jamais « Ajuster à la page ».",
-                 "- **Règle de contrôle** (cartouche, en bas à gauche) : elle doit mesurer **100 mm** au réglet.",
-                 f"- **Barre d'échelle** : {nombre_fr(ech.barre_echelle_m, 0)} m du bâtiment = "
-                 f"**{nombre_fr(barre_cm, 1)} cm** sur le papier (échelle 1:{ech.S})."]
-    if murs:
-        lm = geo.distance(*mod.axe_mur(murs[0]))
-        morceaux.append(f"- Exemple : le mur {murs[0]['id']} ({mtr.longueur_fr(lm)}) mesure "
-                        f"**{nombre_fr(lm * 1000.0 / ech.S, 1)} mm** sur le papier.")
+    # 3. ce que le plan contient
+    morceaux += ["## Ce que le plan contient", ""]
+    if plan.chambres_froides:
+        morceaux += [_table_md(["Chambre", "Dimensions", "Régime / température", "Évaporateur", "Alimentée par"],
+                               vue.rangs_chambres()), ""]
+    else:
+        morceaux += ["Aucune chambre froide sur ce plan.", ""]
+    autres = vue.autres_equipements()
+    if autres:
+        morceaux += ["Autres équipements :", ""] + autres + [""]
+
+    # 4. métré
+    morceaux += ["## Métré", ""]
+    if m.lignes:
+        morceaux += tableaux_metre_lisibles(m, vue)
+        hyp = any(h["statut"] == mtr.HYPOTHESE for h in m.hypotheses)
+        note = [NOTE_HYP_METRE if hyp else NOTE_VALIDEES_METRE]
+        diam = [l["diametre"] for l in m.lignes.values() if l["type"] != "chemin_cables"]
+        if diam and all(d == mtr.A_DEFINIR for d in diam):
+            note.append("Les diamètres sont à définir par le dimensionnement.")
+        elif mtr.A_DEFINIR in diam:
+            note.append("Les diamètres non indiqués sont à définir par le dimensionnement.")
+        morceaux += [" ".join(note), ""]
+    else:
+        morceaux += ["Aucune ligne à métrer.", ""]
+
+    # 5. croisements
+    morceaux += [f"## {TITRE_CROISEMENTS_MD}", ""]
+    if groupes:
+        n = len(groupes)
+        reperes = groupes[0]["id"] if n == 1 else f"{groupes[0]['id']} à {groupes[-1]['id']}"
+        morceaux += [f"{n} endroit{'s' if n > 1 else ''} où des réseaux se croisent (sur le chantier, l'un passe "
+                     f"au-dessus de l'autre), repéré{'s' if n > 1 else ''} {reperes} sur le plan :", ""]
+        par_id = {x["id"]: x for x in liste_x}
+        morceaux += [vue.phrase_groupe(g, par_id) for g in groupes] + [""]
+    else:
+        morceaux += [crx.AUCUN, ""]
+    if recouv:
+        morceaux += ["Lignes posées l'une sur l'autre (non comptées comme croisements) :", ""]
+        for r in recouv:
+            milieu = ((r["de"][0] + r["a"][0]) / 2.0, (r["de"][1] + r["a"][1]) / 2.0)
+            a_, _ = vue.decrire_lignes([r["lignes"][0]])
+            b_, _ = vue.decrire_lignes([r["lignes"][1]])
+            morceaux.append(f"- {_maj(a_)} et {b_} : l'un sur l'autre sur {mtr.longueur_fr(r['longueur_m'])}, "
+                            f"{vue.lieu(milieu)}.")
+        morceaux.append("")
+
+    # 6. cotes
+    morceaux += ["## Cotes relevées", ""]
+    if plan.cotes:
+        morceaux.append(_table_md(["Cote", "Longueur", "Ce qu'elle mesure", "Source"],
+                                  [[c["id"], mtr.longueur_fr(c["valeur"]), vue.ce_que_mesure(c),
+                                    source_en_mots(c.get("source"))] for c in plan.cotes],
+                                  ["g", "d", "g", "g"]))
+    else:
+        morceaux.append("Aucune cote dans le modèle : demander les cotes au frigoriste (télémètre).")
+    morceaux.append("")
+
+    # 7. hauteurs et questions
+    hyp = any(h["statut"] == mtr.HYPOTHESE for h in m.hypotheses)
+    morceaux += [f"## Hauteurs de pose{' (hypothèses)' if hyp else ''}", ""]
+    if m.hypotheses:
+        morceaux.append(_table_md(["Élément", "Hauteur", "Statut"],
+                                  [[h["libelle"], mtr.longueur_fr(h["valeur"]), h["statut"]] for h in m.hypotheses],
+                                  ["g", "d", "g"]))
+    else:
+        morceaux.append("Aucune hauteur utilisée (aucune ligne à métrer).")
+    morceaux.append("")
+    q = questions_ouvertes(plan, m, vue)
+    morceaux += ["## Questions ouvertes", ""] + ([f"- {x}" for x in q] if q else ["Aucune."]) + [""]
+
+    # 8. détails techniques (court)
+    morceaux += ["## Détails techniques", "",
+                 "- Fichiers : `plan.drawio` (à ouvrir dans draw.io), `plan.pdf` (à imprimer), `plan.png` (image du "
+                 "plan), `metre-detail.md` (détail du calcul par ligne), `verification.md` (dernier contrôle, "
+                 "`verifier_plan.py`)."]
     if rendu_info and rendu_info.get("regle_pt"):
         voie = "draw.io Desktop" if rendu_info["voie"] == "drawio" else "Edge + viewer diagrams.net (secours)"
         s_txt = f"{rendu_info['facteur_s']:.6f}".replace(".", ",")
@@ -201,87 +664,81 @@ def ecrire_plan_md(chemin: Path, plan: mod.Plan, ech, m: mtr.Metre, liste_x: lis
                         f"dans le PDF : {regle_txt} mm (écart {ecart_txt} %).")
     else:
         morceaux.append("- PDF non rendu à cette génération (`--sans-rendu` ou rendu en échec).")
-    morceaux += ["- Contrôle automatique : `verifier_plan.py` relit `plan.drawio` et mesure `plan.pdf` "
-                 "(contrôles E1 à E11, rapport `verification.md`).", ""]
-
-    # cotes
-    morceaux += ["## Cotes relevées", ""]
-    if plan.cotes:
-        morceaux.append(_table_md(["Cote", "De", "À", "Valeur", "Source"],
-                                  [[c["id"], _pt(c["de"]), _pt(c["a"]), mtr.longueur_fr(c["valeur"]),
-                                    c.get("source") or "non précisée"] for c in plan.cotes],
-                                  ["g", "g", "g", "d", "g"]))
-    else:
-        morceaux.append("Aucune cote dans le modèle : demander les cotes au frigoriste (télémètre).")
+    morceaux.append("- Calques (draw.io, menu Affichage > Calques) : " + ", ".join(n for _, n in plan.calques()) + ".")
+    versions = journal[-VERSIONS_MONTREES:]
+    if versions:
+        entete = ("- Versions :" if len(journal) <= VERSIONS_MONTREES else
+                  f"- Versions (les {VERSIONS_MONTREES} dernières ; toutes dans `journal.md`) :")
+        morceaux += [entete] + ["    " + v for v in versions]
     morceaux.append("")
+    chemin.write_text("\n".join(morceaux), encoding="utf-8", newline="\n")
+    return chemin
 
-    # hauteurs
-    morceaux += ["## Hypothèses de hauteur", "",
-                 f"Métré d'une ligne = longueur du tracé en plan + |passage {mtr.MOINS} départ| + |passage {mtr.MOINS} "
-                 "arrivée| + réserve (câbles seulement) ; un câble qui s'arrête sur le chemin de câbles compte aussi son "
-                 "parcours dans le chemin jusqu'au tableau (colonne « Dans le chemin ») ; le chemin de câbles lui-même "
-                 "est métré une fois, à part, sans métré vertical.", ""]
-    if m.hypotheses:
-        morceaux.append(_table_md(["Hauteur", "Valeur (m)", "Statut"],
-                                  [[h["libelle"], mtr.nombre_fr(h["valeur"]), h["statut"]] for h in m.hypotheses],
-                                  ["g", "d", "g"]))
-        if any(h["statut"] == mtr.HYPOTHESE for h in m.hypotheses):
-            morceaux += ["", "Les hauteurs « hypothèse » sont des valeurs par défaut, à faire valider avant de commander "
-                         "le matériel : les valeurs marquées (hyp.) changeront avec elles."]
-    else:
-        morceaux.append("Aucune hauteur utilisée (aucune ligne à métrer).")
-    morceaux.append("")
 
-    # métré
-    morceaux += ["## Métré", "", f"### {TITRES_SECTIONS['reseaux']}", ""]
+def ecrire_metre_detail(chemin: Path, plan: mod.Plan, m: mtr.Metre, liste_x: list[dict], recouv: list[dict],
+                        version: int, maintenant: datetime, groupes: list[dict] | None = None) -> Path:
+    """metre-detail.md : mémoire de Claude (non rendue en HTML), relue par verifier_plan.py (E6 ligne par ligne,
+    E7 croisement par croisement). Codes, formules, hauteurs, diamètres, calques, notes du relevé."""
+    titre = plan.titre or "Plan 2D"
+    morceaux = [f"# Métré détaillé : {titre}", "",
+                f"Mémoire du skill froid-plan-2d (v{version}, générée le {maintenant:%Y-%m-%d à %H:%M}), non rendue "
+                "en HTML : Loïc lit `plan.html`. Relue par `verifier_plan.py` (E6, E7).", ""]
+    morceaux += [f"## {TITRES_SECTIONS['reseaux']}", ""]
     if m.lignes:
-        morceaux += [tableau_reseaux_md(m), "", "### Détail du calcul par ligne", ""]
-        for lid, l in m.lignes.items():
-            morceaux.append(f"- **{lid}** ({l['libelle_type']}, {l['de'] or mtr.TIRET_VIDE} {mtr.FLECHE} "
-                            f"{l['a'] or mtr.TIRET_VIDE}) : {l['formule']}")
-        morceaux += ["", f"### {TITRES_SECTIONS['diametres']}", "", tableau_diametres_md(m), ""]
+        morceaux += [f"Métré d'une ligne = longueur du tracé en plan + |passage {mtr.MOINS} départ| + |passage "
+                     f"{mtr.MOINS} arrivée| + réserve (câbles seulement) ; un câble qui s'arrête sur le chemin de "
+                     "câbles compte aussi son parcours dans le chemin jusqu'au tableau (colonne « Dans le chemin ») ; "
+                     "le chemin de câbles lui-même est métré une fois, à part, sans métré vertical. Dans plan.md, "
+                     "« En plan » = en plan + dans le chemin, « Montées et descentes » = vertical.", "",
+                     tableau_reseaux_md(m), "", "## Détail du calcul par ligne", ""]
+        morceaux += [f"- **{lid}** ({l['libelle_type']}, {l['de'] or mtr.TIRET_VIDE} {mtr.FLECHE} "
+                     f"{l['a'] or mtr.TIRET_VIDE}) : {l['formule']}" for lid, l in m.lignes.items()]
+        morceaux += ["", f"## {TITRES_SECTIONS['diametres']}", "", tableau_diametres_md(m), ""]
     else:
         morceaux += ["Aucune ligne à métrer.", ""]
-
-    # croisements
+    morceaux += ["## Hauteurs utilisées", ""]
+    if m.hypotheses:
+        morceaux += [_table_md(["Hauteur", "Valeur (m)", "Statut", "Lignes"],
+                               [[h["libelle"], mtr.nombre_fr(h["valeur"]), h["statut"], ", ".join(h.get("lignes") or [])]
+                                for h in m.hypotheses], ["g", "d", "g", "g"]), ""]
+    else:
+        morceaux += ["Aucune.", ""]
     morceaux += [f"## {TITRES_SECTIONS['croisements']}", "",
-                 "Croisements en plan entre lignes de faisceaux différents. Sur le dessin (calque « Croisements »), "
-                 "un cercle orange par repère G : les croisements distants de 0,50 m au plus partagent le même cercle, "
-                 "étiqueté à côté (« X1-X3 ») :",
-                 "", crx.tableau_markdown(liste_x, groupes), ""]
+                 "Un cercle orange par repère G sur le plan (calque « Croisements ») : les croisements distants de "
+                 "0,50 m au plus partagent le même cercle, étiqueté à côté (« X1-X3 ») :", "",
+                 crx.tableau_markdown(liste_x, groupes), ""]
     if recouv:
         morceaux += ["Recouvrements (deux lignes superposées en plan, non comptés comme croisements) :", ""]
         morceaux += [f"- {r['id']} : {r['lignes'][0]} et {r['lignes'][1]} superposées sur "
                      f"{mtr.longueur_fr(r['longueur_m'])}, de {_pt(r['de'])} à {_pt(r['a'])} m." for r in recouv]
         morceaux.append("")
-
-    # calques
     rangs = []
     for cle, nom in plan.calques():
         lignes = [l["id"] for l in plan.lignes if l.get("calque") == cle]
         equip = [q["id"] for q in plan.equipements if q.get("calque") == cle]
-        contenu = []
-        if equip:
-            contenu.append(f"équipements {', '.join(equip)}")
-        if lignes:
-            contenu.append(f"lignes {', '.join(lignes)}")
-        if cle == "croisements":
-            contenu.append(f"{len(liste_x)} croisement(s)")
+        contenu = ([f"équipements {', '.join(equip)}"] if equip else []) + (
+            [f"lignes {', '.join(lignes)}"] if lignes else []) + (
+            [f"{len(liste_x)} croisement(s)"] if cle == "croisements" else [])
         rangs.append([cle, nom, " ; ".join(contenu) or mtr.TIRET_VIDE])
-    morceaux += ["## Calques", "", "Dans draw.io : menu Affichage > Calques (Ctrl+Maj+L) pour masquer ou afficher "
-                 "un réseau.", "", _table_md(["Calque", "Nom", "Contenu"], rangs), ""]
-
-    # questions
-    q = questions_ouvertes(plan, m)
-    morceaux += ["## Questions ouvertes", ""]
-    morceaux += [f"- {x}" for x in q] if q else ["Aucune."]
-    morceaux.append("")
+    morceaux += ["## Calques", "", _table_md(["Calque", "Nom", "Contenu"], rangs), ""]
     if plan.notes:
         morceaux += ["## Notes du relevé", ""] + [f"- {n}" for n in plan.notes] + [""]
-
-    morceaux += ["## Journal des versions", ""] + (journal or ["Aucune génération enregistrée."]) + [""]
     chemin.write_text("\n".join(morceaux), encoding="utf-8", newline="\n")
     return chemin
+
+
+RE_IMAGE_PLAN = re.compile(r'<img alt="Plan" src="plan\.png"\s*/?>')
+
+
+def image_pleine_largeur(chemin_html: Path) -> None:
+    """Dans plan.html, l'image du plan prend toute la largeur et s'ouvre en taille réelle au clic (le rendu
+    markdown partagé n'a pas de style pour une image seule)."""
+    page = chemin_html.read_text(encoding="utf-8")
+    nouvelle = RE_IMAGE_PLAN.sub('<a href="plan.png" target="_blank" title="Ouvrir l\'image en taille réelle">'
+                                 '<img alt="Plan" src="plan.png" style="display:block;width:100%;height:auto;'
+                                 'border:1px solid #d9d9de;border-radius:4px"></a>', page, count=1)
+    if nouvelle != page:
+        chemin_html.write_text(nouvelle, encoding="utf-8", newline="\n")
 
 
 # ======================================================================
@@ -364,13 +821,17 @@ def generer(dossier_plan, rendu_pdf: bool = True, ouvrir: bool = False, maintena
                      f"{len(plan.lignes)} lignes, {len(liste_x)} croisement(s) · {rendu_txt}")
     journal = lire_journal(dossier) + [ligne_journal]
 
+    sans_image = None if rendu_info else ("`--sans-rendu`" if not rendu_pdf else "rendu en échec")
     f["md"] = ecrire_plan_md(dossier / "plan.md", plan, ech, m, liste_x, p["recouvrements"], version, maintenant,
-                             rendu_info, journal, p["groupes"])
+                             rendu_info, journal, p["groupes"], sans_image=sans_image)
+    f["metre_detail"] = ecrire_metre_detail(dossier / "metre-detail.md", plan, m, liste_x, p["recouvrements"],
+                                            version, maintenant, p["groupes"])
     try:
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
         from shared.rendu_html import convertir
         f["html"] = convertir(f["md"], racine=dossier, navigation=[])
+        image_pleine_largeur(f["html"])
     except Exception as exc:  # noqa: BLE001 - la vue HTML est un confort : son échec ne bloque pas le plan
         res["avertissements"].append(f"plan.html non produit ({type(exc).__name__} : {exc}).")
 

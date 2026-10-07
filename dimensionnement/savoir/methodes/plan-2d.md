@@ -48,11 +48,11 @@
 Ordre d'affichage (le premier est dessous) : Plan de base · Cotes · Froid, évaporateurs et centrales · Froid, cuivres
 et condensats · Électricité (froid et clim) · Clim, splits et moteur · Clim, cuivres · calques libres (dans l'ordre
 déclaré) · Croisements · Cartouche. Un calque se masque dans draw.io pour imprimer un seul réseau. Les identifiants des
-éléments du dessin sont ceux du modèle (M1, CF1, EV1, LA1, C1, X1…) : c'est ce qui permet de relire un plan retouché.
+éléments du dessin sont ceux du modèle (M1, CF1, EV1, LA1, CT1, X1…) : c'est ce qui permet de relire un plan retouché.
 
 ## 4. Le métré
 
-- **Formule** (une par ligne, écrite en toutes lettres dans `plan.md`) :
+- **Formule** (une par ligne, écrite en toutes lettres dans `metre-detail.md`) :
   métré = longueur du tracé en plan + |passage − départ| + |passage − arrivée| + réserve (câbles seulement).
   Exemple : « 6,40 m en plan + |2,60 − 2,30| + |2,60 − 0,50| = 8,80 m ».
 - **Câble qui s'arrête sur le chemin de câbles** (`a` = le chemin, ou dernier point à 0,10 m du chemin) : on ajoute
@@ -78,6 +78,11 @@ déclaré) · Croisements · Cartouche. Un calque se masque dans draw.io pour im
 - Le chemin de câbles compte dans le total du réseau électricité, à part dans le détail. Une ligne part et arrive au
   **centre** de son équipement (R15) : la longueur peut dépasser le raccord réel d'une demi-longueur d'appareil.
 - Le métré est **recalculé depuis le fichier draw.io** par le vérificateur et comparé aux tableaux à 1 cm.
+- **Ce que Loïc lit** (`plan.md`, rendu en `plan.html`) : le plan en image, les chambres et équipements avec leur
+  emplacement en mots, un tableau par réseau (tronçon en noms d'équipements, en plan, montées et descentes, total ;
+  pour l'électricité « dont chemin de câbles » et la réserve), le récapitulatif par réseau, les croisements en mots,
+  les cotes et ce qu'elles mesurent, les hauteurs de pose, les questions. Aucun code de ligne (LA1, LE1…) : le
+  détail par ligne (code, formule, hauteurs, diamètre) reste dans `metre-detail.md`, mémoire non rendue.
 
 ## 5. Les croisements
 

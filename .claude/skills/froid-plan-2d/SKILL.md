@@ -14,8 +14,12 @@ Loïc décrit un local (ou donne un croquis, un plan d'architecte, un relevé) *
 `plan.json` (en mètres) ; les scripts dessinent, mesurent et vérifient. Dans `dimensionnement/dossiers/<slug>/plan/` :
 
 - `plan.drawio` : page « Plan » (A4, échelle 1:S écrite dans le cartouche, un calque par réseau) et page « Métré » ;
-- `plan.pdf` (à imprimer) et `plan.png` (relecture) ; `plan.md` + `plan.html` : métré par réseau et par diamètre, formule
-  de chaque ligne, croisements, hauteurs utilisées, journal des versions ; `verification.md` : dernier contrôle ;
+- `plan.pdf` (à imprimer) et `plan.png` (relecture) ; `plan.md` + `plan.html` (ce que Loïc lit, sans aucun code de
+  ligne) : le plan en image, les chambres et les équipements avec leur emplacement en mots, le métré en un tableau par
+  réseau (tronçon en noms, en plan, montées et descentes, total) et son récapitulatif, les croisements en mots (un par
+  repère G), les cotes et ce qu'elles mesurent, les hauteurs de pose, les questions ouvertes, des détails techniques
+  courts ; `metre-detail.md` (mémoire de Claude, non rendue en HTML) : métré par ligne avec codes, formules, hauteurs
+  et diamètres, métré par diamètre, croisements un par un, calques, notes du relevé ; `verification.md` : dernier contrôle ;
 - Lot 6 : une feuille A4 à repères par réseau, que Loïc trace au marqueur et photographie ; la photo devient un calque.
 
 L'étape P est **indépendante** des étapes 1 à 3 : avant ou après l'étape 2. Le métré nourrira l'étape 2 (longueurs de
@@ -95,8 +99,8 @@ modèle ; copie suivie dans le dépôt : `scripts/tests/fixtures/a1-boucherie-pl
   centrale 1,5 × 0,8 ; groupe 1,0 × 0,6 ; condenseur 1,2 × 0,5 ; split 0,9 × 0,3 ; moteur 0,9 × 0,35 ; tableau
   0,6 × 0,2 ; autre 0,5 × 0,5), `chambre`, `soufflage`. Évaporateur contre la paroi opposée à la porte, soufflage
   vers la porte. Jamais devant une porte ou une fenêtre.
-- **Cotes** : `de`, `a` (les deux points mesurés), `valeur` (le télémètre), `source`, `cote` (côté : haut, bas, gauche,
-  droite), `decalage` (m). **|distance(de, a) − valeur| ≤ 0,01 m**, sinon erreur : une description incohérente se
+- **Cotes** : `id` **`CT1`, `CT2`…** (préfixe CT : `C1…Cn` sont les repères des câbles sur le plan), `de`, `a` (les
+  deux points mesurés), `valeur` (le télémètre), `source`, `cote` (côté : haut, bas, gauche, droite), `decalage` (m). **|distance(de, a) − valeur| ≤ 0,01 m**, sinon erreur : une description incohérente se
   dit à Loïc, on n'arrondit pas en silence.
 - **Lignes** : `id`, `type` (`aspiration`, `liquide`, `condensats`, `clim_gaz`, `clim_liquide`, `cable`,
   `chemin_cables`, ou la clé d'un calque libre), `de`, `a` (équipement, chambre, mur ou autre ligne ; `null` pour des
@@ -124,8 +128,9 @@ modèle ; copie suivie dans le dépôt : `scripts/tests/fixtures/a1-boucherie-pl
    `--sans-pdf` seulement pendant les tours rapides ; **le dernier tour se fait toujours avec le PDF**. Contrôles :
    E1 échelle du fichier, E2 cotes, E3 barre d'échelle, E4 tout dans la page, E5 complétude (porte, évaporateur,
    aspiration, liquide, condensats et câble par chambre ; gaz, liquide et câble par split), E6 tableaux = recalcul
-   depuis le XML, E7 croisements, E8 textes qui se chevauchent, E9 cohérence (calques, rien sur une porte ou une
-   fenêtre, extrémités de lignes), E10 PDF, E11 PNG. Croisements : ceux à 0,50 m ou moins l'un de l'autre partagent
+   depuis le XML (page « Métré », `metre-detail.md` ligne par ligne, `plan.md` par réseau et récapitulatif), E7
+   croisements, E8 textes qui se chevauchent, E9 cohérence (calques, rien sur une porte ou une fenêtre, extrémités
+   de lignes), E10 PDF, E11 PNG. Croisements : ceux à 0,50 m ou moins l'un de l'autre partagent
    un seul cercle (repère G, étiquette « X1-X3 » posée à côté) ; les tableaux gardent une ligne par croisement avec
    la colonne « Repère ». E8 avertit aussi quand une étiquette est posée sur le trait d'un autre élément (ligne,
    cote, attache) : la déplacer avec `position_etiquette` dans `plan.json` (équipements, pièces, chambres, lignes).
@@ -237,7 +242,9 @@ dimensionnement/dossiers/<slug>/plan/
 ├── plan.drawio            ← pages « Plan » et « Métré » (s'ouvre dans draw.io Desktop)
 ├── plan.pdf, plan.png     ← le plan sur une page A4 à l'échelle, le métré sur une ou deux pages A4 selon
 │                            sa longueur ; plan.png = image du plan pour la relecture
-├── plan.md, plan.html     ← métré, formules, croisements, hauteurs, questions, versions (Loïc lit le .html)
+├── plan.md, plan.html     ← vue lisible : plan, contenu, métré par réseau, croisements, cotes, hauteurs, questions
+│                            (Loïc lit le .html ; aucun code de ligne)
+├── metre-detail.md        ← mémoire : métré par ligne (codes, formules, diamètres), croisements un par un, notes
 ├── plan-base.json         ← échelle, orientation, origine en mm (repris par les feuilles du Lot 6)
 ├── rendu.json             ← facteur de calibration du PDF (règle de 100 mm), revérifié à chaque rendu
 ├── verification.md, .json ← dernier rapport de verifier_plan.py

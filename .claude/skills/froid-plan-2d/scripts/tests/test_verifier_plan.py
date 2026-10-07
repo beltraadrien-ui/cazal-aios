@@ -1,5 +1,5 @@
 """Tests de verifier_plan.py : la boucherie passe à 0 erreur ; CHAQUE contrôle E1 à E11 a au moins un test qui le
-fait échouer par mutation d'une copie (XML de plan.drawio, plan.json, plan.md, PDF fabriqué exprès à l'échelle
+fait échouer par mutation d'une copie (XML de plan.drawio, plan.json, plan.md, metre-detail.md, PDF fabriqué exprès à l'échelle
 fausse avec PyMuPDF, PNG absent ou de mauvaise taille) ; format de verification.md / verification.json.
 
 Usage, depuis la racine du dépôt :
@@ -149,13 +149,13 @@ class TestE1(Base):
 class TestE2(Base):
     def test_texte_de_cote_modifie(self):
         d = self.copie()
-        ot.changer_attribut(d, "C1", "value", ("16,00 m", "16,10 m"))
+        ot.changer_attribut(d, "CT1", "value", ("16,00 m", "16,10 m"))
         r = self.verifier(d)
-        self.assertIn("C1", elements(r, "E2"))
+        self.assertIn("CT1", elements(r, "E2"))
 
     def test_cote_raccourcie(self):
         d = self.copie()
-        ot.deplacer_arete(d, "C1", "targetPoint", dx=-4.0)
+        ot.deplacer_arete(d, "CT1", "targetPoint", dx=-4.0)
         self.assertIn("E2", erreurs(self.verifier(d)))
 
     def test_cote_incoherente_dans_le_modele(self):
@@ -163,7 +163,7 @@ class TestE2(Base):
         donnees = json.loads((d / "plan.json").read_text(encoding="utf-8"))
         donnees["cotes"][1]["valeur"] = 11.05
         ot.ecrire_plan(d, donnees)
-        self.assertIn("C2", elements(self.verifier(d), "E2"))
+        self.assertIn("CT2", elements(self.verifier(d), "E2"))
 
 
 class TestE3(Base):
@@ -241,20 +241,66 @@ class TestE6(Base):
         self.assertIn("E6", erreurs(r))
         self.assertTrue(any("page Métré" in e and "LA1" in e for e in elements(r, "E6")))
 
+    def _falsifier(self, d: Path, fichier: str, avant: str, apres: str) -> None:
+        texte = (d / fichier).read_text(encoding="utf-8")
+        self.assertIn(avant, texte)
+        (d / fichier).write_text(texte.replace(avant, apres, 1), encoding="utf-8")
+
     def test_plan_md_falsifie(self):
+        # plan.md n'a pas de codes de ligne : le tronçon falsifié (1re ligne du tableau froid) est retrouvé par son rang
         d = self.copie()
-        md = (d / "plan.md").read_text(encoding="utf-8")
-        self.assertIn("| 4,21 (hyp.) |", md)
-        (d / "plan.md").write_text(md.replace("| 4,21 (hyp.) |", "| 4,51 (hyp.) |", 1), encoding="utf-8")
+        self._falsifier(d, "plan.md", "| 4,21 (hyp.) |", "| 4,51 (hyp.) |")
         r = self.verifier(d)
-        self.assertTrue(any(e.startswith("plan.md") and "LA1" in e for e in elements(r, "E6")))
+        self.assertIn("plan.md · Froid : cuivres et condensats · LA1", elements(r, "E6"))
+        self.assertTrue(all(not e.startswith("metre-detail.md") for e in elements(r, "E6")))
+
+    def test_metre_detail_falsifie(self):
+        d = self.copie()
+        self._falsifier(d, "metre-detail.md", "| 4,21 (hyp.) |", "| 4,51 (hyp.) |")
+        r = self.verifier(d)
+        self.assertTrue(any(e.startswith("metre-detail.md") and "LA1" in e for e in elements(r, "E6")))
+        self.assertTrue(all(not e.startswith("plan.md") for e in elements(r, "E6")))
 
     def test_total_de_reseau_falsifie(self):
         d = self.copie()
+        self._falsifier(d, "plan.md", "**36,02 (hyp.)**", "**37,02 (hyp.)**")
+        self.assertTrue(any(e.startswith("plan.md") and "Total" in e for e in elements(self.verifier(d), "E6")))
+
+    def test_total_du_detail_falsifie(self):
+        d = self.copie()
+        self._falsifier(d, "metre-detail.md", "**36,02 (hyp.)**", "**37,02 (hyp.)**")
+        self.assertTrue(any(e.startswith("metre-detail.md") and "Total" in e
+                            for e in elements(self.verifier(d), "E6")))
+
+    def test_recapitulatif_falsifie(self):
+        d = self.copie()
+        self._falsifier(d, "plan.md", "| Électricité (froid et clim) | 86,88 (hyp.) |",
+                        "| Électricité (froid et clim) | 87,88 (hyp.) |")
+        self.assertIn("plan.md · Récapitulatif · Électricité (froid et clim)", elements(self.verifier(d), "E6"))
+
+    def test_troncon_retire_de_plan_md(self):
+        d = self.copie()
         md = (d / "plan.md").read_text(encoding="utf-8")
-        self.assertIn("**36,02 (hyp.)**", md)
-        (d / "plan.md").write_text(md.replace("**36,02 (hyp.)**", "**37,02 (hyp.)**"), encoding="utf-8")
-        self.assertTrue(any("Total" in e for e in elements(self.verifier(d), "E6")))
+        rang = next(l for l in md.splitlines() if l.startswith("| Split salle") and "Clim gaz" in l)
+        (d / "plan.md").write_text(md.replace(rang + "\n", "", 1), encoding="utf-8")
+        self.assertIn("plan.md · Clim : cuivres · tronçons", elements(self.verifier(d), "E6"))
+
+    def test_tableau_de_reseau_absent_de_plan_md(self):
+        d = self.copie()
+        self._falsifier(d, "plan.md", "### Clim : cuivres", "### Clim")
+        self.assertIn("plan.md · Clim : cuivres", elements(self.verifier(d), "E6"))
+
+    def test_diametres_du_detail_falsifies(self):
+        d = self.copie()
+        self._falsifier(d, "metre-detail.md", "| à définir | Câble | 76,38 (hyp.) |", "| à définir | Câble | 75,38 (hyp.) |")
+        self.assertTrue(any(e.startswith("metre-detail.md · Métré par diamètre") for e in elements(self.verifier(d), "E6")))
+
+    def test_metre_detail_absent(self):
+        d = self.copie()
+        (d / "metre-detail.md").unlink()
+        r = self.verifier(d)
+        self.assertIn("metre-detail.md", elements(r, "E6"))
+        self.assertEqual(r["code"], 1)
 
     def test_recalcul_depuis_le_dessin_et_non_le_modele(self):
         d = self.copie()
@@ -294,12 +340,18 @@ class TestE6(Base):
                             for c in r["constats"] if c["code"] == "E6"), r["constats"])
 
     def test_colonne_dans_le_chemin_falsifiee(self):
+        # plan.md : « En plan » = 1,60 + 10,10 dans le chemin = 11,70, colonne « dont chemin de câbles » = 10,10
         d = self.copie()
-        md = (d / "plan.md").read_text(encoding="utf-8")
-        self.assertIn("| 1,60 | 10,10 | 3,60 (hyp.) | 1,00 (hyp.) | 16,30 (hyp.) |", md)
-        (d / "plan.md").write_text(md.replace("| 1,60 | 10,10 |", "| 1,60 | 0,00 |", 1), encoding="utf-8")
+        self._falsifier(d, "plan.md", "| 11,70 | 10,10 | 3,60 (hyp.) | 1,00 (hyp.) | 16,30 (hyp.) |",
+                        "| 11,70 | 0,00 | 3,60 (hyp.) | 1,00 (hyp.) | 16,30 (hyp.) |")
         r = self.verifier(d)
-        self.assertTrue(any(e.startswith("plan.md") and "LE1" in e for e in elements(r, "E6")))
+        self.assertTrue(any(c["element"] == "plan.md · Électricité (froid et clim) · LE1"
+                            and "dont chemin de câbles" in c["attendu"] for c in r["constats"] if c["code"] == "E6"))
+        # metre-detail.md : colonne « Dans le chemin »
+        d = self.copie()
+        self._falsifier(d, "metre-detail.md", "| 1,60 | 10,10 |", "| 1,60 | 0,00 |")
+        r = self.verifier(d)
+        self.assertTrue(any(e.startswith("metre-detail.md") and "LE1" in e for e in elements(r, "E6")))
 
     def test_page_metre_imprimee_avec_hyp(self):
         """C2 (écart n° 6) : la page « Métré » porte « (hyp.) » comme plan.md, et E6 la relit sans erreur."""
@@ -366,6 +418,31 @@ class TestE7(Base):
         ot.changer_attribut(d, "metre-tableau-4", "value", ("3,22 m ; 0,30 m", "3,52 m ; 0,30 m"),
                             page="metre")
         self.assertTrue(any("X1" in e for e in elements(self.verifier(d), "E7")))
+
+
+    def test_tableau_des_croisements_du_detail_falsifie(self):
+        d = self.copie()
+        detail = (d / "metre-detail.md").read_text(encoding="utf-8")
+        avant = "3,22\u00a0m ; 0,30\u00a0m"
+        self.assertIn(avant, detail)
+        (d / "metre-detail.md").write_text(detail.replace(avant, "3,52\u00a0m ; 0,30\u00a0m", 1), encoding="utf-8")
+        self.assertIn("metre-detail.md · X1", elements(self.verifier(d), "E7"))
+
+    def test_repere_absent_de_plan_md(self):
+        d = self.copie()
+        md = (d / "plan.md").read_text(encoding="utf-8")
+        rang = next(l for l in md.splitlines() if l.startswith("- **G2**"))
+        (d / "plan.md").write_text(md.replace(rang + "\n", "", 1), encoding="utf-8")
+        r = self.verifier(d)
+        self.assertIn("plan.md · Croisements", elements(r, "E7"))
+        self.assertEqual(r["code"], 1)
+
+    def test_nombre_d_endroits_faux_dans_plan_md(self):
+        d = self.copie()
+        md = (d / "plan.md").read_text(encoding="utf-8")
+        self.assertIn("3 endroits où des réseaux se croisent", md)
+        (d / "plan.md").write_text(md.replace("3 endroits où", "4 endroits où", 1), encoding="utf-8")
+        self.assertIn("plan.md · Croisements", elements(self.verifier(d), "E7"))
 
 
 class TestE8(Base):

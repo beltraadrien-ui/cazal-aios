@@ -11,8 +11,8 @@ le PDF est mesuré avec PyMuPDF (règle n° 1 : « 15 m de cuivre annoncés = 15
 | E3 | barre d'échelle (longueur exacte à 0,5 px, texte) et règle de contrôle de 100 mm (393,70 px à 0,5 px) |
 | E4 | toute la géométrie dans la zone utile (cartouche dans le cartouche) |
 | E5 | complétude : chambres (porte, évaporateur, aspiration + liquide vers groupe/centrale, condensats, câble vers un tableau) ; splits (gaz + liquide vers un moteur, câble) ; `exigences` → avertissement motivé |
-| E6 | tableaux de la page « Métré » et de `plan.md` = métré recalculé depuis les points RELUS, ligne par ligne |
-| E7 | ellipses du calque « Croisements » = groupes recalculés (repères G, même nombre, centre à 0,05 m) ; tableaux = croisements individuels (point à 0,05 m, colonne Repère) |
+| E6 | métré recalculé depuis les points RELUS = tableaux de la page « Métré » et de `metre-detail.md` (ligne par ligne, totaux, diamètres) et de `plan.md` (un tableau par réseau : chaque tronçon dans l'ordre, ligne de total, récapitulatif) |
+| E7 | ellipses du calque « Croisements » = groupes recalculés (repères G, même nombre, centre à 0,05 m) ; tableaux de la page « Métré » et de `metre-detail.md` = croisements individuels (point à 0,05 m, colonne Repère) ; `plan.md` : une ligne par repère G |
 | E8 | lisibilité : aucune boîte de texte sur une autre, sur une porte ou sur un équipement (sauf son propre élément) ; avertissement si un texte est posé sur le trait d'un autre élément (ligne, cote, attache, flèche) |
 | E9 | cohérence : calques présents, rien sur l'emprise d'une porte ou d'une fenêtre, extrémités à 0,15 m de leur équipement, évaporateur face à la porte (avertissement), modèle valide |
 | E10 | PDF : page A4 ± 1 pt, règle de contrôle 283,46 pt ± 0,3 pt, barre ± 0,5 pt, trois plus longs murs ± 1 pt |
@@ -71,6 +71,8 @@ ANGLE_FACE_PORTE = 60.0
 GENRES_PRODUCTION = ("groupe", "centrale", "condenseur")
 FACTEUR_PNG = 2                                   # 200 dpi = 2 px par px draw.io
 TITRE_CROISEMENTS_PAGE = "Croisements entre réseaux"
+TITRE_CROISEMENTS_MD = "Croisements"              # section de plan.md : une ligne « - **G1**, … » par repère
+TITRE_CROISEMENTS_DETAIL = "Croisements et recouvrements"   # section de metre-detail.md : tableau par croisement
 
 
 class FichierManquant(Exception):
@@ -268,6 +270,8 @@ class Contexte:
         self.lecture = drawio.lire(dossier / "plan.drawio")
         self.ech = self.lecture.echelle
         self.md = (dossier / "plan.md").read_text(encoding="utf-8")
+        detail = dossier / "metre-detail.md"
+        self.md_detail = detail.read_text(encoding="utf-8") if detail.is_file() else None
         self.elements = self.lecture.elements
         self._relu = None
         self._metre = None
@@ -579,6 +583,88 @@ def _comparer_diametres(ctx: Contexte, rangs: list[list[str]] | None, source: st
                  "Regénérer le plan.")
 
 
+def _sans_gras(t: str) -> str:
+    return str(t).replace("**", "").strip()
+
+
+def _comparer_plan_md(ctx: Contexte) -> None:
+    """plan.md (lu par Loïc) : un tableau « ### <réseau> » par réseau, sans code de ligne. Chaque tronçon est comparé
+    dans l'ordre au recalcul (« En plan » = en plan + dans le chemin, « dont chemin de câbles », « Montées et
+    descentes » = vertical, « Réserve », « Total »), puis la ligne de total et le récapitulatif « Réseau | Total »."""
+    R, m = ctx.rapport, ctx.metre
+    if not m.lignes:
+        return
+    tol_ligne = TOL_M + 1e-6
+    for cle, res in m.par_reseau.items():
+        nom = mtr.nom_reseau_lisible(cle, ctx.relu)
+        source = f"plan.md · {nom}"
+        rangs = rangs_markdown(ctx.md, nom)
+        if not rangs or len(rangs) < 2:
+            R.erreur("E6", source, f"tableau « {nom} »", "absent", "Regénérer le plan.")
+            continue
+        entete = [_sans_gras(c) for c in rangs[0]]
+        specs = [(mtr.COL_PLAN, lambda d: mtr.arrondi(d["plan_m"] + d["chemin_m"]), True),
+                 (mtr.COL_DONT_CHEMIN, lambda d: d["chemin_m"], res["chemin_m"] > 0),
+                 (mtr.COL_MONTEES, lambda d: d["vertical_m"], True),
+                 (mtr.COL_RESERVE, lambda d: d["reserve_m"], res["reserve_m"] > 0),
+                 (mtr.COL_TOTAL, lambda d: d["total_m"], True)]
+        cols = [(entete.index(n), n, f, oblig) for n, f, oblig in specs if n in entete]
+        manquantes = [n for n, _, oblig in specs if oblig and n not in entete]
+        if manquantes:
+            R.erreur("E6", source, "colonnes " + ", ".join(manquantes), " | ".join(entete), "Regénérer le plan.")
+            continue
+        corps = [r for r in rangs[1:] if r and _sans_gras(r[0]) != "Total"]
+        total = next((r for r in rangs[1:] if r and _sans_gras(r[0]) == "Total"), None)
+        if len(corps) != len(res["lignes"]):
+            R.erreur("E6", f"{source} · tronçons", f"{len(res['lignes'])} tronçon(s) (recalcul depuis le dessin)",
+                     f"{len(corps)} dans le tableau", "Regénérer le plan.")
+        for lid, r in zip(res["lignes"], corps):
+            l = m.lignes[lid]
+            for i, nom_col, f, _ in cols:
+                cellule = r[i] if i < len(r) else ""
+                vide_admis = nom_col in (mtr.COL_DONT_CHEMIN, mtr.COL_RESERVE)   # case vide sur la ligne du chemin
+                v = 0.0 if (vide_admis and not _sans_gras(cellule)) else lire_nombre(cellule)
+                if v is None or abs(v - f(l)) > tol_ligne:
+                    R.erreur("E6", f"{source} · {lid}", f"{nom_col} = {mtr.nombre_fr(f(l))} (recalcul depuis le dessin)",
+                             cellule, "Le tableau ne correspond plus au dessin : regénérer (generer.py).")
+        if total is None:
+            R.erreur("E6", f"{source} · Total {nom}", "ligne de total", "absente", "Regénérer le plan.")
+            continue
+        tol = TOL_M * max(1, len(res["lignes"])) + 1e-6       # un arrondi au cm peut basculer par ligne (A2)
+        for i, nom_col, f, _ in cols:
+            v = lire_nombre(total[i]) if i < len(total) else None
+            if v is None or abs(v - f(res)) > tol:
+                R.erreur("E6", f"{source} · Total {nom}", f"{nom_col} = {mtr.nombre_fr(f(res))} (recalcul)",
+                         total[i] if i < len(total) else "absent", "Regénérer le plan.")
+        i_total = next(c[0] for c in cols if c[1] == mtr.COL_TOTAL)
+        valeurs = [lire_nombre(r[i_total]) if i_total < len(r) else None for r in corps]
+        total_tab = lire_nombre(total[i_total]) if i_total < len(total) else None
+        if None not in valeurs and total_tab is not None and abs(sum(valeurs) - total_tab) > 0.005 + 1e-6:
+            R.erreur("E6", f"{source} · Total {nom}", f"somme des tronçons du tableau = {mtr.nombre_fr(sum(valeurs))}",
+                     total[i_total], "Total incohérent avec ses tronçons : regénérer le plan.")
+    rangs = rangs_markdown(ctx.md, mtr.TITRE_RECAPITULATIF)
+    source = f"plan.md · {mtr.TITRE_RECAPITULATIF}"
+    if not rangs or len(rangs) < 2:
+        R.erreur("E6", source, f"tableau « {mtr.TITRE_RECAPITULATIF} »", "absent", "Regénérer le plan.")
+        return
+    entete = [_sans_gras(c) for c in rangs[0]]
+    try:
+        i_r, i_t = entete.index(mtr.COL_RESEAU), entete.index(mtr.COL_TOTAL)
+    except ValueError:
+        R.erreur("E6", source, f"colonnes {mtr.COL_RESEAU}, {mtr.COL_TOTAL}", " | ".join(entete), "Regénérer le plan.")
+        return
+    tab = {_sans_gras(r[i_r]): r[i_t] for r in rangs[1:] if len(r) > max(i_r, i_t)}
+    for cle, res in m.par_reseau.items():
+        nom = mtr.nom_reseau_lisible(cle, ctx.relu)
+        v = lire_nombre(tab.pop(nom)) if nom in tab else None
+        if v is None or abs(v - res["total_m"]) > TOL_M * max(1, len(res["lignes"])) + 1e-6:
+            R.erreur("E6", f"{source} · {nom}", f"{mtr.nombre_fr(res['total_m'])} m (recalcul)",
+                     "absent" if v is None else mtr.nombre_fr(v), "Regénérer le plan.")
+    for nom in tab:
+        R.erreur("E6", f"{source} · {nom}", "réseau présent dans le recalcul", "réseau en trop dans le récapitulatif",
+                 "Regénérer le plan.")
+
+
 def controle_e6(ctx: Contexte) -> None:
     try:
         ctx.metre
@@ -589,8 +675,15 @@ def controle_e6(ctx: Contexte) -> None:
     tableaux = dict(ctx.lecture.tableaux)
     _comparer_reseaux(ctx, rangs_html(tableaux.get("Métré par réseau", "")), "page Métré · Métré par réseau")
     _comparer_diametres(ctx, rangs_html(tableaux.get("Métré par diamètre", "")), "page Métré · Métré par diamètre")
-    _comparer_reseaux(ctx, rangs_markdown(ctx.md, "Métré par réseau"), "plan.md · Métré par réseau")
-    _comparer_diametres(ctx, rangs_markdown(ctx.md, "Métré par diamètre"), "plan.md · Métré par diamètre")
+    if ctx.md_detail is None:
+        if ctx.metre.lignes:
+            ctx.rapport.erreur("E6", "metre-detail.md", "détail du métré par ligne", "fichier absent",
+                               "Regénérer le plan (generer.py).")
+    else:
+        _comparer_reseaux(ctx, rangs_markdown(ctx.md_detail, "Métré par réseau"), "metre-detail.md · Métré par réseau")
+        _comparer_diametres(ctx, rangs_markdown(ctx.md_detail, "Métré par diamètre"),
+                            "metre-detail.md · Métré par diamètre")
+    _comparer_plan_md(ctx)
 
 
 def _points_tableau_croisements(rangs: list[list[str]]) -> dict[str, tuple[float, float] | None]:
@@ -643,13 +736,15 @@ def controle_e7(ctx: Contexte) -> None:
     # tableaux : une ligne par croisement individuel (point recalculé à 0,05 m) et son repère G
     par_id = {x["id"]: x for x in attendus}
     repere = {xid: g["id"] for g in groupes for xid in g["croisements"]}
+    detail = ctx.md_detail or ""
     sources = [("page Métré", rangs_html(dict(ctx.lecture.tableaux).get(TITRE_CROISEMENTS_PAGE, ""))),
-               ("plan.md", rangs_markdown(ctx.md, "Croisements et recouvrements") or [])]
+               ("metre-detail.md", rangs_markdown(detail, TITRE_CROISEMENTS_DETAIL) or [])]
     for source, rangs in sources:
         if source == "page Métré" and not rangs:
             R.erreur("E7", source, f"tableau « {TITRE_CROISEMENTS_PAGE} »", "absent", "Regénérer le plan.")
             continue
-        if source == "plan.md" and not rangs and "Aucun croisement" not in texte_section(ctx.md, "Croisements et recouvrements"):
+        if (source == "metre-detail.md" and not rangs
+                and "Aucun croisement" not in texte_section(detail, TITRE_CROISEMENTS_DETAIL)):
             R.erreur("E7", source, "tableau des croisements", "absent", "Regénérer le plan.")
             continue
         tab = _points_tableau_croisements(rangs) if rangs else {}
@@ -669,6 +764,23 @@ def controle_e7(ctx: Contexte) -> None:
             if xid in par_id and repere.get(xid) != g:
                 R.erreur("E7", f"{source} · {xid}", f"repère {repere.get(xid)} (recalcul)", g or "vide",
                          "Regénérer le plan.")
+    # plan.md (lu par Loïc) : une ligne « - **G1**, <lieu> : <ce qui se croise>. » par repère, dans l'ordre
+    section = texte_section(ctx.md, TITRE_CROISEMENTS_MD)
+    source = f"plan.md · {TITRE_CROISEMENTS_MD}"
+    if not section.strip():
+        R.erreur("E7", source, f"section « {TITRE_CROISEMENTS_MD} »", "absente", "Regénérer le plan.")
+        return
+    lus = re.findall(r"^\s*-\s+\*\*(G\d+)\*\*", section, flags=re.M)
+    ids = [g["id"] for g in groupes]
+    if lus != ids:
+        R.erreur("E7", source, f"repères {', '.join(ids) or 'aucun'} (recalcul)", ", ".join(lus) or "aucun",
+                 "Regénérer le plan.")
+    annonce = re.search(r"^(\d+) endroits? où des réseaux se croisent", section, flags=re.M)
+    if groupes and (annonce is None or int(annonce.group(1)) != len(groupes)):
+        R.erreur("E7", source, f"{len(groupes)} endroit(s) annoncé(s)", annonce.group(1) if annonce else "phrase absente",
+                 "Regénérer le plan.")
+    if not groupes and "Aucun croisement" not in section:
+        R.erreur("E7", source, "« Aucun croisement entre réseaux. »", "absent", "Regénérer le plan.")
 
 
 def controle_e8(ctx: Contexte) -> None:
