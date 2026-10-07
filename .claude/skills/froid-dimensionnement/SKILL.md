@@ -145,6 +145,10 @@ Si `1-existant.md` n'existe pas encore (« sors-moi les puissances » sur un rap
   fluide, regime}`, `estimations[] {id, texte, puissance}` (chiffres antérieurs à comparer).
 - **id uniques dans tout le fichier** (ils apparaissent dans les formules) ; convention : poste `a`, compresseur
   `a-c1`, volume balayé `a-c1-vb`, régime `a-t0` / `a-tc`, charge `a-charge`.
+- Champ facultatif **`photo`** sur `compresseurs[]`, `evaporateurs[]` et `plaques_ensemble[]` : liste des photos de la
+  plaque, chemins relatifs au dossier (ex. `["sources/photos/07-centrale-negative-a/p11-3.jpeg"]`, d'après la colonne
+  Photo de `1-existant.md`). Aucun calcul ne s'en sert : `calculs.py` le recopie tel quel dans `2-resultats.json`
+  pour l'étape 3 (`froid-demande-fournisseur`, photo à côté de sa légende). À remplir dès que la photo est connue.
 
 ## Règles de fiabilité (en plus de `dimensionnement/CLAUDE.md`)
 

@@ -38,10 +38,11 @@ Chaque source dit d'où vient la donnée : « photo p11-3 », « rapport p. 10 �
       "charge": Valeur kg,
       "compresseurs": [{"id", "marque", "modele", "volume_balaye": Valeur m³/h (photo en source),
                         "lecture": "sûre" | "douteuse" | "illisible", "note": texte, "frequence": Valeur Hz,
-                        "estimation": Valeur kW (facultatif : chiffre antérieur pour ce compresseur)}],
-      "evaporateurs": [{"id", "modele", "annee", "fluide_origine", "source"}],
+                        "estimation": Valeur kW (facultatif : chiffre antérieur pour ce compresseur),
+                        "photo": [chemins] (facultatif, voir plus bas)}],
+      "evaporateurs": [{"id", "modele", "annee", "fluide_origine", "source", "photo": [chemins] (facultatif)}],
       "plaques_ensemble": [{"id", "texte", "puissance": Valeur kW, "fluide": choix | null,
-                            "regime": {"t0", "tc"} | null}],
+                            "regime": {"t0", "tc"} | null, "photo": [chemins] (facultatif)}],
       "estimations": [{"id", "texte", "puissance": Valeur kW}]}]       (chiffres antérieurs à comparer)
 }
 Règles : lecture « douteuse » → volume balayé en statut « hypothèse » avec « lecture douteuse : … » dans la source
@@ -53,6 +54,10 @@ La capacité passée à fgas.py est la somme des puissances retenues du poste (i
 plafonne aussi les résultats F-gas (PRP du poste, tCO2e, étanchéité, interdictions : « (hyp.) » au tableau D) ; une
 plaque du poste qui indique un autre fluide (plaque d'ensemble, fluide d'origine d'un évaporateur) donne une variante
 calculée (tableau « G-variantes »). Les id sont uniques dans tout le fichier : ils apparaissent dans les formules.
+Champ facultatif « photo » (compresseurs, évaporateurs, plaques d'ensemble ; ajouté pour l'étape 3, compatible) : liste
+des photos de la plaque, chemins relatifs au dossier de l'installation (ex. « sources/photos/07-centrale-negative-a/
+p11-3.jpeg »). Aucun calcul ne s'en sert : il est recopié tel quel dans 2-resultats.json (même objet), pour que
+froid-demande-fournisseur place chaque photo à côté de sa légende. Absent : rien ne change dans les sorties.
 """
 from __future__ import annotations
 
@@ -95,9 +100,9 @@ CLES_PROJET = ("texte", "fluide_actuel", "fluide_cible", "type_equipement", "typ
                "date_analyse")
 CLES_POSTE = ("id", "nom", "dessert", "fluide", "temperature_chambre", "volume", "regime", "charge", "compresseurs",
               "evaporateurs", "plaques_ensemble", "estimations")
-CLES_COMPRESSEUR = ("id", "marque", "modele", "volume_balaye", "lecture", "note", "frequence", "estimation")
-CLES_EVAPORATEUR = ("id", "modele", "annee", "fluide_origine", "source")
-CLES_PLAQUE = ("id", "texte", "puissance", "fluide", "regime")
+CLES_COMPRESSEUR = ("id", "marque", "modele", "volume_balaye", "lecture", "note", "frequence", "estimation", "photo")
+CLES_EVAPORATEUR = ("id", "modele", "annee", "fluide_origine", "source", "photo")
+CLES_PLAQUE = ("id", "texte", "puissance", "fluide", "regime", "photo")
 CLES_ESTIMATION = ("id", "texte", "puissance")
 CLES_REGIME = ("t0", "tc")
 CLES_CHOIX = ("valeur", "source", "statut", "id")
@@ -352,6 +357,16 @@ class _Rapport:
             self.erreur(chemin, str(exc))
         self.source(chemin, t.get("source"))
 
+    def photos(self, chemin: str, obj: dict) -> None:
+        """Champ facultatif « photo » : liste de chemins relatifs au dossier (ex. sources/photos/<poste>/pNN-k.jpeg)."""
+        if "photo" not in obj:
+            return
+        ph = obj["photo"]
+        if not isinstance(ph, list) or not all(isinstance(x, str) and x.strip() for x in ph):
+            self.erreur(f"{chemin}.photo", "liste de chemins attendue, ex. [\"sources/photos/07-poste/p11-3.jpeg\"]")
+        elif any(x.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:", x) for x in ph):
+            self.erreur(f"{chemin}.photo", "chemin relatif au dossier de l'installation attendu (pas de chemin absolu)")
+
     def regime(self, chemin: str, reg: Any, obligatoire: bool = True) -> None:
         if reg is None:
             if obligatoire:
@@ -449,6 +464,7 @@ def verifier(e: dict) -> tuple[list[str], list[str]]:
                 continue
             cc = f"{ch}.compresseurs[{j}] ({c.get('id')})"
             r.id(cc, c.get("id"))
+            r.photos(cc, c)
             lecture = _lecture(c.get("lecture"))
             if not lecture:
                 r.erreur(cc, f"lecture « {c.get('lecture')} » ; attendue : sûre, douteuse ou illisible")
@@ -475,11 +491,13 @@ def verifier(e: dict) -> tuple[list[str], list[str]]:
             if r.cles(ce, ev, CLES_EVAPORATEUR, ("modele", "source")):
                 r.id(ce, ev.get("id"), obligatoire=False)
                 r.source(ce, ev.get("source"))
+                r.photos(ce, ev)
         for j, pl in enumerate(poste.get("plaques_ensemble") or []):
             cp = f"{ch}.plaques_ensemble[{j}]"
             if not r.cles(cp, pl, CLES_PLAQUE, ("id", "texte")):
                 continue
             r.id(cp, pl.get("id"))
+            r.photos(cp, pl)
             r.valeur(f"{cp}.puissance", pl.get("puissance"), ("kW",))
             r.choix(f"{cp}.fluide", pl.get("fluide"), obligatoire=False, fluide="coolprop")
             r.regime(f"{cp}.regime", pl.get("regime"), obligatoire=False)
@@ -570,6 +588,8 @@ def _calculer_compresseur(c: dict, fl: dict | None, regime: dict, points: list[d
     r["note"] = c.get("note") or ""
     r["volume_balaye"] = c.get("volume_balaye")
     r["volume_catalogue"] = _volume_catalogue(c, points) if lecture != ILLISIBLE else None
+    if "photo" in c:                                   # recopié tel quel (étape 3), absent : sortie inchangée
+        r["photo"] = c["photo"]
     return r
 
 
@@ -622,7 +642,7 @@ def _controle_plaque(pl: dict, comps: list[dict], fl: dict | None, regime: dict,
     return {"id": plid, "texte": pl.get("texte", ""), "puissance": puissance, "fluide": fluide_calc,
             "regime": regime_calc, "reference": reference, "libelle": libelle, "recalcul": recalcul, "ecart": ecart,
             "sans_conversion": sans_conversion, "ecart_sans_conversion": ecart_sans, "tableau_commun": communs,
-            "depassement": depassement, "portee": portee}
+            "depassement": depassement, "portee": portee, **({"photo": pl["photo"]} if "photo" in pl else {})}
 
 
 def _variantes_fluide(poste: dict, fluide_nom: str, type_eq: str, charge: Valeur | None, date: Any,

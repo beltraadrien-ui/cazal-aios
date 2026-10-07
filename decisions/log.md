@@ -705,3 +705,34 @@ sous-agents en trois vagues (cœur, socle, recherche ; calculs ; assemblage, vé
 
 **Owner:** Adrien. Reste : relire la table F-gas, valider la table de rendement volumétrique, obtenir les réponses de
 Loïc aux six questions (la convention de température du mélange pèse jusqu'à 15 % sur M2), retours de Loïc à l'usage.
+
+## 2026-10-07 — Lot 3 livré : `froid-demande-fournisseur`, un PDF unique et un mail court, anonymisation contrôlée
+
+**Decision:** L'étape 3 du parcours (demande de prix au fournisseur) est construite : skill `froid-demande-fournisseur`
+(`assembler.py` lit les étapes 1 et 2 et écrit `demande.json` ; `generer_livrable.py` produit `demande-vN.html`,
+`demande-vN.pdf` par Edge en mode sans tête et les mails `.txt` / `.html` ; `controler.py` vérifie anonymisation,
+chiffres, plaques, poids, mail ; 74 tests), gabarits de textes repris mot pour mot des mails que Loïc envoyait à la
+main, fiche `savoir/methodes/demande-fournisseur.md`, règles R9 à R13. **Le livrable est un PDF unique** (page de
+garde, contexte, chambres à traiter, production frigorifique existante, évaporateurs, demande détaillée, un chapitre
+par poste avec les photos des plaques légendées, annexes avec l'emplacement du plan d'implantation) **et un mail court
+sans tableau** qui résume et renvoie au PDF. Deux variantes : grossiste (vouvoiement, client anonymisé par un
+contrôle bloquant) et fabricant de centrale (tutoiement, chantier nommé, options techniques). Chaque chiffre vient de
+l'étape 2 (`Valeur.texte()`), les questions internes (« à confirmer », « lesquels garder ») sont exclues du livrable et
+listées pour Claude. Versions `vN` et `envois.md` ; **aucun envoi automatique, jamais** : Loïc relit et envoie.
+
+**Why:** Choix d'Adrien du 2026-10-07 : « un mail avec un résumé, toutes les informations dans le PDF, plus aucun
+tableau dans le mail », à la place de la pratique de Loïc (tableaux dans le corps du mail, PDF de photos seules de
+11,9 Mo dont l'envoi avait échoué) ; c'est aussi ce qui avait été présenté à Loïc en visio le 28/09. Un vérificateur
+indépendant a confirmé sur le dossier test : anonymisation étanche (identifiants cherchés jusque dans les métadonnées et
+l'EXIF des 43 photos), chiffres identiques à l'étape 2, six légendes relues sur six justes, structures des mails du
+16/09 et du 24/09 respectées ; PDF de 16 pages pour 2,5 Mo. Les corrections demandées (quantités dictées, note interne
+partie chez le fournisseur, annotations de lecture dans les légendes) ont été appliquées. Edge imprime le PDF sans
+logiciel supplémentaire. Pillow est utilisé pour redimensionner les photos avec un repli PyMuPDF : son ajout à
+`requirements.txt` est en attente de la décision d'Adrien (il est déjà requis par `froid-savoir`).
+
+**Alternatives considered:** page de tableaux HTML à coller dans Outlook (pratique de Loïc, écartée : option future
+si un fournisseur la réclame) ; Word (rejeté : Loïc n'arrivait pas à l'ouvrir) ; envoi par Outlook ou par API (jamais) ;
+`wkhtmltopdf` (nouvelle dépendance, inutile avec Edge).
+
+**Owner:** Adrien. Reste : décision Pillow ; coordonnées de l'émetteur (`dossiers/emetteur.json`, local) à compléter
+par Loïc ; questions 7 à 11 remises à Loïc à la livraison ; retours de Loïc à l'usage (ton, ordre des chapitres).

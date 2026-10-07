@@ -1,6 +1,7 @@
 # Règles de Loïc (dimensionnement et demande fournisseur)
 
-> v1 du 2026-10-06 (Lot 2). Chaque règle est **datée et sourcée**. Sources : « conversation Claude de Loïc
+> v1 du 2026-10-06 (Lot 2), complétée le 2026-10-07 (Lot 3 : R9 à R13, demande fournisseur). Chaque règle est
+> **datée et sourcée**. Sources : « conversation Claude de Loïc
 > du 16/09/2026 » (numéro de capture d'écran) et « visio du 24/09/2026 » (minute de l'enregistrement).
 > Une règle énoncée pour un seul dossier est marquée « à confirmer comme règle générale ». Les réponses de
 > Loïc aux six questions du 2026-10-06 s'ajoutent en fin de fichier, avec leur date. Toute correction de
@@ -52,6 +53,7 @@
   message daté du 24/09, capture 21.
 - **Format** : tableaux qui passent au copier-coller dans Outlook (version HTML) ; dossier photo des
   plaques classé par poste, envoyé en PDF. Conversation du 16/09/2026, captures 13, 14, 19 et 20.
+  **Remplacé le 2026-10-07 par R13** (un seul PDF, mail court sans tableau).
 
 ## R5. Marques et matériel préférés
 
@@ -90,6 +92,48 @@ Conversation du 16/09/2026, message daté du 24/09, capture 21 :
 
 - Prix indicatifs du **cuivre K65 du moment**, des **isolants** et des **petites fournitures** (colliers
   isolés, coudes…), pour faire ses métrés d'après son plan d'implantation. Conversation du 16/09/2026, capture 9.
+
+## R9. Ton selon le destinataire (demande de prix)
+
+- **Grossistes : vouvoiement, ton formel**, plusieurs grossistes non nommés, **client anonymisé** (ni nom, ni
+  adresse, ni localité, ni référence de fiche). Conversation du 16/09/2026, captures 9 et 17 à 19.
+- **Fabricant de centrale : tutoiement, ton cordial**, une personne nommée, **chantier nommé** avec sa référence.
+  Conversation du 16/09/2026, captures 20 à 22 (demande dictée le 24/09).
+- À confirmer comme règle générale : qui sont ses fournisseurs habituels et lesquels il tutoie (question 9).
+
+## R10. « Phase de prix, plusieurs sociétés en lice »
+
+- Dire au fournisseur que le marché est **mis en concurrence** et qu'on est **en phase de prix** (« rien n'est
+  encore signé »), avec le nombre d'entreprises en lice quand on le connaît, pour obtenir une offre « assez
+  concurrentielle ». Conversation du 16/09/2026, captures 20 à 22 ; mail aux grossistes, captures 17 à 19
+  (« marché de remodeling », « offre de prix compétitive »).
+- Le nombre d'entreprises vient du dossier (`dossier.md`, bloc A de l'étape 2) ou de la dictée, jamais d'une
+  supposition.
+
+## R11. Cuivre K65 et métrés
+
+- La tuyauterie est en **cuivre K65** (R5) ; Loïc fait **ses métrés lui-même d'après son plan d'implantation** et
+  demande au grossiste seulement les **prix indicatifs du moment** : cuivre K65, isolants, petites fournitures
+  (colliers isolés, coudes, raccords). Point f) de la demande. Conversation du 16/09/2026, captures 6, 9 et 11.
+- En V1, le plan d'implantation est « à suivre » dans les annexes ; il sera joint avec le métré au Lot 7.
+
+## R12. Marques dans les documents envoyés
+
+- **Évaporateurs : Alfa Laval de préférence** ; **régulation, détendeurs, sondes, transducteurs et détection de
+  fuite : Danfoss** (supervision AK-SM 800A, régulateurs AK-CC 55). Écrits correctement dans tout document envoyé
+  (dictés « Alpha Luv » et « dents fausses »). Conversation du 16/09/2026, captures 6, 9, 11 et 17.
+- Ce sont des **préférences** : la solution reste adaptée à ce que propose le fournisseur (capture 9).
+
+## R13. Un seul PDF et un mail court (décision d'Adrien du 2026-10-07)
+
+- La demande part en **un seul PDF** (contexte, tableaux, demande détaillée, un chapitre par poste avec les photos
+  des plaques légendées, annexes ; moins de 5 Mo) et **un mail court sans tableau** qui résume, cite les chiffres
+  clés et renvoie au PDF. Décision d'Adrien du 2026-10-07, dans la ligne de ce qu'il avait décrit à Loïc en visio
+  le 28/09/2026 (un PDF avec les tableaux, les explications et les photos, plus le texte du mail).
+- **Pourquoi** : les tableaux collés dans Outlook se perdaient (capture 20 ; visio du 24/09/2026, 16:01) et le PDF
+  de photos de 11,9 Mo n'est pas passé (capture 14 ; visio du 24/09/2026, 16:41).
+- Remplace la pratique du 16/09 (R4, « Format ») ; la page de tableaux pour Outlook devient une option future.
+  À valider par Loïc à la livraison (ordre des chapitres, taille maximale : questions 7 et 8).
 
 ## Réponses attendues (six questions posées le 2026-10-06)
 

@@ -4,7 +4,7 @@
 > vectorisé). Les livres et formations de Loïc (scans) sont dans la base Supabase `savoir_*`
 > (skill `froid-savoir`, Lot 4) ; ici ne vit que le savoir distillé, maintenu par Adrien.
 > État : **v2 (Lot 2, 2026-10-06)** : fluides, règlement F-gas, méthode de puissance, règles de Loïc,
-> transitions, fiche Bitzer.
+> transitions, fiche Bitzer ; **Lot 3 (2026-10-07)** : demande de prix aux fournisseurs.
 
 | Question | Fichier | Remarque |
 |---|---|---|
@@ -19,3 +19,4 @@
 | Quel fluide est encore autorisé : entretien, mise sur le marché, contrôles d'étanchéité ? | `fluides/reglementation-fgas.csv` | **Table non relue** : à relire par Adrien sur EUR-Lex avant mise en service (colonnes `relu_par`, `date_relecture`) |
 | Que garde-t-on, que remplace-t-on quand on change de fluide ? | `methodes/transitions.md` | HFC → CO2 booster, HFC → HFC/HFO (retrofit), HFC → propane ; à compléter avec Loïc |
 | Quelles sont les règles de pouce de Loïc (régimes, marges, seuils, marques, régulation) ? | `methodes/regles-loic.md` | Datées et sourcées ; réponses aux six questions du 2026-10-06 ajoutées en fin de fichier |
+| Étape 3 : que veut un fournisseur dans une demande de prix ? Structure du PDF, mail, variantes grossiste / fabricant, demande a) à f), anonymisation, poids ? | `methodes/demande-fournisseur.md` | Déroulé, scripts et contrôles : `.claude/skills/froid-demande-fournisseur/SKILL.md` ; règles R9 à R13 dans `methodes/regles-loic.md` |

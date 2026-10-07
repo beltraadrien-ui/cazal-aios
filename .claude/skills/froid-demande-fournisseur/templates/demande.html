@@ -1,0 +1,272 @@
+<!doctype html>
+<!--
+  Gabarit A4 de la demande de prix (étape 3), rempli par scripts/generer_livrable.py : syntaxe du mini-moteur
+  (doubles accolades = texte échappé, triples = HTML préparé par le script, dièse / accent circonflexe = blocs)
+  décrite en tête de ce script. Numéros de chapitres : clés n.* (le chapitre « évaporateurs » peut manquer).
+  Sobre : noir sur blanc, un seul accent (--accent), polices système. Imprimé par Edge sans tête (--print-to-pdf).
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{titre}}</title>
+<style>
+:root {
+  --encre: #1a1a1a; --gris: #5f6368; --gris-clair: #8a8f94; --ligne: #c9ccd1; --fond: #f3f4f6;
+  --accent: #1f4e79; --orange: #b45309;
+}
+* { box-sizing: border-box; }
+html { background: #fff; }
+body {
+  margin: 0; background: #fff; color: var(--encre);
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif; font-size: 10pt; line-height: 1.45;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+@page {
+  size: A4;
+  margin: 17mm 16mm 18mm 16mm;
+  @top-right { content: "{{{titre_css}}}"; font-family: "Segoe UI", Arial, sans-serif; font-size: 7.5pt; color: #8a8f94; }
+  @bottom-left { content: "{{{mention_css}}}"; font-family: "Segoe UI", Arial, sans-serif; font-size: 7.5pt; color: #5f6368; }
+  @bottom-right { content: "Page " counter(page) " / " counter(pages); font-family: "Segoe UI", Arial, sans-serif; font-size: 7.5pt; color: #5f6368; }
+}
+@page :first {
+  @top-right { content: none; }
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+@media screen {
+  body { padding: 24px 16px 64px; }
+  main { max-width: 178mm; margin: 0 auto; }
+  section.chapitre, .poste + .poste { margin-top: 48px; padding-top: 24px; border-top: 1px dashed var(--ligne); }
+}
+
+/* Page de garde */
+.garde { height: 255mm; display: flex; flex-direction: column; }
+.emetteur { font-size: 9.5pt; color: var(--gris); line-height: 1.5; padding-bottom: 6mm; border-bottom: 1px solid var(--ligne); }
+.emetteur .societe { color: var(--encre); font-size: 12pt; font-weight: 600; }
+.garde-titre { margin-top: 34mm; }
+.garde-titre .trait { width: 22mm; height: 3px; background: var(--accent); margin-bottom: 6mm; }
+.garde-titre h1 { margin: 0; font-size: 28pt; line-height: 1.15; font-weight: 600; color: var(--encre); }
+.garde-titre .sous-titre { margin: 3mm 0 0; font-size: 15pt; color: var(--gris); }
+table.meta { width: auto; margin-top: 14mm; border-collapse: collapse; font-size: 10pt; }
+table.meta th { width: 38mm; text-align: left; font-weight: normal; color: var(--gris); padding: 1.2mm 6mm 1.2mm 0; border: 0; background: none; white-space: nowrap; vertical-align: top; }
+table.meta td { padding: 1.2mm 0; border: 0; font-weight: 600; }
+.sommaire { margin-top: 14mm; }
+.sommaire h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gris); margin: 0 0 3mm; border: 0; padding: 0; font-weight: 600; }
+.sommaire ol { list-style: none; margin: 0; padding: 0; }
+.sommaire li { margin: 1.2mm 0; }
+.sommaire .num { display: inline-block; min-width: 9mm; color: var(--accent); font-weight: 600; }
+.sommaire ol ol { margin: 0.5mm 0 0 9mm; font-size: 9pt; color: var(--gris); }
+.sommaire ol ol .num { min-width: 9mm; font-weight: normal; color: var(--gris); }
+.mention-garde { margin-top: auto; padding: 3.5mm 4mm; border-left: 3px solid var(--accent); background: var(--fond); font-size: 9.5pt; }
+
+/* Chapitres : 1 à 5 en continu ; nouvelle page seulement pour le début du contenu, les postes et les annexes */
+section.chapitre { margin-top: 11mm; }
+section.chapitre.nouvelle-page { break-before: page; margin-top: 0; }
+.entree-chapitre { break-inside: avoid; }
+h1.chapitre-titre { font-size: 16pt; font-weight: 600; color: var(--accent); margin: 0 0 5mm; padding-bottom: 2mm; border-bottom: 1.5px solid var(--accent); break-after: avoid; }
+h1.chapitre-titre .num { margin-right: 2mm; }
+h2 { font-size: 12.5pt; font-weight: 600; margin: 0 0 3.5mm; break-after: avoid; }
+h2 .num { color: var(--accent); margin-right: 2mm; }
+h3 { font-size: 10.5pt; font-weight: 600; margin: 5mm 0 2mm; break-after: avoid; }
+p { margin: 0 0 2.5mm; }
+ul { margin: 0 0 2.5mm; padding-left: 5mm; }
+li { margin: 0.8mm 0; }
+.note { font-size: 9pt; color: var(--gris); }
+.note p { margin: 0 0 1.5mm; }
+
+/* Tableaux */
+.tableau { margin: 2mm 0 4mm; break-inside: avoid; }
+table.donnees { width: 100%; border-collapse: collapse; font-size: 9pt; font-variant-numeric: tabular-nums; }
+table.donnees th, table.donnees td { border: 0.6pt solid var(--ligne); padding: 1.6mm 2.2mm; text-align: left; vertical-align: top; }
+table.donnees th { background: var(--fond); font-weight: 600; }
+table.donnees td.num, table.donnees th.num { text-align: right; white-space: nowrap; }
+table.donnees td:first-child { font-weight: 600; }
+table.donnees tr { break-inside: avoid; }
+table.donnees thead { display: table-header-group; }
+table.donnees tr.sous-total td { background: var(--fond); font-weight: 600; border-top: 1.2pt solid var(--encre); }
+td.statut-col, th.statut-col { width: 1%; white-space: nowrap; }
+.statut, .hyp { font-size: 0.82em; color: var(--gris-clair); font-weight: normal; }
+.a-confirmer { color: var(--orange); font-weight: 600; }
+.legende-statuts { font-size: 8pt; color: var(--gris-clair); margin-top: -2mm; }
+
+/* Notre demande */
+.point { margin: 0 0 4mm; break-inside: avoid; }
+.point h3 { margin: 0 0 1.5mm; }
+.point .lettre { display: inline-block; min-width: 6mm; color: var(--accent); }
+.point > p, .point > ul { margin-left: 6mm; }
+.encadre { margin-top: 5mm; padding: 3.5mm 4mm; background: var(--fond); border-left: 3px solid var(--accent); break-inside: avoid; }
+.encadre p:last-child { margin-bottom: 0; }
+
+/* Postes */
+.poste + .poste { break-before: page; }
+.chapeau { color: var(--gris); margin-bottom: 4mm; }
+table.fiche { width: 100%; border-collapse: collapse; margin: 0 0 4mm; break-inside: avoid; }
+table.fiche th { width: 34mm; text-align: left; vertical-align: top; font-weight: 600; color: var(--gris); padding: 1.8mm 3mm 1.8mm 0; border-bottom: 0.6pt solid var(--ligne); }
+table.fiche td { vertical-align: top; padding: 1.8mm 0; border-bottom: 0.6pt solid var(--ligne); }
+table.fiche td ul, table.fiche td p { margin: 0; }
+table.fiche td li { margin: 0 0 0.8mm; }
+
+/* Photos : deux par rangée, une rangée n'est jamais coupée */
+.rangee { display: flex; gap: 6mm; margin: 0 0 5mm; break-inside: avoid; page-break-inside: avoid; }
+figure.photo { flex: 0 0 calc(50% - 3mm); margin: 0; break-inside: avoid; }
+figure.photo .cadre { height: 72mm; display: flex; align-items: center; justify-content: center; border: 0.6pt solid var(--ligne); background: #fafafa; overflow: hidden; }
+figure.photo img { display: block; max-width: 100%; max-height: 72mm; width: auto; height: auto; }
+figure.photo figcaption { margin-top: 1.6mm; font-size: 8.5pt; line-height: 1.35; color: var(--encre); }
+.sans-photo { color: var(--gris); font-style: italic; }
+
+/* Annexes */
+.plan, p.pieces { margin: 0 0 2.5mm; }
+.plan .valeur, p.pieces .valeur { font-style: italic; }
+ul.pieces { margin-bottom: 4mm; }
+</style>
+</head>
+<body>
+<main>
+
+<section class="garde">
+  <div class="emetteur">
+    {{#emetteur.societe}}<div class="societe">{{emetteur.societe}}</div>{{/emetteur.societe}}
+    {{#emetteur.contact}}<div>{{emetteur.contact}}</div>{{/emetteur.contact}}
+    {{#emetteur.adresse}}<div>{{emetteur.adresse}}</div>{{/emetteur.adresse}}
+    {{#emetteur.coordonnees}}<div>{{emetteur.coordonnees}}</div>{{/emetteur.coordonnees}}
+  </div>
+
+  <div class="garde-titre">
+    <div class="trait"></div>
+    <h1>{{titre_principal}}</h1>
+    {{#sous_titre}}<p class="sous-titre">{{sous_titre}}</p>{{/sous_titre}}
+  </div>
+
+  <table class="meta">
+    <tr><th>Date</th><td>{{date_longue}}</td></tr>
+    <tr><th>Version</th><td>{{version}}</td></tr>
+    <tr><th>À l'attention de</th><td>{{destinataire}}</td></tr>
+    {{#lieu}}<tr><th>Installation</th><td>{{lieu}}</td></tr>{{/lieu}}
+    {{#reference}}<tr><th>Référence</th><td>{{reference}}</td></tr>{{/reference}}
+  </table>
+
+  <nav class="sommaire">
+    <h2>Sommaire</h2>
+    <ol>
+      {{#sommaire}}<li><span class="num">{{numero}}.</span>{{titre}}{{#a_sous}}<ol>{{#sous}}<li><span class="num">{{numero}}</span>{{titre}}</li>{{/sous}}</ol>{{/a_sous}}</li>
+      {{/sommaire}}
+    </ol>
+  </nav>
+
+  <p class="mention-garde">{{mention}}</p>
+</section>
+
+<section class="chapitre nouvelle-page" id="contexte">
+  <h1 class="chapitre-titre"><span class="num">{{n.contexte}}.</span>{{t.contexte}}</h1>
+  {{{contexte_html}}}
+</section>
+
+<section class="chapitre" id="chambres">
+  {{#chambres}}
+  <div class="entree-chapitre">
+  <h1 class="chapitre-titre"><span class="num">{{n.chambres}}.</span>{{t.chambres}}</h1>
+  <div class="tableau">
+    <table class="donnees">
+      <thead><tr><th>Chambre</th><th>Régime</th><th class="num">Surface</th><th class="num">Volume</th><th class="num">Évaporateurs</th></tr></thead>
+      <tbody>
+        {{#lignes}}<tr><td>{{{chambre}}}</td><td>{{{regime}}}</td><td class="num">{{{surface}}}</td><td class="num">{{{volume}}}</td><td class="num">{{{nb_evaporateurs}}}</td></tr>
+        {{/lignes}}
+      </tbody>
+    </table>
+  </div>
+  </div>
+  {{#note_html}}<div class="note">{{{note_html}}}</div>{{/note_html}}
+  {{/chambres}}
+</section>
+
+<section class="chapitre" id="production">
+  {{#production}}
+  <div class="entree-chapitre">
+  <h1 class="chapitre-titre"><span class="num">{{n.production}}.</span>{{t.production}}</h1>
+  <div class="tableau">
+    <table class="donnees">
+      <thead><tr><th>Poste</th><th>Compresseurs</th><th class="num">Volume balayé</th><th class="num">Puissance</th>{{#avec_statut}}<th class="statut-col">Statut</th>{{/avec_statut}}</tr></thead>
+      <tbody>
+        {{#lignes}}<tr><td>{{{poste}}}</td><td>{{{compresseurs}}}</td><td class="num">{{{volume_balaye}}}</td><td class="num">{{{puissance}}}</td>{{#avec_statut}}<td class="statut-col">{{{statut_html}}}</td>{{/avec_statut}}</tr>
+        {{/lignes}}
+        {{#sous_totaux}}<tr class="sous-total"><td colspan="3">{{{libelle}}}</td><td class="num">{{{puissance}}}</td>{{#avec_statut}}<td class="statut-col">{{{statut_html}}}</td>{{/avec_statut}}</tr>
+        {{/sous_totaux}}
+      </tbody>
+    </table>
+  </div>
+  {{#avec_a_confirmer}}<p class="legende-statuts"><span class="a-confirmer">à confirmer</span> : donnée encore à vérifier.</p>{{/avec_a_confirmer}}
+  {{#note_html}}<div class="note">{{{note_html}}}</div>{{/note_html}}
+  </div>
+  {{/production}}
+</section>
+
+{{#evaporateurs}}
+<section class="chapitre" id="evaporateurs">
+  <div class="entree-chapitre">
+  <h1 class="chapitre-titre"><span class="num">{{n.evaporateurs}}.</span>{{t.evaporateurs}}</h1>
+  <div class="tableau">
+    <table class="donnees">
+      <thead><tr><th>Chambre</th><th>Fabricant / modèle</th><th class="num">Année</th><th>Puissance</th></tr></thead>
+      <tbody>
+        {{#lignes}}<tr><td>{{{chambre}}}</td><td>{{{modele}}}</td><td class="num">{{{annee}}}</td><td>{{{puissance}}}</td></tr>
+        {{/lignes}}
+      </tbody>
+    </table>
+  </div>
+  </div>
+  {{#note_html}}<div class="note">{{{note_html}}}</div>{{/note_html}}
+</section>
+{{/evaporateurs}}
+
+<section class="chapitre" id="demande">
+  {{#demande}}
+  <div class="entree-chapitre">
+  <h1 class="chapitre-titre"><span class="num">{{n.demande}}.</span>{{t.demande}}</h1>
+  {{{intro_html}}}
+  </div>
+  {{#points}}
+  <div class="point">
+    <h3>{{#lettre}}<span class="lettre">{{lettre}})</span>{{/lettre}}{{titre}}</h3>
+    {{{texte_html}}}
+    {{#avec_sous_points}}<ul>{{#sous_points}}<li>{{{.}}}</li>{{/sous_points}}</ul>{{/avec_sous_points}}
+  </div>
+  {{/points}}
+  {{#resume_html}}<div class="encadre">{{{resume_html}}}</div>{{/resume_html}}
+  {{/demande}}
+</section>
+
+<section class="chapitre nouvelle-page" id="postes">
+  <h1 class="chapitre-titre"><span class="num">{{n.postes}}.</span>{{t.postes}}</h1>
+  {{^postes}}<p class="sans-photo">Aucun poste détaillé.</p>{{/postes}}
+  {{#postes}}
+  <article class="poste" id="{{ancre}}">
+    <h2><span class="num">{{numero}}</span>{{titre}}</h2>
+    <table class="fiche">
+      {{#dessert}}<tr><th>Dessert</th><td>{{dessert}}</td></tr>{{/dessert}}
+      {{#avec_existant}}<tr><th>Existant</th><td><ul>{{#existant}}<li>{{{.}}}</li>{{/existant}}</ul></td></tr>{{/avec_existant}}
+      {{#puissance_html}}<tr><th>Puissance retenue</th><td>{{{puissance_html}}}</td></tr>{{/puissance_html}}
+      {{#remplacement_html}}<tr><th>Remplacement</th><td>{{{remplacement_html}}}</td></tr>{{/remplacement_html}}
+    </table>
+    {{#rangees}}<div class="rangee">{{#photos}}<figure class="photo {{classe}}"><div class="cadre"><img src="{{src}}" alt="{{alt}}"></div><figcaption>{{{legende_html}}}</figcaption></figure>{{/photos}}</div>
+    {{/rangees}}
+  </article>
+  {{/postes}}
+</section>
+
+<section class="chapitre nouvelle-page" id="annexes">
+  <h1 class="chapitre-titre"><span class="num">{{n.annexes}}.</span>{{t.annexes}}</h1>
+  {{#annexes}}
+  <p class="plan"><strong>Plan d'implantation :</strong> <span class="valeur">{{plan_implantation}}</span></p>
+  <p class="pieces"><strong>Pièces jointes :</strong>{{^pieces_jointes}} <span class="valeur">aucune en plus de ce document</span>{{/pieces_jointes}}</p>
+  {{#avec_pieces}}<ul class="pieces">{{#pieces_jointes}}<li>{{.}}</li>{{/pieces_jointes}}</ul>{{/avec_pieces}}
+  <h3>Vues d'ensemble</h3>
+  {{^rangees}}<p class="sans-photo">Aucune vue d'ensemble jointe.</p>{{/rangees}}
+  {{#rangees}}<div class="rangee">{{#photos}}<figure class="photo {{classe}}"><div class="cadre"><img src="{{src}}" alt="{{alt}}"></div><figcaption>{{{legende_html}}}</figcaption></figure>{{/photos}}</div>
+  {{/rangees}}
+  {{/annexes}}
+</section>
+
+</main>
+</body>
+</html>

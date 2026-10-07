@@ -34,6 +34,16 @@ fournitures, hypothèses et questions), un vérificateur le relit, Loïc valide 
 écrite, marqué « (hyp.) ») ou *à confirmer* (pas de nombre) ; un résultat n'est jamais plus sûr que sa plus
 faible entrée.
 
+**Étape 3 (demande fournisseur).** Loïc dit à qui il écrit (grossistes, ou un fabricant de centrale nommé).
+`assembler.py` du skill `froid-demande-fournisseur` écrit `demande.json` depuis les étapes 1 et 2 (textes par défaut,
+tableaux rendus depuis `2-resultats.json`, un chapitre par poste avec les photos des plaques, client anonymisé pour
+les grossistes) ; Claude n'y ajuste que les textes dictés, jamais un chiffre ; `generer_livrable.py` produit **un
+PDF unique** (contexte, chambres, production existante, évaporateurs, demande, détail par poste avec les photos
+légendées, annexes ; moins de 5 Mo) et **un mail court sans tableau** ; `controler.py` vérifie anonymisation,
+chiffres, plaques, PDF, mail et annexes (0 échec exigé), un vérificateur relit, puis Loïc relit ✋ et **envoie
+lui-même** ; `envois.md` garde la trace de chaque envoi. Une version envoyée ne se réécrit jamais : `v2`, `v3`…
+(grossistes) et `v1-fabricant`… (fabricant).
+
 ## Où vivent les choses
 
 ```
@@ -43,12 +53,20 @@ dimensionnement/
 ├── bibliotheque/        ← LOCAL (gitignoré) : documents originaux de Loïc, cache des pages et de l'OCR
 ├── carnet/              ← LOCAL (gitignoré) : lecons.md, les corrections de Loïc et le pourquoi
 └── dossiers/            ← LOCAL (gitignoré) : un dossier par installation
+    ├── emetteur.json                  ← coordonnées de Loïc pour les demandes de prix (à compléter par lui)
     └── AAAA-MM-JJ-client/
         ├── dossier.md                 ← état, précision, décisions, hypothèses, questions, journal
         ├── sources/                   ← rapport.pdf, rapport-texte.md, structure.json, photos/<poste>/
         ├── 1-existant.md
         ├── 2-dimensionnement.md
-        └── 3-demande-fournisseur/     ← demande-v1.pdf, tableaux-outlook.html, mail.txt
+        └── 3-demande-fournisseur/
+            ├── envois.md              ← à qui, quand, quelle version (une ligne par envoi de Loïc)
+            ├── v1/                    ← variante grossiste ; v2, v3… à chaque nouvelle version
+            │   ├── demande.json       ← données de la demande (+ identifiants-client.json, valeurs-derivees.json)
+            │   ├── demande-v1.html    ← page A4 (img/ : photos réduites)
+            │   ├── demande-v1.pdf     ← le PDF à joindre
+            │   └── mail-grossiste.txt, mail-grossiste.html  ← le mail court, sans tableau
+            └── v1-fabricant/          ← variante fabricant : demande-v1-fabricant.pdf, mail-fabricant.txt…
 ```
 
 Ce qui est à Loïc (documents, dossiers clients, corrections) ne va **jamais** sur GitHub.
