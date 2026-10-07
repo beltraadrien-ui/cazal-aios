@@ -1,6 +1,7 @@
 # Règles de Loïc (dimensionnement et demande fournisseur)
 
-> v1 du 2026-10-06 (Lot 2), complétée le 2026-10-07 (Lot 3 : R9 à R13, demande fournisseur). Chaque règle est
+> v1 du 2026-10-06 (Lot 2), complétée le 2026-10-07 (Lot 3 : R9 à R13, demande fournisseur ; Lots 5 et 6 : R14 à
+> R19, plans 2D, toutes en hypothèse tant que Loïc ne les a pas validées). Chaque règle est
 > **datée et sourcée**. Sources : « conversation Claude de Loïc
 > du 16/09/2026 » (numéro de capture d'écran) et « visio du 24/09/2026 » (minute de l'enregistrement).
 > Une règle énoncée pour un seul dossier est marquée « à confirmer comme règle générale ». Les réponses de
@@ -134,6 +135,57 @@ Conversation du 16/09/2026, message daté du 24/09, capture 21 :
   de photos de 11,9 Mo n'est pas passé (capture 14 ; visio du 24/09/2026, 16:41).
 - Remplace la pratique du 16/09 (R4, « Format ») ; la page de tableaux pour Outlook devient une option future.
   À valider par Loïc à la livraison (ordre des chapitres, taille maximale : questions 7 et 8).
+
+## R14. Hauteurs de pose pour le métré des plans (hypothèse du 2026-10-07)
+
+- **Statut : hypothèse**, jamais confirmée par Loïc. Valeurs reprises de l'exemple de plan du 2026-09-28 et de la
+  décision du 2026-10-07 : évaporateur **2,30 m** ; passage des cuivres froid **2,60 m** ; raccord du groupe ou de
+  la centrale **0,50 m** ; tableau électrique **1,50 m** ; chemin de câbles **2,80 m** ; réserve par câble **1,00 m** ;
+  split **2,20 m** ; passage des cuivres clim **2,20 m** ; raccord du moteur **0,50 m** ; condensats : passage
+  **2,30 m**, évacuation **0,10 m**.
+- Elles entrent dans la formule du métré (`methodes/plan-2d.md` § 4) et `plan.md` les écrit « hypothèse » tant que
+  `hauteurs_validees` ne les contient pas. Une hauteur dictée pour une ligne ou un équipement prime sur la table.
+- À valider par Loïc à la livraison (question 13 : lesquelles il change).
+
+## R15. Une ligne part et arrive au centre de l'équipement (hypothèse du 2026-10-07)
+
+- **Statut : hypothèse.** Le départ d'un cuivre ou d'un câble se compte depuis le centre de l'équipement, et
+  l'accrochage d'un trait lu sur photo se fait sur ce centre (`--accrochage bord` en variante). Choix de construction
+  du 2026-10-07 : le métré peut dépasser le raccord réel d'une demi-longueur d'appareil.
+- À valider par Loïc à la livraison (question 15 : centre ou bord).
+
+## R16. Écart accepté entre un tracé photographié et sa longueur de référence (hypothèse du 2026-10-07)
+
+- **Statut : hypothèse.** Écart accepté par réseau : **max(5 %, 0,30 m)**. Au delà, `lire_photo.py` le signale et la
+  fusion dans le plan attend la confirmation de Loïc. Seuil provisoire (décision du 2026-10-07).
+- À valider par Loïc à la livraison (question 14).
+
+## R17. Impression à 100 % et marqueur de couleur (décision d'Adrien du 2026-10-07 et hypothèse)
+
+- **Plans en A4, une page, à une échelle normalisée** choisie automatiquement, avec barre d'échelle et règle de
+  contrôle de 100 mm : décision d'Adrien du 2026-10-07 (« les plans sont à l'échelle et l'échelle se vérifie »).
+- **Le plan s'imprime à 100 %** (« taille réelle »), jamais « ajusté à la page » ; la règle de contrôle se vérifie au
+  réglet. Seule exception : la feuille à repères du Lot 6 peut être ajustée à la page (mesures relatives aux repères).
+- **Tracés au marqueur rouge, bleu ou vert**, un trait continu par tronçon, une feuille par réseau, photo de dessus
+  sans flash ; le noir est lu mais moins sûr (le plan imprimé est gris).
+- **Statut : hypothèse** sur la pratique de Loïc : à valider à la livraison (question 16 : marqueurs et imprimante A4 ;
+  question 17 : A4 seulement ou parfois A3 ; question 18 : métré sur la page 2 et dans la vue HTML).
+
+## R18. Diamètres jamais inventés sur un plan (règle du système du 2026-10-07)
+
+- Chaque ligne porte **« à définir »** comme diamètre tant que le dimensionnement ne l'a pas fixé ; aucune section de
+  câble non plus. Application des règles de fiabilité 1 et 2 de `dimensionnement/CLAUDE.md` (une source sur chaque
+  chiffre ; ne jamais inventer). Le métré par diamètre regroupe ces lignes sous « à définir ».
+- **Statut : hypothèse** quant à la pratique de Loïc (qui fixe les diamètres, et quand) : à lui confirmer.
+
+## R19. Cote manquante = question (règle du système du 2026-10-07)
+
+- **Aucune longueur estimée** sur un plan : une cote que Loïc n'a pas donnée (ni écrite sur un croquis ou un plan
+  d'architecte) est une question, jamais une valeur « environ » ni une mesure prise sur un croquis. Chaque cote garde
+  sa source (télémètre, croquis, plan d'architecte, rapport) ; une description incohérente de plus de 1 cm est
+  signalée, jamais arrondie en silence. Seuls défauts permis, écrits comme tels : dimensions d'équipement par type,
+  épaisseurs de mur, hauteurs de pose (R14).
+- **Statut : hypothèse** quant à la tolérance de Loïc (1 cm entre ses cotes et le dessin) : à lui confirmer.
 
 ## Réponses attendues (six questions posées le 2026-10-06)
 

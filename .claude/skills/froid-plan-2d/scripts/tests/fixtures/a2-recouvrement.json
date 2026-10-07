@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "titre": "Test A2 : câble posé dans le chemin de câbles (recouvrement) et liquide qui traverse le chemin",
+  "dossier": "test-a2-recouvrement",
+  "date": "2026-10-07",
+  "page": {"format": "A4", "orientation": "auto", "echelle": null},
+  "equipements": [
+    {"id": "EV1", "type": "evaporateur", "position": [3, 0]},
+    {"id": "TD", "type": "tableau", "position": [8, 4]},
+    {"id": "EV2", "type": "evaporateur", "position": [9, 0]},
+    {"id": "GR1", "type": "groupe", "position": [9, 4]}
+  ],
+  "lignes": [
+    {"id": "K1", "type": "chemin_cables", "calque": "electricite", "de": null, "a": null,
+     "points": [[0, 2], [10, 2]]},
+    {"id": "C1", "type": "cable", "calque": "electricite", "de": "EV1", "a": "TD",
+     "points": [[3, 0], [3, 2], [5, 2], [8, 2], [8, 4]]},
+    {"id": "L1", "type": "liquide", "calque": "froid_cuivres", "de": "EV2", "a": "GR1",
+     "points": [[9, 0], [9, 4]], "faisceau": "EV2-GR1"}
+  ]
+}

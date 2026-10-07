@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "titre": "Test A2 : surcharges de hauteurs (ligne, équipement, calque libre)",
+  "dossier": "test-a2-surcharges",
+  "date": "2026-10-07",
+  "page": {"format": "A4", "orientation": "auto", "echelle": null},
+  "hauteurs": {"evaporateur": 2.50, "passage_froid": 3.00, "raccord_groupe": 0.30, "reserve_cable": 2.00,
+               "chemin_cables": 3.20, "tableau": 1.20},
+  "hauteurs_validees": true,
+  "equipements": [
+    {"id": "EV1", "type": "evaporateur", "nom": "Évaporateur 1", "position": [0, 0]},
+    {"id": "EV2", "type": "evaporateur", "nom": "Évaporateur 2 posé plus haut", "position": [0, 4], "hauteur": 2.70},
+    {"id": "GR1", "type": "groupe", "nom": "Groupe", "position": [5, 0]},
+    {"id": "TD", "type": "tableau", "nom": "TD-F", "position": [0, 3]}
+  ],
+  "lignes": [
+    {"id": "L1", "type": "aspiration", "de": "EV1", "a": "GR1", "points": [[0, 0], [5, 0]],
+     "faisceau": "EV1-GR1", "hauteur_depart": null, "hauteur_passage": 3.50, "hauteur_arrivee": null},
+    {"id": "L2", "type": "liquide", "de": "EV1", "a": "GR1", "points": [[0, 0.1], [5, 0.1]],
+     "faisceau": "EV1-GR1", "hauteur_depart": 2.00, "hauteur_passage": 2.00, "hauteur_arrivee": 2.00},
+    {"id": "L3", "type": "condensats", "de": "EV1", "a": null, "points": [[0, 0], [0, 1]]},
+    {"id": "L4", "type": "cable", "de": "EV2", "a": "TD", "points": [[0, 4], [0, 3]]},
+    {"id": "L5", "type": "gaine", "calque": "gaine", "de": null, "a": null, "points": [[1, 1], [3, 1]]},
+    {"id": "L6", "type": "chemin_cables", "de": null, "a": null, "points": [[0, 2], [2, 2]], "hauteur_depart": 1.00},
+    {"id": "L7", "type": "aspiration", "de": "EV2", "a": "GR1", "points": [[0, 4], [5, 4], [5, 0]],
+     "faisceau": "EV2-GR1"}
+  ],
+  "calques_libres": [{"cle": "gaine", "nom": "Gaine de soufflage", "couleur": "#8D6E63", "trait": "double",
+                      "hauteur_depart": 2.90, "hauteur_passage": 3.10}]
+}

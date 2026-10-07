@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "titre": "Test A2 : hauteurs par défaut, un exemple par type de ligne",
+  "dossier": "test-a2-defauts",
+  "date": "2026-10-07",
+  "page": {"format": "A4", "orientation": "auto", "echelle": null},
+  "equipements": [
+    {"id": "EV1", "type": "evaporateur", "nom": "Évaporateur", "position": [2, 1]},
+    {"id": "GR1", "type": "groupe", "nom": "Groupe", "position": [8, 1]},
+    {"id": "SP1", "type": "split", "nom": "Split", "position": [1, 5]},
+    {"id": "MO1", "type": "moteur", "nom": "Moteur clim", "position": [9, 5]},
+    {"id": "TD", "type": "tableau", "nom": "TD-F", "position": [0.2, 3]}
+  ],
+  "lignes": [
+    {"id": "L1", "type": "aspiration", "calque": "froid_cuivres", "de": "EV1", "a": "GR1",
+     "points": [[2, 1], [2, 0.5], [8, 0.5], [8, 1]], "diametre": "à définir", "faisceau": "EV1-GR1"},
+    {"id": "L2", "type": "liquide", "calque": "froid_cuivres", "de": "EV1", "a": "GR1",
+     "points": [[2, 1], [2, 0.6], [8, 0.6], [8, 1]], "diametre": "à définir", "faisceau": "EV1-GR1"},
+    {"id": "L3", "type": "condensats", "de": "EV1", "a": null,
+     "points": [[2, 1], [2, 2.5]], "diametre": null},
+    {"id": "L4", "type": "clim_gaz", "calque": "clim_cuivres", "de": "SP1", "a": "MO1",
+     "points": [[1, 5], [9, 5]], "faisceau": "SP1-MO1"},
+    {"id": "L5", "type": "clim_liquide", "calque": "clim_cuivres", "de": "SP1", "a": "MO1",
+     "points": [[1, 5.1], [9, 5.1]], "faisceau": "SP1-MO1"},
+    {"id": "L6", "type": "cable", "calque": "electricite", "de": "EV1", "a": "TD",
+     "points": [[2, 1], [2, 3], [0.2, 3]]},
+    {"id": "L7", "type": "chemin_cables", "calque": "electricite", "de": null, "a": null,
+     "points": [[0.2, 2.8], [6, 2.8]]},
+    {"id": "L8", "type": "eau_chaude", "calque": "eau_chaude", "de": null, "a": null,
+     "points": [[0, 7], [4, 7]]},
+    {"id": "L9", "type": "cable", "calque": "electricite", "de": "GR1", "a": "TD",
+     "points": [[8, 1], [8, 3], [0.2, 3]]},
+    {"id": "L10", "type": "cable", "calque": "electricite", "de": "TD", "a": "SP1",
+     "points": [[0.2, 3], [0.2, 5], [1, 5]]}
+  ],
+  "calques_libres": [{"cle": "eau_chaude", "nom": "Eau chaude", "couleur": "#EF6C00", "trait": "simple"}]
+}

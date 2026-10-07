@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "titre": "Atelier test A3 — plan froid",
+  "dossier": "2026-10-07-atelier-test-a3",
+  "date": "2026-10-07",
+  "page": {"format": "A4", "orientation": "auto", "echelle": null},
+  "hauteurs": {"evaporateur": 2.30, "passage_froid": 2.60, "raccord_groupe": 0.50,
+               "tableau": 1.50, "chemin_cables": 2.80, "reserve_cable": 1.00,
+               "split": 2.20, "passage_clim": 2.20, "raccord_moteur": 0.50},
+  "murs": [
+    {"id": "M1", "de": [0, 0], "a": [10, 0], "epaisseur": 0.20, "type": "exterieur"},
+    {"id": "M2", "de": [0, 0], "a": [0, 6], "epaisseur": 0.20, "type": "exterieur"}
+  ],
+  "pieces": [{"id": "P1", "nom": "Atelier", "polygone": [[0, 0], [10, 0], [10, 6], [0, 6]]}],
+  "chambres_froides": [
+    {"id": "CF1", "nom": "Chambre positive", "regime": "positif",
+     "polygone": [[6.5, 0.4], [9.8, 0.4], [9.8, 2.8], [6.5, 2.8]], "panneau_mm": 80,
+     "porte": {"position": [6.5, 1.2], "largeur": 0.8, "orientation": 90}},
+    {"id": "CF2", "nom": "Chambre négative", "regime": "negatif",
+     "polygone": [[6.5, 3.2], [9.8, 3.2], [9.8, 5.6], [6.5, 5.6]], "panneau_mm": 120,
+     "porte": {"position": [6.5, 4.0], "largeur": 0.8, "orientation": 90}}
+  ],
+  "portes": [{"id": "D1", "position": [2.0, 0], "largeur": 0.9, "orientation": 0, "dans": "M1"}],
+  "fenetres": [{"id": "F1", "position": [0, 3.0], "largeur": 1.2, "orientation": 90, "dans": "M2"}],
+  "equipements": [
+    {"id": "EV1", "type": "evaporateur", "nom": "Évaporateur CF1", "position": [9.4, 1.6],
+     "dimensions": [1.2, 0.5], "rotation": 90, "chambre": "CF1", "soufflage": "gauche"},
+    {"id": "EV2", "type": "evaporateur", "nom": "Évaporateur CF2", "position": [9.4, 4.4],
+     "dimensions": [1.2, 0.5], "rotation": 90, "chambre": "CF2", "soufflage": "gauche"},
+    {"id": "GR1", "type": "groupe", "nom": "Groupe", "position": [1.5, 4.8], "dimensions": [1.0, 0.6]}
+  ],
+  "cotes": [
+    {"id": "C1", "de": [0, 0], "a": [10, 0], "valeur": 10.0, "source": "telemetre", "cote": "haut", "decalage": 0.6},
+    {"id": "C2", "de": [0, 0], "a": [0, 6], "valeur": 6.0, "source": "telemetre", "cote": "gauche", "decalage": 0.6}
+  ],
+  "lignes": [
+    {"id": "L1", "type": "liquide", "calque": "froid_cuivres", "de": "EV1", "a": "GR1",
+     "points": [[9.4, 1.6], [5.8, 1.6], [5.8, 4.8], [1.5, 4.8]], "diametre": "à définir",
+     "faisceau": "EV1-groupe", "hauteur_depart": null, "hauteur_arrivee": null, "hauteur_passage": null}
+  ],
+  "calques_libres": [{"cle": "eau_chaude", "nom": "Eau chaude", "couleur": "#EF6C00", "trait": "simple"}],
+  "exigences": {},
+  "notes": ["Plan fictif pour les tests du Lot 6 (sous-agent A3) : aucune donnée client."]
+}

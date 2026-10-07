@@ -503,7 +503,7 @@ versionné, lu directement (jamais vectorisé) et bundlé dans le zip mobile com
 Quatre choix tranchés par Adrien : (1) **CoolProp installé chez Loïc** (dépendance épinglée dans
 `requirements.txt`, avec son accord) ; (2) **double index, par mots et par sens, pour tout document
 ingéré, dès la V1** côté PC ; le mobile cherche par mots en V1 ; (3) contrôle par **abaque de volume**
-en V1, le bilan thermique détaillé de chambre est reporté en phase 2 ; (4) le dossier **ETS Denis**
+en V1, le bilan thermique détaillé de chambre est reporté en phase 2 ; (4) **le dossier test (client réel, nom retiré)**
 (rapport InterFast IN01834 + conversation Claude de Loïc du 16/09) est le dossier test des étapes 1
 et 2. InterFast : démarrage **sans** MCP (réservé au plan supérieur), le PDF reste la porte
 d'entrée. Ordre de construction : module chiffrage d'abord, module plans 2D ensuite, séparément.
@@ -590,7 +590,7 @@ des plaques par un modèle de vision via API (rejeté en V1 : Claude Code lit le
 double lecture par sous-agent remplit le rôle de vérification) ; calcul des puissances dès l'étape 1
 (rejeté : les calculs sont l'étape 2, par script).
 
-**Owner:** Adrien. Validation du relevé ETS Denis par Adrien (comparaison avec la conversation du 16/09) avant commit.
+**Owner:** Adrien. Validation du relevé du dossier test (client réel, nom retiré) par Adrien (comparaison avec la conversation du 16/09) avant commit.
 
 ## 2026-10-05 — Le markdown est la mémoire de Claude ; l'humain lit une vue HTML générée
 
@@ -736,3 +736,42 @@ si un fournisseur la réclame) ; Word (rejeté : Loïc n'arrivait pas à l'ouvri
 
 **Owner:** Adrien. Reste : décision Pillow ; coordonnées de l'émetteur (`dossiers/emetteur.json`, local) à compléter
 par Loïc ; questions 7 à 11 remises à Loïc à la livraison ; retours de Loïc à l'usage (ton, ordre des chapitres).
+
+## 2026-10-07 — Lots 5 et 6 : plans 2D à l'échelle vérifiée (`froid-plan-2d`) et lecture des tracés photographiés
+
+**Decision:** L'étape P du parcours (plan 2D, indépendante des étapes 1 à 3) est construite dans le skill
+`froid-plan-2d`. Claude écrit un modèle en mètres (`plan/plan.json`, chaque cote avec sa source ; une cote manquante est
+une question, jamais une estimation) ; les scripts dessinent `plan.drawio` (pages « Plan » et « Métré », un calque par
+réseau), calculent le métré (longueur en plan + montées et descentes aux hauteurs de pose) et les croisements, rendent
+`plan.pdf` et `plan.png`, et vérifient. **A4, une page, échelle normalisée choisie automatiquement** (1:50 à 1:1000,
+la plus petite qui tient), barre d'échelle et règle de contrôle de 100 mm dans le cartouche, impression à 100 % :
+**décision d'Adrien du 2026-10-07** (« les plans sont à l'échelle et l'échelle se vérifie »). **Vérification à trois
+niveaux** (`verifier_plan.py`, 11 contrôles, 0 erreur exigée, 5 tours au plus) : le fichier draw.io relu et reconverti
+en mètres = le modèle à 1 cm, la barre d'échelle à 0,5 px, **le PDF mesuré** (page A4, règle de 100 mm, barre et trois
+plus longs murs, à 1 pt près au plus). **PDF par draw.io Desktop en ligne de commande, calibré sur la règle de 100 mm** (mesurée dans le PDF, facteur
+corrigé puis revérifié à chaque rendu) ; secours Edge et viewer draw.io ; PNG = PDF rasterisé par PyMuPDF. Retouches à
+la voix (Claude modifie `plan.json`) ou à la souris dans draw.io Desktop (`importer_drawio.py`). **Lot 6** : une
+feuille A4 par réseau avec 4 **repères ArUco de 16 mm** aux coins ; Loïc trace au marqueur, photographie ;
+`lire_photo.py` redresse par homographie, lit le trait, le convertit en mètres, l'accroche aux équipements et l'ajoute
+au plan après son accord. **opencv-python ajouté** à `requirements.txt` (autorisé par Adrien le 2026-10-07), avec
+numpy et Pillow. Tests en **unittest** (pytest absent). **Opus recommandé, pas forcé** : une phrase au début du skill
+demande à Loïc de passer sur Opus avec `/model` ; pas de champ `model` tant qu'Adrien ne l'a pas tranché.
+
+**Why:** Un métré faux, c'est du cuivre commandé en trop ou en moins ; un plan « à peu près à l'échelle » ne se mesure
+pas au réglet sur chantier. L'export PDF de draw.io Desktop sort réduit de 0,245 % (mesuré sur ce PC) : seule une
+mesure dans le PDF lui-même garantit l'échelle, et elle tient si draw.io change de version. L'A4 est le format de
+l'imprimante de bureau ; l'échelle normalisée rend la barre et la règle lisibles. Les repères ArUco rendent la photo
+indépendante de l'angle de prise de vue et d'une impression réduite : sur 218 photos synthétiques (perspective
+jusqu'à 35°, flou, JPEG dégradé), écart de longueur au plus 0,80 %. Le modèle en mètres, unique source du dessin, du
+métré et de la vérification, empêche qu'un chiffre retouché à la main diverge du dessin.
+
+**Alternatives considered:** A3 ou échelle libre (1 m = 50 px de l'exemple du 28/09, soit un 1:78,74 non normalisé :
+rejeté) ; export PNG de draw.io (cassé au-delà d'environ 2 500 px sur ce PC : rejeté) ; Edge + viewer en voie
+principale (gardé en secours) ; lecture de photo sans repères (perspective non maîtrisée : rejetée) ; scikit-image pour
+le squelette (nouvelle dépendance : remplacée par du numpy) ; champ `model: opus` forcé (repli silencieux si
+indisponible : en attente d'Adrien).
+
+**Owner:** Adrien. Reste : validation du Lot 6 sur 2 ou 3 feuilles imprimées et photographiées (à la fin, avec Adrien) ;
+hypothèses en attente de Loïc (hauteurs de pose, seuil d'écart max(5 %, 0,30 m), accrochage au centre, marqueurs et
+imprimante, A4 seulement, métré en page 2 : questions 13 à 18, règles R14 à R19) ; champ `model` ; branchement du métré
+vers les étapes 2 et 3 (Lot 7).

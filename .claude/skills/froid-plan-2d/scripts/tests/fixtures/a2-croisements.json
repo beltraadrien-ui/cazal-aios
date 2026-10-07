@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "titre": "Test A2 : deux câbles qui traversent un faisceau aspiration + liquide",
+  "dossier": "test-a2-croisements",
+  "date": "2026-10-07",
+  "page": {"format": "A4", "orientation": "auto", "echelle": null},
+  "equipements": [
+    {"id": "EV1", "type": "evaporateur", "position": [1, 1]},
+    {"id": "EV2", "type": "evaporateur", "position": [5, 2]},
+    {"id": "GR1", "type": "groupe", "position": [9, 0.5]},
+    {"id": "SP1", "type": "split", "position": [2, 3]},
+    {"id": "MO1", "type": "moteur", "position": [8, 3]},
+    {"id": "TD", "type": "tableau", "position": [5, 0]}
+  ],
+  "lignes": [
+    {"id": "L1", "type": "aspiration", "calque": "froid_cuivres", "de": "EV1", "a": "GR1",
+     "points": [[1, 1], [1, 0.5], [9, 0.5]], "faisceau": "EV1-GR1"},
+    {"id": "L2", "type": "liquide", "calque": "froid_cuivres", "de": "EV1", "a": "GR1",
+     "points": [[1.1, 1], [1.1, 0.6], [9, 0.6]], "faisceau": "EV1-GR1"},
+    {"id": "L3", "type": "cable", "calque": "electricite", "de": "EV2", "a": "TD",
+     "points": [[5, 2], [5, 0]]},
+    {"id": "L4", "type": "clim_gaz", "calque": "clim_cuivres", "de": "SP1", "a": "MO1",
+     "points": [[2, 3], [8, 3]], "faisceau": "SP1-MO1"},
+    {"id": "L5", "type": "cable", "calque": "electricite", "de": "SP1", "a": "TD",
+     "points": [[2, 3], [2, 0]]}
+  ]
+}

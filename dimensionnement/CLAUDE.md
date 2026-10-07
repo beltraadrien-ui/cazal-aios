@@ -2,7 +2,8 @@
 
 > Manuel de la branche. Le `CLAUDE.md` racine reste le routeur canonique ; ce fichier dit comment
 > se déroule **un dossier d'installation** et quelles règles s'appliquent. Lu par les skills
-> `froid-releve-existant`, `froid-dimensionnement`, `froid-demande-fournisseur`, `froid-savoir`.
+> `froid-releve-existant`, `froid-dimensionnement`, `froid-demande-fournisseur`, `froid-savoir`,
+> `froid-plan-2d`.
 > Travail de bureau, sur PC (onglet Code). Loïc parle normalement ; le routeur fait le lien.
 
 ## Le parcours d'un dossier (une installation = un dossier)
@@ -12,6 +13,8 @@
 ② ÉTAPE 1 · Relevé de l'existant ............ froid-releve-existant → 1-existant.md    ✋ Loïc valide
 ③ ÉTAPE 2 · Dimensionnement du remplacement . froid-dimensionnement → 2-dimensionnement.md ✋ Loïc valide
 ④ ÉTAPE 3 · Demande fournisseur ............. froid-demande-fournisseur → 3-demande-fournisseur/ ✋ Loïc relit et envoie lui-même
+Ⓟ ÉTAPE P · Plan 2D et métré ................ froid-plan-2d → plan/ (plan.drawio, plan.pdf, plan.html) ✋ Loïc relit
+   indépendante : avant ou après l'étape 2 ; nourrira l'étape 2 (longueurs de lignes) et l'étape 3 (pièce jointe) au Lot 7
 ```
 
 Chaque étape relit `dossier.md` en premier (état, décisions, hypothèses, questions, corrections) et
@@ -44,6 +47,20 @@ chiffres, plaques, PDF, mail et annexes (0 échec exigé), un vérificateur reli
 lui-même** ; `envois.md` garde la trace de chaque envoi. Une version envoyée ne se réécrit jamais : `v2`, `v3`…
 (grossistes) et `v1-fabricant`… (fabricant).
 
+**Étape P (plan).** Loïc décrit le local avec ses cotes au télémètre (ou donne un croquis photographié, un plan
+d'architecte en PDF ; le relevé InterFast fournit l'inventaire des chambres et des équipements). Claude écrit
+`plan/plan.json`, un modèle en mètres où **chaque cote garde sa source** ; une cote manquante est une question, jamais
+une estimation. `generer.py` du skill `froid-plan-2d` dessine `plan.drawio` en **A4 à une échelle normalisée** (1:50,
+1:100, 1:200…, choisie automatiquement, avec barre d'échelle et règle de contrôle de 100 mm), calcule le **métré** de
+chaque réseau (longueur en plan + parcours dans le chemin de câbles pour un câble qui s'y arrête + montées et
+descentes aux hauteurs de pose, hypothèses tant que Loïc ne les a pas validées) et les **croisements**, rend `plan.pdf` (draw.io en ligne de commande, calibré sur la règle de 100 mm) et la
+vue HTML du métré ; `verifier_plan.py` relit tout depuis le fichier draw.io et mesure le PDF (0 erreur exigée, 5 tours
+au plus), Claude relit l'image du plan, puis Loïc relit ✋. Il retouche à la voix (Claude modifie `plan.json`) ou à la
+souris dans draw.io Desktop (`importer_drawio.py` ramène les positions). Lot 6 : une feuille A4 à repères par réseau,
+tracée au marqueur et photographiée, devient un calque (`feuille.py`, `lire_photo.py`). Les diamètres restent « à
+définir par le dimensionnement ». **Pour les plans, Opus recommandé** : Loïc passe sur Opus avec `/model` avant de
+commencer (meilleure lecture des croquis et des rendus).
+
 ## Où vivent les choses
 
 ```
@@ -59,6 +76,16 @@ dimensionnement/
         ├── sources/                   ← rapport.pdf, rapport-texte.md, structure.json, photos/<poste>/
         ├── 1-existant.md
         ├── 2-dimensionnement.md
+        ├── plan/                      ← étape P (froid-plan-2d), indépendante des étapes 1 à 3
+        │   ├── plan.json              ← le modèle en mètres, cotes sourcées (seul fichier que Claude écrit)
+        │   ├── plan.drawio            ← pages « Plan » et « Métré », s'ouvre dans draw.io Desktop
+        │   ├── plan.pdf, plan.png     ← le plan sur une page A4 à l'échelle (à imprimer à 100 %), le métré
+        │   │                            sur une ou deux pages A4 selon sa longueur ; image de relecture
+        │   ├── plan.md, plan.html     ← métré, croisements, hauteurs, journal des versions (Loïc lit le .html)
+        │   ├── plan-base.json, rendu.json        ← échelle et origine pour les feuilles ; calibration du PDF
+        │   ├── verification.md, .json, journal.md ← dernier contrôle ; une ligne par génération
+        │   ├── versions/              ← plan-vN.drawio + plan-vN.json à chaque génération, sauvegardes
+        │   └── feuilles/, photos/, calques/      ← Lot 6 : feuilles à repères, photos des tracés, réseaux lus
         └── 3-demande-fournisseur/
             ├── envois.md              ← à qui, quand, quelle version (une ligne par envoi de Loïc)
             ├── v1/                    ← variante grossiste ; v2, v3… à chaque nouvelle version

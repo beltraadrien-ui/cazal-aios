@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "titre": "Test A2 : une ligne d'aspiration en L",
+  "dossier": "test-a2-ligne-en-l",
+  "date": "2026-10-07",
+  "page": {"format": "A4", "orientation": "auto", "echelle": null},
+  "hauteurs": {"evaporateur": 2.30, "passage_froid": 2.60, "raccord_groupe": 0.50},
+  "equipements": [
+    {"id": "EV1", "type": "evaporateur", "nom": "Évaporateur de test", "position": [0, 0], "dimensions": [1.2, 0.5]},
+    {"id": "GR1", "type": "groupe", "nom": "Groupe de test", "position": [4, 2.4], "dimensions": [1.0, 0.6]}
+  ],
+  "lignes": [
+    {"id": "L1", "type": "aspiration", "calque": "froid_cuivres", "de": "EV1", "a": "GR1",
+     "points": [[0, 0], [4, 0], [4, 2.4]], "diametre": "à définir", "faisceau": "EV1-GR1",
+     "hauteur_depart": null, "hauteur_arrivee": null, "hauteur_passage": null}
+  ]
+}

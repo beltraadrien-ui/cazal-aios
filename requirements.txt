@@ -3,3 +3,6 @@ openai>=1.0.0
 pymupdf>=1.26
 markdown>=3.5
 CoolProp==8.0.0  # propriétés des fluides frigorigènes (skill froid-dimensionnement, décision du 2026-10-03)
+numpy>=2.0  # plans 2D : lecture des photos de tracés (skill froid-plan-2d, Lot 6)
+opencv-python>=4.10  # plans 2D : repères ArUco, redressement des photos (skill froid-plan-2d, Lot 6 ; autorisé par Adrien le 2026-10-07)
+pillow>=10  # images : base de savoir (froid-savoir), photos de la demande fournisseur, feuilles à imprimer (froid-plan-2d)

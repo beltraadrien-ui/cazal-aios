@@ -16,7 +16,7 @@ Rien n'est inventé : chaque valeur écrite vient d'une ligne du PDF (page cité
 (volume = L × l × h) signalé comme tel.
 
 Usage : python .claude/skills/froid-releve-existant/scripts/extraire_rapport.py "<rapport.pdf>"
-            [--slug 2026-09-14-ets-denis] [--force]
+            [--slug 2026-09-14-boucherie-test] [--force]
 Dépendance : PyMuPDF (pymupdf, dans requirements.txt).
 """
 from __future__ import annotations

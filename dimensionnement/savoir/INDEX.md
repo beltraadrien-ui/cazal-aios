@@ -4,7 +4,8 @@
 > vectorisé). Les livres et formations de Loïc (scans) sont dans la base Supabase `savoir_*`
 > (skill `froid-savoir`, Lot 4) ; ici ne vit que le savoir distillé, maintenu par Adrien.
 > État : **v2 (Lot 2, 2026-10-06)** : fluides, règlement F-gas, méthode de puissance, règles de Loïc,
-> transitions, fiche Bitzer ; **Lot 3 (2026-10-07)** : demande de prix aux fournisseurs.
+> transitions, fiche Bitzer ; **Lot 3 (2026-10-07)** : demande de prix aux fournisseurs ; **Lots 5 et 6
+> (2026-10-07)** : plans 2D à l'échelle, métré, lecture des tracés photographiés.
 
 | Question | Fichier | Remarque |
 |---|---|---|
@@ -20,3 +21,4 @@
 | Que garde-t-on, que remplace-t-on quand on change de fluide ? | `methodes/transitions.md` | HFC → CO2 booster, HFC → HFC/HFO (retrofit), HFC → propane ; à compléter avec Loïc |
 | Quelles sont les règles de pouce de Loïc (régimes, marges, seuils, marques, régulation) ? | `methodes/regles-loic.md` | Datées et sourcées ; réponses aux six questions du 2026-10-06 ajoutées en fin de fichier |
 | Étape 3 : que veut un fournisseur dans une demande de prix ? Structure du PDF, mail, variantes grossiste / fabricant, demande a) à f), anonymisation, poids ? | `methodes/demande-fournisseur.md` | Déroulé, scripts et contrôles : `.claude/skills/froid-demande-fournisseur/SKILL.md` ; règles R9 à R13 dans `methodes/regles-loic.md` |
+| Étape P : comment est fait un plan 2D (échelle normalisée et sa vérification, calques, métré : formule et hauteurs par défaut, croisements, feuille à repères, lecture des photos de tracés, limites) ? | `methodes/plan-2d.md` | Déroulé, scripts et commandes : `.claude/skills/froid-plan-2d/SKILL.md` ; styles et identifiants : `.claude/skills/froid-plan-2d/references/conventions-plan-froid.md` ; règles R14 à R19 (hypothèses) dans `methodes/regles-loic.md` |

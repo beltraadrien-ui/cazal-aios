@@ -1,6 +1,6 @@
 """Carnet de leçons : noter une correction ou une règle apprise de Loïc (dimensionnement/carnet/lecons.md, local).
 
-Usage : python …/lecon.py "Sur une centrale au R449A, compter 10 % de marge sur la puissance existante" [--dossier 2026-09-14-ets-denis] [--theme dimensionnement]
+Usage : python …/lecon.py "Sur une centrale au R449A, compter 10 % de marge sur la puissance existante" [--dossier 2026-09-14-boucherie-test] [--theme dimensionnement]
         python …/lecon.py --lister
 Chaque leçon est datée ; le carnet est relu au début de chaque dossier (étapes 1 à 3) et consolidé dans savoir/ par Adrien.
 """
