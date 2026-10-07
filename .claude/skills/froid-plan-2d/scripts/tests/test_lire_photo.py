@@ -3,6 +3,8 @@
 Usage, depuis la racine du dépôt :
     PYTHONUTF8=1 python -m unittest discover -s .claude/skills/froid-plan-2d/scripts/tests -p "test_lire_photo.py"
 (compatible pytest). Fixture : tests/fixtures/a3-plan.json + a3-plan-base.json (plan fictif, 1:50 paysage).
+Photo réelle (sous-agent E) : a3-photo-reelle-basse-resolution.jpg (stylo bille, ≈ 3 px/mm, plan test sans donnée
+privée) avec son plan et sa feuille figés : a3-photo-reelle-plan.json, a3-photo-reelle-feuille.png/.json.
 Règle n° 1 : la longueur lue sur la photo doit être à ≤ 3 % de la longueur tracée.
 """
 from __future__ import annotations
@@ -469,6 +471,195 @@ class TestAccrochageMurAligne(unittest.TestCase):
         bout = p["points_m"][-1] if p["mur_a"] == "M2" else p["points_m"][0]
         self.assertEqual("M2", p["mur_a"] or p["mur_de"])
         self.assertAlmostEqual(bout[0], 15.80, delta=0.005)
+
+# --- Photo réelle, traits fins au stylo, formes fermées, annotations, mode auto (sous-agent E) -------------------
+PHOTO_REELLE = FIXTURES / "a3-photo-reelle-basse-resolution.jpg"
+# Centres mesurés à la main sur la photo redressée (m) : 4 ventilo-convecteurs rouges, groupe noir dehors.
+VENTILOS_A_LA_MAIN = [(4.11, 6.33), (7.13, 6.36), (0.37, 7.39), (0.30, 10.25)]
+GROUPE_A_LA_MAIN = (1.24, -1.22)
+TOLERANCE_CENTRE_M = 0.30
+
+
+def segments(points):
+    p = np.asarray(points, dtype=float)
+    return list(zip(p[:-1], p[1:]))
+
+
+def proche(formes, centre, couleur):
+    """Distance (m) du centre attendu à la forme de cette couleur la plus proche, et cette forme."""
+    meilleures = sorted(((float(np.hypot(f["centre_m"][0] - centre[0], f["centre_m"][1] - centre[1])), f)
+                         for f in formes if f["couleur"] == couleur), key=lambda t: t[0])
+    return meilleures[0] if meilleures else (math.inf, None)
+
+
+class TestPhotoReelle(unittest.TestCase):
+    """Première photo réelle (Adrien, 2026-10-07) : feuille froid_cuivres de la boucherie test (1:100) tracée au
+    stylo bille : réseau d'eau glacée bleu, 4 ventilo-convecteurs rouges, groupe noir dehors, annotations
+    manuscrites. Capture de 733 × 1054 px (≈ 3 px/mm sur la feuille), recompressée en JPEG q85 pour la fixture.
+    Plan et feuille figés dans les fixtures (a3-photo-reelle-plan.json, a3-photo-reelle-feuille.png/.json)."""
+
+    @classmethod
+    def setUpClass(cls):
+        d = _TMP / "photo-reelle" / "plan"
+        (d / "feuilles").mkdir(parents=True)
+        shutil.copy(FIXTURES / "a3-photo-reelle-plan.json", d / "plan.json")
+        shutil.copy(FIXTURES / "a3-photo-reelle-feuille.png", d / "feuilles" / "feuille-froid_cuivres.png")
+        shutil.copy(FIXTURES / "a3-photo-reelle-feuille.json", d / "feuilles" / "feuille-froid_cuivres.json")
+        cls.dossier = d
+        cls.r = lp.lire_photo(d, PHOTO_REELLE, RESEAU)
+
+    def test_quatre_reperes_et_reprojection(self):
+        self.assertEqual(sorted(self.r["reperes_photo_px"]), ["0", "1", "2", "3"])
+        self.assertLessEqual(self.r["erreur_reprojection_max_mm"], 1.5)
+
+    def test_avertissement_basse_resolution(self):
+        self.assertLess(self.r["photo_px_par_mm_min"], lp.RESOLUTION_FAIBLE_PX_MM)
+        self.assertLessEqual(self.r["px_par_mm_travail"], lp.PX_PAR_MM)
+        self.assertTrue(any("faible résolution" in a and "original du téléphone" in a for a in self.r["avertissements"]))
+
+    def test_bleu_reseau_principal(self):
+        """Bleu ≥ 2 tronçons : un ≥ 5 m le long du mur entre labo et vente (M8, y ≈ 6,55), un vertical le long du
+        mur extérieur gauche (M4, x ≈ 0,1)."""
+        self.assertEqual(self.r["marqueur"], "bleu")
+        polys = self.r["par_couleur"]["bleu"]["polylignes"]
+        self.assertGreaterEqual(len(polys), 2)
+        horizontal = max((np.linalg.norm(b - a) for p in polys for a, b in segments(p["points_m"])
+                          if abs(a[1] - b[1]) < 1e-9 and 6.3 <= a[1] <= 6.8), default=0.0)
+        vertical = max((np.linalg.norm(b - a) for p in polys for a, b in segments(p["points_m"])
+                        if abs(a[0] - b[0]) < 1e-9 and -0.1 <= a[0] <= 0.3), default=0.0)
+        self.assertGreaterEqual(horizontal, 5.0)
+        self.assertGreaterEqual(vertical, 3.0)
+
+    def test_rouge_quatre_ventilos(self):
+        rouges = [f for f in self.r["formes_fermees"] if f["couleur"] == "rouge"]
+        self.assertGreaterEqual(len(rouges), 4)
+        for centre in VENTILOS_A_LA_MAIN:
+            d, f = proche(rouges, centre, "rouge")
+            self.assertLessEqual(d, TOLERANCE_CENTRE_M, f"ventilo attendu en {centre}")
+            self.assertNotEqual(f["piece"], "extérieur")
+        self.assertTrue(any("formes rouges dessinées" in q and "quels équipements" in q for q in self.r["questions"]))
+
+    def test_noir_groupe_exterieur(self):
+        d, f = proche(self.r["formes_fermees"], GROUPE_A_LA_MAIN, "noir")
+        self.assertLessEqual(d, TOLERANCE_CENTRE_M)
+        self.assertEqual(f["piece"], "extérieur")
+        self.assertGreaterEqual(min(f["dimensions_m"]), 0.5)
+
+    def test_reseau_accroche_au_groupe(self):
+        _, groupe = proche(self.r["formes_fermees"], GROUPE_A_LA_MAIN, "noir")
+        polys = self.r["par_couleur"]["bleu"]["polylignes"]
+        self.assertTrue(any(groupe["id"] in (p["de"], p["a"]) for p in polys))
+
+    def test_annotations_ignorees(self):
+        annotations = self.r["annotations_ignorees"]
+        self.assertGreaterEqual(len(annotations), 2)
+        self.assertGreaterEqual(sum(a["motif"].startswith("loin du bâtiment") for a in annotations), 2)
+        for a in annotations:
+            self.assertEqual(len(a["boite_mm"]), 4)
+        self.assertFalse(self.r["par_couleur"].get("noir", {}).get("polylignes"))
+
+    def test_equipements_proposes(self):
+        props = self.r["equipements_proposes"]
+        self.assertEqual(len(props), len(self.r["formes_fermees"]))
+        for e in props:
+            self.assertIsNone(e["type"])
+            self.assertEqual(len(e["dimensions"]), 2)
+            self.assertGreaterEqual(e["dimensions"][0], e["dimensions"][1])
+
+    def test_couleur_imposee_memes_formes(self):
+        """Lecture du rouge seul : pas d'erreur malgré l'absence de tronçon, mêmes identifiants qu'en auto."""
+        r = lp.lire_photo(self.dossier, PHOTO_REELLE, RESEAU, marqueur="rouge")
+        attendu = {f["id"]: f["centre_m"] for f in self.r["formes_fermees"] if f["couleur"] == "rouge"}
+        self.assertEqual({f["id"]: f["centre_m"] for f in r["formes_fermees"] if f["couleur"] == "rouge"}, attendu)
+
+
+class TestTraitsFinsEtFormes(unittest.TestCase):
+    """Photos synthétiques au stylo bille (encre pâle, trait de 0,4-0,5 mm)."""
+
+    TRAITS_C = [[(1.5, 4.8), (1.5, 0.4), (5.2, 0.4)], [(10.5, 1.6), (9.4, 1.6)],
+                [(2.6, 0.5), (3.4, 0.5), (3.4, 0.8), (2.6, 0.8), (2.6, 0.5)],
+                [(4.8, 0.5), (5.6, 0.5), (5.6, 0.8), (4.8, 0.8), (4.8, 0.5)],
+                [(10.6, 1.2), (11.8, 1.2), (11.8, 2.0), (10.6, 2.0), (10.6, 1.2)],
+                [(12.5, 0.6), (12.7, 1.0), (12.9, 0.6), (13.1, 1.0), (13.3, 0.6)],
+                [(12.5, 4.0), (12.7, 4.4), (12.9, 4.0), (13.1, 4.4)],
+                [(12.4, 4.2), (10.4, 4.2)]]
+    COULEURS_C = ["bleu", "bleu", "rouge", "rouge", "noir", "noir", "rouge", "rouge"]
+
+    @classmethod
+    def setUpClass(cls):
+        """Feuille à 3 couleurs : réseau bleu, 2 rectangles rouges dans l'atelier, 1 rectangle noir dehors,
+        2 gribouillis (texte) loin du bâtiment et une flèche rouge hors du bâtiment."""
+        cls.jpeg_c, _ = photo(63, "bleu", cls.TRAITS_C, encre="stylo", epaisseur_mm=0.5, traits_couleurs=cls.COULEURS_C)
+        cls.auto = lp.lire_photo(_MODELE, cls.jpeg_c, RESEAU)
+
+    def test_trait_fin_basse_resolution(self):
+        """Stylo 0,4 mm sur une photo à ≈ 2,5 px/mm (trait d'1 px) : lu, accroché, longueur à ≤ 3 %."""
+        jpeg, v = photo(61, "bleu", CAS[1][1], encre="stylo", largeur_photo=1000)
+        r = lp.lire_photo(_MODELE, jpeg, RESEAU)
+        self.assertLess(r["photo_px_par_mm_min"], 3.0)
+        self.assertTrue(any("faible résolution" in a for a in r["avertissements"]))
+        self.assertEqual({r["polylignes"][0]["de"], r["polylignes"][0]["a"]}, {"EV1", "GR1"})
+        self.assertLessEqual(abs(r["longueur_totale_plan_m"] - v["longueur_totale_m"]) / v["longueur_totale_m"],
+                             TOLERANCE_LONGUEUR)
+
+    def test_trait_fin_pose_sur_un_mur_imprime(self):
+        """Trait fin tracé sur la face intérieure imprimée de M1 (y = 0,10) : pas coupé par le masque du plan."""
+        traits = [[(9.4, 1.6), (6.0, 1.6), (6.0, 0.1), (3.0, 0.1)]]
+        jpeg, v = photo(62, "bleu", traits, encre="stylo", largeur_photo=1000)
+        r = lp.lire_photo(_MODELE, jpeg, RESEAU)
+        p = r["polylignes"][0]
+        self.assertEqual(p["de"], "EV1")
+        sur_mur = max((np.linalg.norm(b - a) for a, b in segments(p["points_m"])
+                       if abs(a[1] - b[1]) < 1e-9 and 0.0 <= a[1] <= 0.2), default=0.0)
+        self.assertGreaterEqual(sur_mur, 2.5)
+        self.assertLessEqual(abs(r["longueur_totale_plan_m"] - v["longueur_totale_m"]) / v["longueur_totale_m"],
+                             TOLERANCE_LONGUEUR)
+
+    def test_formes_fermees_dessinees(self):
+        formes = self.auto["formes_fermees"]
+        for centre, couleur, piece in (((3.0, 0.65), "rouge", "Atelier"), ((5.2, 0.65), "rouge", "Atelier"),
+                                       ((11.2, 1.6), "noir", "extérieur")):
+            d, f = proche(formes, centre, couleur)
+            self.assertLessEqual(d, 0.10, f"{couleur} en {centre}")
+            self.assertEqual(f["piece"], piece)
+        self.assertEqual(len(formes), 3)
+        self.assertEqual([f["id"] for f in formes], ["F1", "F2", "F3"])     # rouges de gauche à droite, puis noir
+        self.assertTrue(any(q.startswith("2 formes rouges dessinées") for q in self.auto["questions"]))
+
+    def test_mode_auto_toutes_les_couleurs(self):
+        r = self.auto
+        self.assertEqual(r["marqueur"], "bleu")
+        self.assertEqual(set(r["couleurs_lues"]), {"bleu", "rouge", "noir"})
+        liaisons = sorted(sorted({p["de"], p["a"]}) for p in r["par_couleur"]["bleu"]["polylignes"])
+        self.assertEqual(liaisons, [["EV1", "F3"], ["F2", "GR1"]])          # accrochées aux formes dessinées
+        self.assertEqual(r["par_couleur"]["rouge"]["polylignes"], [])
+        self.assertEqual(r["par_couleur"]["noir"]["polylignes"], [])
+        controle = fe.lire_image(r["fichiers"]["controle"])
+        self.assertEqual(controle.shape[:2], (840, 1188))
+
+    def test_annotations_loin_du_batiment_ignorees(self):
+        annotations = self.auto["annotations_ignorees"]
+        loin = [a for a in annotations if a["boite_mm"][0] >= 260]
+        self.assertGreaterEqual(len(loin), 2)
+        self.assertEqual({a["couleur"] for a in loin}, {"rouge", "noir"})
+        self.assertTrue(any("hors du bâtiment" in a["motif"] for a in annotations))   # la flèche rouge
+
+    def test_couleur_imposee_memes_identifiants(self):
+        par_id = {f["id"]: f["centre_m"] for f in self.auto["formes_fermees"]}
+        rouge = lp.lire_photo(_MODELE, self.jpeg_c, RESEAU, marqueur="rouge")
+        self.assertEqual(rouge["polylignes"], [])
+        self.assertEqual({f["id"]: f["centre_m"] for f in rouge["formes_fermees"]},
+                         {k: v for k, v in par_id.items() if k in ("F1", "F2")})
+        bleu = lp.lire_photo(_MODELE, self.jpeg_c, RESEAU, marqueur="bleu")
+        self.assertEqual({f["id"] for f in bleu["formes_fermees"]}, {"F2", "F3"})      # celles où le bleu s'accroche
+        noir = lp.lire_photo(_MODELE, self.jpeg_c, RESEAU, marqueur="noir")
+        self.assertEqual([f["id"] for f in noir["formes_fermees"]], ["F3"])
+
+    def test_boucle_du_reseau_pas_une_forme(self):
+        """Cas 8 : deux tracés verts qui se croisent ferment des rectangles : ce ne sont pas des équipements."""
+        r, _ = resultat_cas(8)
+        self.assertEqual(r["formes_fermees"], [])
+        self.assertEqual(r["annotations_ignorees"], [])
 
 
 if __name__ == "__main__":

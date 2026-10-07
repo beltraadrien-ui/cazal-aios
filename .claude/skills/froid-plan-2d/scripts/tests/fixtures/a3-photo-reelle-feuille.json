@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "dossier": "2026-09-28-boucherie-test",
+  "reseau": "froid_cuivres",
+  "type_ligne": "aspiration",
+  "S": 100,
+  "orientation": "paysage",
+  "origine_mm": [
+    61.9989,
+    46.101
+  ],
+  "page_mm": [
+    297.0,
+    210.0
+  ],
+  "px_par_mm": 8,
+  "reperes": {
+    "0": {
+      "position": "haut-gauche",
+      "cote_mm": 16.0,
+      "centre_mm": [
+        14.0,
+        14.0
+      ],
+      "coins_mm": [
+        [
+          6.0,
+          6.0
+        ],
+        [
+          22.0,
+          6.0
+        ],
+        [
+          22.0,
+          22.0
+        ],
+        [
+          6.0,
+          22.0
+        ]
+      ],
+      "zone_blanche_mm": [
+        4.0,
+        4.0,
+        24.0,
+        24.0
+      ]
+    },
+    "1": {
+      "position": "haut-droite",
+      "cote_mm": 16.0,
+      "centre_mm": [
+        283.0,
+        14.0
+      ],
+      "coins_mm": [
+        [
+          275.0,
+          6.0
+        ],
+        [
+          291.0,
+          6.0
+        ],
+        [
+          291.0,
+          22.0
+        ],
+        [
+          275.0,
+          22.0
+        ]
+      ],
+      "zone_blanche_mm": [
+        273.0,
+        4.0,
+        293.0,
+        24.0
+      ]
+    },
+    "2": {
+      "position": "bas-droite",
+      "cote_mm": 16.0,
+      "centre_mm": [
+        283.0,
+        196.0
+      ],
+      "coins_mm": [
+        [
+          275.0,
+          188.0
+        ],
+        [
+          291.0,
+          188.0
+        ],
+        [
+          291.0,
+          204.0
+        ],
+        [
+          275.0,
+          204.0
+        ]
+      ],
+      "zone_blanche_mm": [
+        273.0,
+        186.0,
+        293.0,
+        206.0
+      ]
+    },
+    "3": {
+      "position": "bas-gauche",
+      "cote_mm": 16.0,
+      "centre_mm": [
+        14.0,
+        196.0
+      ],
+      "coins_mm": [
+        [
+          6.0,
+          188.0
+        ],
+        [
+          22.0,
+          188.0
+        ],
+        [
+          22.0,
+          204.0
+        ],
+        [
+          6.0,
+          204.0
+        ]
+      ],
+      "zone_blanche_mm": [
+        4.0,
+        186.0,
+        24.0,
+        206.0
+      ]
+    }
+  },
+  "dictionnaire_aruco": "DICT_4X4_50",
+  "barre_echelle": {
+    "longueur_m": 1,
+    "longueur_mm": 10.0,
+    "de_mm": [
+      251.0,
+      192.0
+    ],
+    "a_mm": [
+      261.0,
+      192.0
+    ],
+    "hauteur_mm": 1.2
+  },
+  "cadre_identification_mm": [
+    30.0,
+    180.0,
+    267.0,
+    202.0
+  ],
+  "zone_plan_mm": [
+    61.999,
+    30.101,
+    227.999,
+    156.101
+  ],
+  "date": "2026-10-07",
+  "fichiers": {
+    "png": "feuille-froid_cuivres.png",
+    "pdf": "feuille-froid_cuivres.pdf"
+  },
+  "avertissements": []
+}

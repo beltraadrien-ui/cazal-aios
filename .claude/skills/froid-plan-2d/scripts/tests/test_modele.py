@@ -64,10 +64,29 @@ class TestChargement(unittest.TestCase):
         self.assertEqual(len(plan.cotes), 10)
 
     def test_copie_de_la_fixture_du_dossier(self):
+        """Le dossier local peut avoir été enrichi par l'usage (réseaux ajoutés depuis une photo, étiquettes
+        déplacées) : tout ce que contient la fixture commitée doit s'y retrouver à l'identique, élément par
+        élément (par identifiant pour les listes), les ajouts étant permis."""
         if not DOSSIER_BOUCHERIE.is_file():
             self.skipTest("dossier de test absent (gitignoré)")
-        self.assertEqual(json.loads(DOSSIER_BOUCHERIE.read_text(encoding="utf-8")),
-                         json.loads(BOUCHERIE.read_text(encoding="utf-8")))
+        dossier = json.loads(DOSSIER_BOUCHERIE.read_text(encoding="utf-8"))
+        fixture = json.loads(BOUCHERIE.read_text(encoding="utf-8"))
+        for cle, valeur in fixture.items():
+            self.assertIn(cle, dossier, cle)
+            if isinstance(valeur, list) and valeur and isinstance(valeur[0], dict) and "id" in valeur[0]:
+                par_id = {e["id"]: e for e in dossier[cle]}
+                for element in valeur:
+                    self.assertIn(element["id"], par_id, f"{cle}/{element['id']} absent du dossier")
+                    for champ, attendu in element.items():
+                        if champ in ("position_etiquette", "etiquette"):
+                            continue
+                        self.assertEqual(par_id[element["id"]].get(champ), attendu,
+                                         f"{cle}/{element['id']}/{champ}")
+            elif cle in ("notes", "calques_libres"):
+                for element in valeur:
+                    self.assertIn(element, dossier[cle], f"{cle} : {element!r} absent du dossier")
+            else:
+                self.assertEqual(dossier[cle], valeur, cle)
 
     def test_plan_minimal_valide(self):
         self.assertEqual(messages(plan_minimal()), [])

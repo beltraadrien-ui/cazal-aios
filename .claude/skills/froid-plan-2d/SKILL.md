@@ -197,9 +197,12 @@ tracer une nouvelle ligne dans le bon calque (Affichage, Calques), en trait droi
    consignes ; elle est contrôlée (PDF A4, repères relus à 0,5 mm) : code 1 = ne pas l'imprimer. Sorties :
    `feuilles/feuille-<reseau>.pdf`, `.png`, `.json`. Ne pas la regénérer entre l'impression et la lecture de la photo.
 2. **Consignes à Loïc** : imprimer en A4 à 100 % (si l'imprimante coupe un repère, « ajuster à la page » est permis
-   pour cette feuille : les mesures se font par rapport aux repères) ; **marqueur rouge, bleu ou vert** (le noir est
-   lu, moins sûr) ; un trait continu par tronçon ; rien dans les repères, le cadre, ni au bord ; photo de dessus,
-   feuille à plat, les 4 repères entiers, sans flash ; déposer la photo dans `plan/photos/`.
+   pour cette feuille : les mesures se font par rapport aux repères) ; **marqueur ou stylo bille rouge, bleu ou vert**
+   (le noir est lu hors du plan imprimé, moins sûr) ; un trait continu par tronçon ; un **équipement à ajouter**
+   (ventilo-convecteur, groupe…) se dessine en **rectangle fermé**, de préférence d'une autre couleur que le réseau ;
+   les annotations écrites **hors du bâtiment** ; rien dans les repères, le cadre, ni au bord ; photo de dessus,
+   feuille à plat, les 4 repères entiers, sans flash ; déposer **l'original** de la photo dans `plan/photos/` (sous
+   4 px/mm, capture d'écran ou image de messagerie, la lecture avertit « photo de faible résolution »).
 3. **Lire la photo** (calque seul, rien n'entre encore dans le plan) :
    ```
    PYTHONUTF8=1 python .claude/skills/froid-plan-2d/scripts/lire_photo.py dimensionnement/dossiers/<slug>/plan dimensionnement/dossiers/<slug>/plan/photos/<photo>.jpg --reseau froid_cuivres
@@ -209,6 +212,15 @@ tracer une nouvelle ligne dans le bon calque (Affichage, Calques), en trait droi
    `--fusionner` ; `--confirmer`. Sorties : `calques/<reseau>.json` (tronçons en mètres, longueur, `de`, `a`,
    confiance, erreur de reprojection, questions) et `calques/<reseau>-controle.png` (photo redressée, tracé lu en
    couleur, équipements accrochés). Code 1 : repère manquant (il est nommé) ou aucun trait : reprendre la photo.
+   `--marqueur auto` (défaut) lit **toutes les couleurs** : `par_couleur`, `formes_fermees` (F1… : centre, dimensions,
+   pièce), `equipements_proposes` (type à préciser avec Loïc), `annotations_ignorees` (cadres gris « A » sur le PNG).
+   Seule la couleur principale (le plus long réseau) est fusionnée ; une ligne accrochée à une forme F1… le signale :
+   **ajouter d'abord ces équipements à `plan.json`** (identifiant, nom, type, position = centre lu), puis fusionner.
+   Limites connues : piquage en T non modélisé (la ligne s'arrête sur l'autre : `a` = identifiant de la ligne) ;
+   une forme de la couleur du réseau avec deux tuyaux est prise pour une boucle ; une écriture dans le bâtiment
+   n'est pas filtrée ; un JPEG très compressé donne des formes en trop ; chaque extrémité libre est lue 1 à 4 mm
+   trop court sur le papier. Première photo réelle (2026-10-07, stylo bille, 3 px/mm) : réseau lu en entier,
+   5 formes trouvées à ≤ 0,07 m, 23 annotations écartées.
 4. **Regarder le PNG de contrôle et le montrer à Loïc**, avec la longueur de chaque tronçon et les questions
    (« extrémité libre à (x ; y) : relier à quel équipement ? »).
 5. **Fusionner** quand il est d'accord : relancer avec `--fusionner`. `plan.json` est sauvegardé

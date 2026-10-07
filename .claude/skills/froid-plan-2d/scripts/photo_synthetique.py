@@ -2,9 +2,11 @@
 
 Part de la feuille rendue (`feuille-<reseau>.png`, 8 px/mm) et de traits connus en mm sur la feuille,
 dessine les traits comme un marqueur (épaisseur 1,5 à 3 mm, léger tremblement ± 0,3 mm, encre
-translucide), puis simule la prise de vue : homographie aléatoire (inclinaison 5-15°, rotation ± 10°,
-échelle), table autour de la feuille, dégradé de lumière, dominante de couleur, flou gaussien, bruit,
-JPEG qualité 85. La vérité (traits en mm et en m, longueurs, homographie) est renvoyée avec la photo.
+translucide) ou comme un stylo bille (`encre="stylo"`, encre plus pâle, trait fin), puis simule la prise de
+vue : homographie aléatoire (inclinaison 5-15°, rotation ± 10°, échelle), table autour de la feuille,
+dégradé de lumière, dominante de couleur, flou gaussien, bruit, JPEG qualité 85. La vérité (traits en mm et
+en m, longueurs, homographie) est renvoyée avec la photo. Un trait fermé (premier point = dernier) dessine un
+rectangle (équipement dessiné) ; `traits_couleurs` donne une couleur par trait (feuille à plusieurs couleurs).
 
     from photo_synthetique import fabriquer
     jpeg, verite = fabriquer(feuille_png, feuille_json, [[(x, y), (x, y), ...]], graine=3, couleur="rouge")
@@ -26,6 +28,13 @@ ENCRES = {
     "bleu": (0.80, 0.38, 0.12),
     "vert": (0.35, 0.62, 0.12),
     "noir": (0.13, 0.12, 0.12),
+}
+# Stylo bille : encre plus pâle (mesurée sur la photo réelle du 2026-10-07, trait de 0,3 à 0,5 mm).
+ENCRES_STYLO = {
+    "rouge": (0.42, 0.36, 0.86),
+    "bleu": (0.78, 0.42, 0.32),
+    "vert": (0.45, 0.70, 0.35),
+    "noir": (0.24, 0.24, 0.26),
 }
 
 
@@ -67,10 +76,13 @@ def _matrice_rotation(axe: np.ndarray, angle: float) -> np.ndarray:
 def fabriquer(feuille_png, feuille_json, traits_mm, graine: int, couleur: str = "rouge", largeur_photo: int = 2000,
               sortie=None, epaisseur_mm: float | None = None, inclinaison_deg: float | None = None,
               rotation_deg: float | None = None, masquer_reperes=(), echelle_impression: float = 1.0,
-              qualite_jpeg: int = 85):
+              qualite_jpeg: int = 85, encre: str = "marqueur", traits_couleurs=None):
     """Fabrique une photo synthétique. Renvoie (chemin_jpeg, verite).
 
-    - traits_mm : liste de polylignes, chacune une liste de (x, y) en mm sur la feuille nominale.
+    - traits_mm : liste de polylignes, chacune une liste de (x, y) en mm sur la feuille nominale (fermée si le
+      dernier point est le premier).
+    - encre : "marqueur" (défaut) ou "stylo" (stylo bille : encre pâle ; épaisseur 0,4 mm par défaut).
+    - traits_couleurs : une couleur par trait (sinon `couleur` pour tous).
     - masquer_reperes : ids de repères à effacer (tests « repère manquant »).
     - echelle_impression : impression réduite uniformément autour du centre de la page (ex. 0,94 pour
       « ajuster à la page ») ; l'utilisateur trace sur le plan imprimé, donc ses traits sont réduits pareil.
@@ -107,18 +119,27 @@ def fabriquer(feuille_png, feuille_json, traits_mm, graine: int, couleur: str = 
         p1 = fe.mm_vers_px(imprime([x1, y1]), ppm)
         papier[int(p0[1]):int(math.ceil(p1[1])) + 1, int(p0[0]):int(math.ceil(p1[0])) + 1] = 1.0
 
-    # 1. Traits au marqueur (encre translucide, densité légèrement irrégulière)
-    ep = float(epaisseur_mm) if epaisseur_mm else float(rng.uniform(1.5, 3.0))
-    masque = np.zeros((h_px, l_px), np.uint8)
+    # 1. Traits au marqueur ou au stylo (encre translucide, densité légèrement irrégulière), couleur par couleur
+    stylo = encre == "stylo"
+    ep = float(epaisseur_mm) if epaisseur_mm else (0.4 if stylo else float(rng.uniform(1.5, 3.0)))
+    couleurs = list(traits_couleurs) if traits_couleurs is not None else [couleur] * len(traits_mm)
+    trembles = []                      # tirages dans l'ordre d'origine : les photos à graine fixe ne changent pas
     for trait in traits_mm:
-        pts = _trembler(imprime(trait), rng)
-        pts_px = np.round(fe.mm_vers_px(pts, ppm) * 16).astype(np.int32).reshape(-1, 1, 2)
-        cv2.polylines(masque, [pts_px], False, 255, max(1, int(round(ep * k * ppm))), cv2.LINE_AA, shift=4)
+        ferme = len(trait) > 2 and np.allclose(trait[0], trait[-1])
+        trembles.append(_trembler(imprime(trait), rng, 0.1 if ferme else 0.3))
     densite = cv2.GaussianBlur(rng.uniform(0.82, 1.0, (h_px // 16 + 1, l_px // 16 + 1)).astype(np.float32), (0, 0), 1.5)
     densite = cv2.resize(densite, (l_px, h_px), interpolation=cv2.INTER_LINEAR)
-    alpha = (masque.astype(np.float32) / 255.0) * densite
-    encre = np.array(ENCRES[couleur], dtype=np.float32)
-    feuille_bgr = np.repeat(papier[:, :, None], 3, axis=2) * (1 - alpha[:, :, None] * (1 - encre))
+    feuille_bgr = np.repeat(papier[:, :, None], 3, axis=2)
+    for c in dict.fromkeys(couleurs):
+        masque = np.zeros((h_px, l_px), np.uint8)
+        for pts, ct in zip(trembles, couleurs):
+            if ct != c:
+                continue
+            pts_px = np.round(fe.mm_vers_px(pts, ppm) * 16).astype(np.int32).reshape(-1, 1, 2)
+            cv2.polylines(masque, [pts_px], False, 255, max(1, int(round(ep * k * ppm))), cv2.LINE_AA, shift=4)
+        alpha = (masque.astype(np.float32) / 255.0) * densite
+        teinte = np.array((ENCRES_STYLO if stylo else ENCRES)[c], dtype=np.float32)
+        feuille_bgr = feuille_bgr * (1 - alpha[:, :, None] * (1 - teinte))
 
     # 2. Prise de vue : feuille dans l'espace, caméra à 45 cm, inclinaison + rotation
     l_ph, h_ph = int(largeur_photo), int(round(largeur_photo * 3 / 4))
@@ -176,7 +197,8 @@ def fabriquer(feuille_png, feuille_json, traits_mm, graine: int, couleur: str = 
         pts = fe.mm_vers_px(imprime(rep["coins_mm"]), ppm).reshape(-1, 1, 2)
         reperes_photo[i] = cv2.perspectiveTransform(pts, hom).reshape(4, 2).tolist()
     verite = {
-        "graine": graine, "couleur": couleur, "epaisseur_mm": round(ep, 3),
+        "graine": graine, "couleur": couleur, "epaisseur_mm": round(ep, 3), "encre": encre,
+        "traits_couleurs": couleurs,
         "inclinaison_deg": round(math.degrees(incl), 3), "rotation_deg": round(math.degrees(rot), 3),
         "echelle_impression": k,
         "traits_mm": [np.asarray(t, dtype=float).tolist() for t in traits_mm],
