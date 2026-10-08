@@ -775,3 +775,14 @@ indisponible : en attente d'Adrien).
 hypothèses en attente de Loïc (hauteurs de pose, seuil d'écart max(5 %, 0,30 m), accrochage au centre, marqueurs et
 imprimante, A4 seulement, métré en page 2 : questions 13 à 18, règles R14 à R19) ; champ `model` ; branchement du métré
 vers les étapes 2 et 3 (Lot 7).
+
+## 2026-10-08 — Lot 7 livré : longueurs estimées ou mesurées, métré du plan dans la demande fournisseur, bout en bout validé en session neuve ; Opus forcé pour les plans
+
+**Decision:** (1) Toute longueur de ligne est une **estimation d'après le plan**, sauf celle **mesurée sur chantier** par Loïc : la phrase d'estimation ouvre chaque métré, la marque « (mesurée) » n'apparaît que sur l'exception ; les diamètres et la charge de fluide sont **laissés au fournisseur**. Le plan écrit `plan/metre.json`, que la demande fournisseur reprend dans un chapitre « Longueurs de cuivre (estimées d'après le plan) » avec le plan du local en annexe ; sans plan, une ligne « longueurs non relevées ». (2) Le pipeline de chiffrage est validé **de bout en bout par un sous-agent sans contexte** (rapport de visite seul, Loïc absent, sans plan) : mêmes puissances que le dossier validé ; les frictions trouvées sont corrigées (scripts qui n'échouent plus en silence, contrôle des légendes, formats inter-étapes écrits, cas « Loïc absent », règle fluide unique). (3) Le skill `froid-plan-2d` **force Opus** (`model: opus`) et garde la phrase de recommandation pour Loïc. (4) Avant livraison : prix et prénoms retirés des textes, transcriptions d'appels supprimées du dépôt, clé Supabase anonyme remplacée par un placeholder dans `.env.example`, routeur racine à jour (étapes 1, 2, 3 et P).
+
+**Why:** (1) décision d'Adrien du 2026-10-08 : un fournisseur doit savoir ce qui est mesuré et ce qui est estimé, et c'est son métier de fixer diamètres et charge. (2) Chaque étape avait été construite avec tout le contexte ; seule une session vierge montre ce que Loïc vivra. (3) La doc Claude Code confirme qu'Opus est le défaut du forfait Pro et que le repli est silencieux si le modèle manque : forcer ne coûte rien et ne bloque pas. (4) Rien de privé ni de secret dans un dépôt synchronisé chez le client.
+
+**Alternatives considered:** longueurs dans le dimensionnement (l'étape 2 ne les utilise pas en V1: rejeté) ; diamètres calculés par le système (option future, tables de la base de savoir) ; bout en bout avec un plan ETS Denis (pas de cotes, jamais inventées : rejeté, chemin avec plan prouvé sur la boucherie) ; recommander Opus sans forcer (choisi le 2026-10-07, remplacé) ; garder la clé anonyme dans l'exemple pour simplifier l'installation (rejeté : règle des placeholders).
+
+**Owner:** Adrien. Reste : Lot 8 (push des commits, `maj-aios`, zips des skills mobiles, installation chez Loïc avec draw.io et la vraie clé dans son `.env`, visio de prise en main, liste des 21 questions, facture du solde).
+

@@ -1,5 +1,6 @@
 ---
 name: froid-plan-2d
+model: opus
 description: Plan 2D de frigoriste à l'échelle (étape P d'un dossier, Cazal Réfrigération) ; à partir d'une description dictée avec les cotes au télémètre, d'un croquis photographié, d'un plan d'architecte en PDF ou du relevé InterFast, écrit le modèle plan.json, dessine plan.drawio en A4 à une échelle normalisée (barre d'échelle, règle de contrôle de 100 mm), calcule le métré de chaque réseau et les croisements, vérifie l'échelle jusque dans le PDF, reprend les retouches faites à la souris dans draw.io et lit la photo d'un réseau tracé au marqueur sur une feuille imprimée ; se déclenche sur « plan », « plan 2D », « dessine le local », « trace les réseaux », « métré », « feuille à imprimer », « photo du tracé », « draw.io ».
 ---
 
