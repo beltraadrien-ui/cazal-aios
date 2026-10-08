@@ -214,3 +214,11 @@ Dossier test : ETS Denis (rapport InterFast IN01834 du 14/09/2026, local, jamais
 - ⏳ Prospection LinkedIn / cold email (~500 € en plus, 3ᵉ espace de travail).
 - ⏳ Génération vidéo (Nano Banana / avant-après immo).
 - ⏳ Pont « vocal sur chantier → déclenche un vrai script » (le plus fragile, reportable).
+
+## Bloc 6 — Mails fournisseurs et sous-traitants (outil de Loïc, 2026-10-08)
+- [x] Skill `mail-fournisseurs-sous-traitants` (construit par Loïc, intégré par Adrien le 2026-10-08).
+- [x] Annuaires `perso/fournisseurs.md` (6 fournisseurs) et `perso/sous-traitants.md` (4 groupes, 6 sous-traitants) :
+      données de Loïc, sur son PC seulement.
+- [x] Pas de version mobile (demandes de prix faites au bureau sur PC).
+- [ ] Chez Loïc, après la mise à jour : déplacer les deux annuaires de `references/` vers `perso/` (le skill le
+      propose à son premier lancement) ; compléter l'annuaire fournisseurs avec les coordonnées manquantes.

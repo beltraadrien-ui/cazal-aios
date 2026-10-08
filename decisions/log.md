@@ -796,3 +796,23 @@ vers les étapes 2 et 3 (Lot 7).
 
 **Owner:** Adrien. Reste : première mise à jour chez Loïc par amorce (son `maj-aios` actuel est l'ancien, cf. `reste-a-faire.md`), puis Lot 8 (2/2) : installation, clés, visio.
 
+## 2026-10-08 — Outil de Loïc : mails fournisseurs et sous-traitants + annuaires (intégré par Adrien)
+
+**Decision:** Le skill **`mail-fournisseurs-sous-traitants`**, construit par Loïc avec son assistant sur son PC
+(2026-10-08) et reçu sous forme de patch, entre dans le système tel quel pour la logique (un mail personnalisé
+par destinataire, brouillons seulement, « Cazal remet prix » en phase de prix, recherche en ligne d'une
+coordonnée manquante avant de demander). Ses deux **annuaires** (`fournisseurs.md` : liste unique de matériel
+sur commande ; `sous-traitants.md` : groupes Isolation, Manutention, Bureaux d'études, Dessin technique)
+restent des **données de Loïc dans `perso/`**, jamais sur GitHub ; le skill les y lit, déplace une copie
+restée dans `references/` (ancienne place) et contient les modèles pour les recréer. Usage PC seulement
+(Loïc fait ses demandes de prix au bureau) : pas de zip mobile, pas d'entrée dans `MOBILES`.
+
+**Why:** Les annuaires contiennent des contacts nominatifs, numéros, numéros d'offres et noms de projets
+clients : règle du dépôt, rien de privé sur GitHub (comme `dimensionnement/dossiers/`). Le mécanisme
+(annuaire → mail perso) est générique et vaut d'être maintenu par Adrien avec le reste.
+
+**Alternatives considered:** versionner les annuaires dans `references/` comme Loïc l'avait fait (rejeté :
+données de tiers) ; table Supabase `sous_traitants` (idée de Loïc, rejetée par lui : volume faible, markdown
+suffit) ; envoi automatique des mails (rejeté : brouillons seulement).
+
+**Owner:** Loïc (demande et données) / Adrien (skill).

@@ -66,6 +66,7 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 | **Dessiner le plan d'un local** (« fais-moi le plan », « mets ce croquis au propre », « trace les cuivres », « métré des lignes », « feuille à imprimer », « voilà la photo du tracé ») | `froid-plan-2d` (étape P, Opus forcé par le skill) | Engine | `dimensionnement/CLAUDE.md` (étape P), `dimensionnement/savoir/methodes/plan-2d.md`, draw.io Desktop pour les retouches à la souris ; sorties dans `dimensionnement/dossiers/<slug>/plan/` |
 | **Question technique froid / clim / CO2 / régulation** (« qu'est-ce que dit le Kotza sur… », « comment régler l'AK-CC 55 », « retrouve le schéma de… ») | `froid-question` | Surface (mobile et desktop) | base de savoir dans Supabase (`rechercher_savoir`) via le connecteur Supabase lecture seule + `references/INDEX.md` bundlé |
 | **Entretenir la base de savoir** (« ajoute ce document au savoir », « retiens ça », « état du savoir », « la base est en pause ») | `froid-savoir` | Engine | `dimensionnement/bibliotheque/` (PDF, catalogue, cache OCR) → tables `savoir_*` + bucket `savoir-pages` ; `shared/savoir.py`, `shared/sql/schema_savoir.sql` |
+| **Mail à un fournisseur ou sous-traitant** (demande de prix, commande, relance…) dicté au vocal → un mail perso par destinataire | `mail-fournisseurs-sous-traitants` | Engine (PC bureau) | annuaires de la zone perso `perso/fournisseurs.md` + `perso/sous-traitants.md` (données de Loïc, jamais sur GitHub) |
 | **Reel / post depuis un chantier** (vocal + photos → script prêt à filmer, + variantes post réalisation & Google) | `script-reel-chantier` | Surface | `references/framework-hook.md`, `voice.md`, `angles-signature-cazal.md`, `rapport-perf-digest.md`, `format-*.md` |
 | **Proposer / développer des idées de contenu** (« qu'est-ce que je peux poster ? ») | `idee-contenu` | Surface | table Supabase `idees` (vérité) ou `references/base-idees.md` (snapshot) + digest |
 | **Noter une idée à la volée** (« garde ça pour plus tard ») | `ajout-idee` | Engine | insertion via `shared/scripts/post/insert_idee.py` (jamais à la main) |
@@ -104,6 +105,7 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 | **Rapports de perf complets datés** (Loïc + concurrents, archives) | table `syntheses` (types `rapport-performance` / `rapport-concurrents`) · fichiers `active/analyse/` |
 | Framework de hooks (Kallaway adapté grand public) | `references/framework-hook.md` |
 | Angles signature + filtre éditorial « bon pour Cazal ? » | `references/angles-signature-cazal.md` |
+| **Fournisseurs** (matériel sur commande, demandé par mail) et **sous-traitants** (coordonnées par domaine) | `perso/fournisseurs.md` · `perso/sous-traitants.md` (zone perso, jamais sur GitHub ; modèles dans le skill `mail-fournisseurs-sous-traitants`) |
 | Formats de sortie (reel, article, Google, réalisation) | `references/format-{reel,article,gmb,realisation}.md` |
 | **Base d'idées** de contenu | table Supabase `idees` (vérité) · `references/base-idees.md` (snapshot) |
 | Le cerveau opérateur (3Ms : Mindset/Method/Machine) | `references/3ms-framework.md` |
