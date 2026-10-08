@@ -45,7 +45,10 @@ PDF unique** (contexte, chambres, production existante, évaporateurs, demande, 
 légendées, annexes ; moins de 5 Mo) et **un mail court sans tableau** ; `controler.py` vérifie anonymisation,
 chiffres, plaques, PDF, mail et annexes (0 échec exigé), un vérificateur relit, puis Loïc relit ✋ et **envoie
 lui-même** ; `envois.md` garde la trace de chaque envoi. Une version envoyée ne se réécrit jamais : `v2`, `v3`…
-(grossistes) et `v1-fabricant`… (fabricant).
+(grossistes) et `v1-fabricant`… (fabricant). Si l'étape P est faite, le PDF reprend les **longueurs de cuivre
+estimées** de `plan/metre.json` (froid et clim seulement ; « (mesurée) » pour une longueur mesurée sur chantier ;
+diamètres et charge de fluide laissés au fournisseur) et la page 1 de `plan/plan.pdf` en dernière page ; sinon une
+ligne « Longueurs de lignes non relevées, à estimer par vos soins. ».
 
 **Étape P (plan).** Loïc décrit le local avec ses cotes au télémètre (ou donne un croquis photographié, un plan
 d'architecte en PDF ; le relevé InterFast fournit l'inventaire des chambres et des équipements). Claude écrit
@@ -57,8 +60,10 @@ descentes aux hauteurs de pose, hypothèses tant que Loïc ne les a pas validée
 vue HTML du métré ; `verifier_plan.py` relit tout depuis le fichier draw.io et mesure le PDF (0 erreur exigée, 5 tours
 au plus), Claude relit l'image du plan, puis Loïc relit ✋. Il retouche à la voix (Claude modifie `plan.json`) ou à la
 souris dans draw.io Desktop (`importer_drawio.py` ramène les positions). Lot 6 : une feuille A4 à repères par réseau,
-tracée au marqueur et photographiée, devient un calque (`feuille.py`, `lire_photo.py`). Les diamètres restent « à
-définir par le dimensionnement ». **Pour les plans, Opus recommandé** : Loïc passe sur Opus avec `/model` avant de
+tracée au marqueur et photographiée, devient un calque (`feuille.py`, `lire_photo.py`). Toute longueur est
+« estimée d'après le plan », sauf celle « mesurée sur chantier » par Loïc (`longueur_mesuree` sur la ligne) ; **le
+métré nourrit la demande fournisseur via `plan/metre.json`** ; diamètres et charge de fluide restent « à définir par
+le fournisseur ». **Pour les plans, Opus recommandé** : Loïc passe sur Opus avec `/model` avant de
 commencer (meilleure lecture des croquis et des rendus).
 
 ## Où vivent les choses
@@ -82,6 +87,7 @@ dimensionnement/
         │   ├── plan.pdf, plan.png     ← le plan sur une page A4 à l'échelle (à imprimer à 100 %), le métré
         │   │                            sur une ou deux pages A4 selon sa longueur ; image de relecture
         │   ├── plan.md, plan.html     ← métré, croisements, hauteurs, journal des versions (Loïc lit le .html)
+        │   ├── metre.json             ← métré lu par la demande fournisseur (longueurs estimées / mesurées)
         │   ├── plan-base.json, rendu.json        ← échelle et origine pour les feuilles ; calibration du PDF
         │   ├── verification.md, .json, journal.md ← dernier contrôle ; une ligne par génération
         │   ├── versions/              ← plan-vN.drawio + plan-vN.json à chaque génération, sauvegardes

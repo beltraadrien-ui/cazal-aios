@@ -30,7 +30,9 @@ Sources : décision du 2026-10-07, exemple validé du 2026-09-28 ; code : `scrip
   (haut / bas / gauche / droite, compatible avec la direction), `decalage` en m (défaut 0,60).
 - Ligne : `points` du départ à l'arrivée ; le premier touche `de`, le dernier touche `a`, à 0,15 m près
   (équipement, chambre, mur ou autre ligne, ex. un câble qui part du chemin de câbles).
-  Diamètres jamais inventés : « à définir » (par le dimensionnement).
+  Diamètres jamais inventés : « à définir » (par le fournisseur, comme la charge de fluide). Longueur mesurée
+  sur chantier : `longueur_mesuree` (m, > 0) + `mesure` {par, date, note}, retenue par le métré à la place de
+  l'estimation du plan (décision du 2026-10-08).
 
 ## 3. Calques (cellules `parent="0"`, le premier est dessous)
 

@@ -83,6 +83,17 @@ déclaré) · Croisements · Cartouche. Un calque se masque dans draw.io pour im
   pour l'électricité « dont chemin de câbles » et la réserve), le récapitulatif par réseau, les croisements en mots,
   les cotes et ce qu'elles mesurent, les hauteurs de pose, les questions. Aucun code de ligne (LA1, LE1…) : le
   détail par ligne (code, formule, hauteurs, diamètre) reste dans `metre-detail.md`, mémoire non rendue.
+- **Longueurs estimées / mesurées** (décision du 2026-10-08) : toute longueur est **estimée d'après le plan** (tracé
+  et hauteurs de pose), sauf celle **mesurée sur chantier** par Loïc (`longueur_mesuree` + `mesure` {par, date,
+  note} sur la ligne de `plan.json`), seule tenue pour fiable : elle devient le total de la ligne, l'estimation du
+  plan reste à côté (`metre-detail.md`). Le métré de `plan.md` et de la page « Métré » commence par la phrase
+  « Toutes les longueurs sont des estimations d'après le plan (tracé et hauteurs de pose), sauf celles marquées
+  « (mesurée) », relevées sur chantier. » ; « (mesurée) » marque le total des lignes mesurées ; plus de « (hyp.) » dans ces
+  vues. Une mesure à plus de **20 %** de l'estimation met le tracé en doute : question à Loïc, avertissement E6.
+- **Le métré nourrit la demande fournisseur** par `plan/metre.json` (écrit par `generer.py`, recalculé par le
+  vérificateur) : longueurs par ligne, par réseau (famille `cuivre_froid`, `cuivre_clim`, `electricite`, `libre`),
+  par type, avec leur origine (`estimee`, `mesuree`, `mixte`). Le PDF de la demande reprend les longueurs de cuivre
+  estimées ; **diamètres et charge de fluide sont laissés au fournisseur** (« à définir par le fournisseur »).
 
 ## 5. Les croisements
 
@@ -118,8 +129,9 @@ déclaré) · Croisements · Cartouche. Un calque se masque dans draw.io pour im
 
 ## 7. Limites
 
-- Ni murs ni percements conçus ; aucun diamètre ni section choisis (« à définir par le dimensionnement », R18) ;
-  pas de 3D (le vertical n'est que dans la formule) ; A4 seulement.
+- Ni murs ni percements conçus ; aucun diamètre, section ni charge de fluide choisis (« à définir par le
+  fournisseur », R18 et décision du 2026-10-08) ; pas de 3D (le vertical n'est que dans la formule) ; A4 seulement.
+- **Options futures** : diamètres calculés (puissance + longueur, tables de la base de savoir).
 - Lot 6 : deux réseaux de même couleur sur une feuille ne sont pas séparés ; crayon et couleurs pâles non lus ; un
   piquage en T laisse une extrémité libre (question posée) ; feuille gondolée et ombre dure non testées ; une
   extrémité libre est lue 0,1 à 0,4 mm trop court sur le papier (1 à 4 cm au 1:100), biais connu non corrigé.

@@ -21,13 +21,22 @@ Arrondi : chaque composante d'une ligne est arrondie au centimètre (au plus pro
 sont des sommes de valeurs arrondies : les tableaux s'additionnent exactement. La longueur en plan non arrondie
 reste disponible (`plan_brut_m`) pour les comparaisons fines.
 
+Longueurs estimées / mesurées (décision du 2026-10-08) : toute longueur est une ESTIMATION d'après le plan (tracé et
+hauteurs de pose, origine « estimee »), sauf celle MESURÉE sur chantier par le frigoriste : `longueur_mesuree` (m) et
+`mesure` ({par, date, note}) sur la ligne de plan.json. La mesure devient le total de la ligne (origine « mesuree ») ;
+l'estimation du plan reste dans `estimation_plan_m` (et ses composantes plan_m, chemin_m, vertical_m, reserve_m) ;
+au delà de 20 % d'écart (`ecart_fort`), le tracé est mis en doute (question dans plan.md, avertissement E6).
+Les tableaux de la page « Métré » ne portent plus « (hyp.) » : la phrase PHRASE_LONGUEURS les annonce comme
+estimations et « (mesurée) » marque le total des seules lignes mesurées (et un total dont toutes les lignes le sont).
+`Metre.contrat_json(...)` = contenu de `plan/metre.json` (lu par la demande fournisseur), écrit par generer.py.
+
 Usage (bibliothèque, importée par generer.py et verifier_plan.py) :
     from metre import metrer
     m = metrer(plan)                 # plan = dict brut lu dans plan.json
     m.lignes["L1"]["total_m"]        → 8.8
     m.lignes["L1"]["formule"]        → « 6,40 m en plan + |2,60 − 2,30| + |2,60 − 0,50| = 8,80 m »
     m.par_reseau["froid_cuivres"]["total_m"], m.par_diametre[("aspiration", "à définir")]["total_m"]
-    m.markdown(), m.html(), m.tableaux_html()
+    m.markdown(), m.html(), m.tableaux_html(), m.contrat_json(troncons, dossier=…, plan_version=…, echelle=…, genere_le=…)
 
 En ligne de commande (contrôle rapide) :
     python metre.py <plan.json> [--html]
@@ -147,9 +156,27 @@ HAUTEUR_PAR_TYPE_EQUIPEMENT = {
 ROLES = ("depart", "passage", "arrivee")
 NOMS_ROLES = {"depart": "départ", "passage": "passage", "arrivee": "arrivée"}
 TOL_JONCTION_CHEMIN = 0.10      # m : dernier point d'un câble à 0,10 m ou moins d'un chemin de câbles = il s'y arrête
-HYP = " (hyp.)"                 # valeur qui dépend d'une hauteur « hypothèse » (même marque que plan.md)
-NOTE_HYP = ("(hyp.) : valeur qui dépend d'une hauteur de pose « hypothèse » (tableau « Hauteurs utilisées »), "
-            "à faire valider (question 13) ; elle changera avec elle.")
+HYP = " (hyp.)"                 # valeur qui dépend d'une hauteur « hypothèse » (metre-detail.md seulement)
+
+# Longueurs estimées / mesurées (décision du 2026-10-08).
+ESTIMEE = "estimee"             # estimée d'après le plan (tracé + hauteurs de pose)
+MESUREE = "mesuree"             # mesurée sur chantier par le frigoriste
+MIXTE = "mixte"                 # total dont une partie seulement des lignes est mesurée
+PHRASE_LONGUEURS = ("Toutes les longueurs sont des estimations d'après le plan (tracé et hauteurs de pose), sauf "
+                    "celles marquées « (mesurée) », relevées sur chantier.")
+MARQUE_MESUREE = " (mesurée)"   # après le total d'une ligne mesurée (et d'un total dont toutes les lignes le sont)
+SEUIL_ECART_MESURE = 0.20       # écart relatif mesure / estimation au delà duquel le tracé est mis en doute
+A_DEFINIR_FOURNISSEUR = "à définir par le fournisseur"
+NOTE_HAUTEURS_HYP = "Les montées et descentes utilisent les hauteurs de pose ci-dessous, à valider (question 13)."
+NOTE_HAUTEURS_VALIDEES = "Les montées et descentes utilisent les hauteurs de pose ci-dessous, validées."
+NOTE_FOURNISSEUR = "Diamètres et charge de fluide : à définir par le fournisseur."
+NOTE_FOURNISSEUR_PARTIEL = "Diamètres non indiqués et charge de fluide : à définir par le fournisseur."
+NOTE_FOURNISSEUR_CHARGE = "Charge de fluide : à définir par le fournisseur."
+
+# Contrat de plan/metre.json (lu par la demande fournisseur) : version, familles de réseaux.
+VERSION_METRE_JSON = 1
+FAMILLES = {"froid_cuivres": "cuivre_froid", "clim_cuivres": "cuivre_clim", "electricite": "electricite"}
+FAMILLE_LIBRE = "libre"
 
 
 class ErreurMetre(ValueError):
@@ -251,7 +278,7 @@ def libelle_type(type_: str, plan: dict | None = None) -> str:
 
 
 def normaliser_diametre(d: Any) -> str:
-    """None, « », « à définir », « à définir par le dimensionnement », « a definir » → « à définir »."""
+    """None, « », « à définir », « à définir par le fournisseur », « a definir » → « à définir »."""
     if d is None:
         return A_DEFINIR
     texte = str(d).strip()
@@ -259,6 +286,51 @@ def normaliser_diametre(d: Any) -> str:
     if not texte or simple.startswith("a definir"):
         return A_DEFINIR
     return texte
+
+
+def origine_ensemble(origines) -> str:
+    """Origine d'un total : « mesuree » si toutes ses lignes sont mesurées, « mixte » si une partie l'est, sinon
+    « estimee »."""
+    origines = list(origines)
+    if origines and all(o == MESUREE for o in origines):
+        return MESUREE
+    return MIXTE if MESUREE in origines else ESTIMEE
+
+
+def famille_reseau(cle: str) -> str:
+    """Famille d'un réseau dans metre.json : cuivre_froid, cuivre_clim, electricite ou libre."""
+    return FAMILLES.get(cle, FAMILLE_LIBRE)
+
+
+def diametre_fournisseur(l: dict) -> str | None:
+    """Diamètre d'une ligne métrée dans metre.json : « à définir par le fournisseur » s'il n'est pas défini, None
+    pour un chemin de câbles (ce n'est pas un tuyau)."""
+    if l["type"] == "chemin_cables":
+        return None
+    return A_DEFINIR_FOURNISSEUR if l["diametre"] == A_DEFINIR else l["diametre"]
+
+
+def ecart_fr(l: dict) -> str:
+    """Écart mesure / estimation d'une ligne mesurée : « +0,29 m (+6,9 %) » ; « » pour une ligne estimée."""
+    if l.get("origine") != MESUREE:
+        return ""
+    e = l["ecart_m"]
+    txt = f"{'+' if e >= 0 else MOINS}{nombre_fr(abs(e))}{ESPACE}m"
+    if l.get("ecart_rel") is not None:
+        pct = l["ecart_rel"] * 100.0
+        txt += f" ({'+' if pct >= 0 else MOINS}{nombre_fr(abs(pct), 1)}{ESPACE}%)"
+    return txt
+
+
+def _mesure(ligne: dict, ou: str) -> tuple[float | None, dict | None]:
+    """(longueur mesurée arrondie au cm, {par, date, note}) d'une ligne, ou (None, None) si elle n'est pas mesurée."""
+    v = ligne.get("longueur_mesuree")
+    if v is None:
+        return None, None
+    if not _est_nombre(v) or v <= 0:
+        raise ErreurMetre(f"{ou} : `longueur_mesuree` doit être une longueur positive en mètres, trouvé {v!r}")
+    brut = ligne.get("mesure") if isinstance(ligne.get("mesure"), dict) else {}
+    return arrondi(v), {"par": brut.get("par"), "date": brut.get("date"), "note": brut.get("note")}
 
 
 def _points(ligne: dict, ou: str) -> list[tuple[float, float]]:
@@ -316,44 +388,62 @@ class Metre:
         reserve = l["type"] == "cable" and statuts.get("reserve_cable") == HYPOTHESE
         return vertical, reserve
 
+    def origine(self, ids) -> str:
+        """Origine du total de ces lignes : estimee, mesuree ou mixte."""
+        return origine_ensemble(self.lignes[i]["origine"] for i in ids)
+
+    def marque(self, ids) -> str:
+        """« (mesurée) » après un total dont toutes les lignes sont mesurées sur chantier, sinon rien."""
+        return MARQUE_MESUREE if self.origine(ids) == MESUREE else ""
+
+    def hauteurs_validees(self) -> bool:
+        """Vrai si aucune hauteur utilisée par le métré n'est encore une hypothèse (question 13)."""
+        return not any(h["statut"] == HYPOTHESE for h in self.hypotheses)
+
+    def lignes_ecart_fort(self) -> list[str]:
+        """Lignes mesurées dont la mesure s'écarte de plus de 20 % de l'estimation du plan (dans l'ordre)."""
+        return [lid for lid, l in self.lignes.items() if l["origine"] == MESUREE and l["ecart_fort"]]
+
+    def note(self) -> str:
+        """Note sous le métré (plan.md et page « Métré ») : hauteurs de pose, puis diamètres et charge de fluide."""
+        morceaux = [NOTE_HAUTEURS_VALIDEES if self.hauteurs_validees() else NOTE_HAUTEURS_HYP]
+        diam = [l["diametre"] for l in self.lignes.values() if l["type"] != "chemin_cables"]
+        if all(d == A_DEFINIR for d in diam):
+            morceaux.append(NOTE_FOURNISSEUR)
+        elif A_DEFINIR in diam:
+            morceaux.append(NOTE_FOURNISSEUR_PARTIEL)
+        else:
+            morceaux.append(NOTE_FOURNISSEUR_CHARGE)
+        return " ".join(morceaux)
+
     def _tableau_reseaux(self) -> tuple[list[str], list[list[str]], list[str], set[int]]:
+        """Page « Métré » : toutes les longueurs sont des estimations (PHRASE_LONGUEURS en tête de page), sauf le
+        total d'une ligne mesurée, marqué « (mesurée) » ; plus de « (hyp.) » (décision du 2026-10-08)."""
         entetes = ["Réseau", "Ligne", f"De {FLECHE} À", "Type", "En plan (m)", "Dans le chemin (m)", "Vertical (m)",
                    "Réserve (m)", "Total (m)", "Diamètre"]
         aligne = ["g", "g", "g", "g", "d", "d", "d", "d", "d", "g"]
         rangs, gras = [], set()
         for r in self.par_reseau.values():
-            hv_res = hr_res = False
             for lid in r["lignes"]:
                 l = self.lignes[lid]
-                hv, hr = self.en_hypothese(lid)
-                hv_res, hr_res = hv_res or hv, hr_res or hr
                 rangs.append([r["nom"], lid, f"{l['de'] or TIRET_VIDE} {FLECHE} {l['a'] or TIRET_VIDE}",
                               l["libelle_type"], nombre_fr(l["plan_m"]), nombre_fr(l["chemin_m"]),
-                              nombre_fr(l["vertical_m"]) + (HYP if hv else ""),
-                              nombre_fr(l["reserve_m"]) + (HYP if hr else ""),
-                              nombre_fr(l["total_m"]) + (HYP if hv or hr else ""), l["diametre"]])
+                              nombre_fr(l["vertical_m"]), nombre_fr(l["reserve_m"]),
+                              nombre_fr(l["total_m"]) + self.marque([lid]), l["diametre"]])
             gras.add(len(rangs))
             rangs.append([f"Total {r['nom']}", "", "", "", nombre_fr(r["plan_m"]), nombre_fr(r["chemin_m"]),
-                          nombre_fr(r["vertical_m"]) + (HYP if hv_res else ""),
-                          nombre_fr(r["reserve_m"]) + (HYP if hr_res else ""),
-                          nombre_fr(r["total_m"]) + (HYP if hv_res or hr_res else ""), ""])
+                          nombre_fr(r["vertical_m"]), nombre_fr(r["reserve_m"]),
+                          nombre_fr(r["total_m"]) + self.marque(r["lignes"]), ""])
         return entetes, rangs, aligne, gras
 
     def _tableau_diametres(self) -> tuple[list[str], list[list[str]], list[str], set[int]]:
-        rangs = [[d["diametre"], d["libelle_type"], nombre_fr(d["total_m"])
-                  + (HYP if any(any(self.en_hypothese(lid)) for lid in d["lignes"]) else "")]
+        rangs = [[d["diametre"], d["libelle_type"], nombre_fr(d["total_m"]) + self.marque(d["lignes"])]
                  for d in self.par_diametre.values()]
         return ["Diamètre", "Type", "Total (m)"], rangs, ["g", "g", "d"], set()
 
     def _tableau_hauteurs(self) -> tuple[list[str], list[list[str]], list[str], set[int]]:
         rangs = [[h["libelle"], nombre_fr(h["valeur"]), h["statut"]] for h in self.hypotheses]
         return ["Hauteur", "Valeur (m)", "Statut"], rangs, ["g", "d", "g"], set()
-
-    def _note_hypotheses(self) -> str:
-        if any(h["statut"] == HYPOTHESE for h in self.hypotheses):
-            return ("Les hauteurs marquées « hypothèse » sont des valeurs par défaut, à confirmer avant de commander "
-                    "le matériel ; les métrés qui en dépendent (marqués (hyp.)) changeront avec elles.")
-        return ""
 
     # -- sorties -------------------------------------------------------------------------------------------------
 
@@ -363,7 +453,7 @@ class Metre:
         if not self.lignes:
             return f"{t} Métré par réseau\n\nAucune ligne à métrer.\n"
         morceaux = [
-            f"{t} Métré par réseau", "",
+            f"{t} Métré par réseau", "", PHRASE_LONGUEURS, "",
             f"Métré d'une ligne = longueur du tracé en plan + |passage {MOINS} départ| + |passage {MOINS} arrivée| "
             "+ réserve (câbles seulement). Un câble qui s'arrête sur le chemin de câbles compte aussi son parcours "
             "dans le chemin jusqu'au tableau. Le chemin de câbles n'a pas de métré vertical.", "",
@@ -374,18 +464,16 @@ class Metre:
             morceaux.append(f"- **{lid}** ({l['libelle_type']}, {l['de'] or TIRET_VIDE} {FLECHE} "
                             f"{l['a'] or TIRET_VIDE}) : {l['formule']}")
         morceaux += ["", f"{t} Métré par diamètre", "", _table_md(*self._tableau_diametres()), "",
-                     f"{t} Hauteurs utilisées", "", _table_md(*self._tableau_hauteurs()), ""]
-        note = self._note_hypotheses()
-        if note:
-            morceaux += [note, ""]
+                     f"{t} Hauteurs utilisées", "", _table_md(*self._tableau_hauteurs()), "", self.note(), ""]
         return "\n".join(morceaux)
 
     def tableaux_html(self) -> list[tuple[str, str]]:
-        """[(titre, HTML d'un <table>)] pour la page « Métré » de plan.drawio : HTML simple, styles en ligne."""
+        """[(titre, HTML d'un <table>)] pour la page « Métré » de plan.drawio : HTML simple, styles en ligne. La
+        phrase PHRASE_LONGUEURS est écrite en haut de la page par drawio.ecrire (`entete`) ; la note (hauteurs de
+        pose, diamètres et charge au fournisseur) est le dernier rang du tableau par réseau."""
         if not self.lignes:
             return [("Métré par réseau", _table_html(["Métré"], [["Aucune ligne à métrer."]], ["g"], set()))]
-        note = NOTE_HYP if any(h["statut"] == HYPOTHESE for h in self.hypotheses) else ""
-        return [("Métré par réseau", _table_html(*self._tableau_reseaux(), note=note)),
+        return [("Métré par réseau", _table_html(*self._tableau_reseaux(), note=self.note())),
                 ("Métré par diamètre", _table_html(*self._tableau_diametres())),
                 ("Hauteurs utilisées", _table_html(*self._tableau_hauteurs()))]
 
@@ -393,6 +481,8 @@ class Metre:
         """Fragment HTML bien formé (lisible aussi comme XML) : titres, tableaux, détail des formules, note."""
         e = _html.escape
         morceaux = ['<div class="metre">']
+        if self.lignes:
+            morceaux.append(f"<p>{e(PHRASE_LONGUEURS)}</p>")
         for titre, table in self.tableaux_html():
             morceaux.append(f"<h3>{e(titre)}</h3>")
             morceaux.append(table)
@@ -403,11 +493,40 @@ class Metre:
                     morceaux.append(f"<li><b>{e(lid)}</b> ({e(l['libelle_type'])}, {e(l['de'] or TIRET_VIDE)} "
                                     f"{FLECHE} {e(l['a'] or TIRET_VIDE)}) : {e(l['formule'])}</li>")
                 morceaux.append("</ul>")
-        note = self._note_hypotheses()
-        if note:
-            morceaux.append(f"<p>{e(note)}</p>")
         morceaux.append("</div>")
         return "\n".join(morceaux)
+
+    def contrat_json(self, troncons: dict[str, str], *, dossier: str | None, plan_version: int | None,
+                     echelle: str | None, genere_le: str | None) -> dict:
+        """Contenu de `plan/metre.json` (contrat du 2026-10-08, lu par la demande fournisseur) : nombres en mètres
+        à 2 décimales ; `troncons` = {id: libellé du tronçon tel que dans plan.md} ; `en_plan_m` = tracé en plan
+        seul (le parcours dans le chemin de câbles est dans `chemin_m`) ; total_m = en_plan_m + chemin_m +
+        vertical_m + reserve_m pour une ligne estimée, = longueur_mesuree_m pour une ligne mesurée."""
+        reseaux, par_type, recap = [], [], []
+        for cle, r in self.par_reseau.items():
+            nom = NOMS_RESEAUX_LISIBLES.get(cle) or r["nom"]
+            lignes = []
+            for lid in r["lignes"]:
+                l = self.lignes[lid]
+                lignes.append({
+                    "id": lid, "troncon": troncons.get(lid, ""), "de": l["de"], "a": l["a"], "type": l["type"],
+                    "type_nom": l["libelle_type"], "en_plan_m": l["plan_m"], "chemin_m": l["chemin_m"],
+                    "vertical_m": l["vertical_m"], "reserve_m": l["reserve_m"], "total_m": l["total_m"],
+                    "origine": l["origine"], "estimation_plan_m": l["estimation_plan_m"],
+                    "longueur_mesuree_m": l["longueur_mesuree_m"],
+                    "mesure": dict(l["mesure"]) if l["mesure"] is not None else None,
+                    "diametre": diametre_fournisseur(l)})
+            reseaux.append({"cle": cle, "nom": nom, "famille": famille_reseau(cle), "lignes": lignes,
+                            "total_m": r["total_m"], "total_estime_m": r["total_estime_m"],
+                            "total_mesure_m": r["total_mesure_m"], "origine": r["origine"]})
+            for t, v in r["par_type"].items():
+                par_type.append({"reseau": cle, "type": t, "type_nom": self.lignes[v["lignes"][0]]["libelle_type"],
+                                 "total_m": v["total_m"], "origine": v["origine"]})
+            recap.append({"cle": cle, "nom": nom, "total_m": r["total_m"], "origine": r["origine"]})
+        return {"version": VERSION_METRE_JSON, "genere_le": genere_le, "plan_version": plan_version,
+                "dossier": dossier, "echelle": echelle, "phrase": PHRASE_LONGUEURS,
+                "hauteurs_validees": self.hauteurs_validees(), "reseaux": reseaux, "par_type": par_type,
+                "recapitulatif": recap}
 
     def en_dict(self) -> dict:
         """Version JSON (clés de `par_diametre` écrites « type|diamètre »)."""
@@ -580,10 +699,23 @@ def _metrer_ligne(ligne: dict, ctx: _Contexte) -> dict:
             formule += f" + {longueur_fr(reserve_m)} de réserve"
         formule += f" = {longueur_fr(total_m)}"
 
+    estimation_m = total_m
+    mesuree, mesure = _mesure(ligne, ou)
+    origine, ecart_m, ecart_rel, ecart_fort = ESTIMEE, None, None, False
+    if mesuree is not None:
+        origine, total_m = MESUREE, mesuree
+        ecart_m = arrondi(mesuree - estimation_m)
+        ecart_rel = (mesuree - estimation_m) / estimation_m if estimation_m > 0 else None
+        ecart_fort = estimation_m <= 0 or abs(mesuree - estimation_m) > SEUIL_ECART_MESURE * estimation_m + 1e-9
+        par = str(mesure.get("par") or "").strip()
+        formule += f" ; mesurée sur chantier{' par ' + par if par else ''} : {longueur_fr(mesuree)}, retenue"
+
     return {
         "plan_m": plan_m, "plan_brut_m": plan_brut, "chemin_m": chemin_m, "chemin": chemin_id,
         "tableau": tableau_id if chemin_id is not None and bout is not None else None,
         "vertical_m": vertical_m, "reserve_m": reserve_m, "total_m": total_m, "formule": formule,
+        "origine": origine, "estimation_plan_m": estimation_m, "longueur_mesuree_m": mesuree, "mesure": mesure,
+        "ecart_m": ecart_m, "ecart_rel": ecart_rel, "ecart_fort": ecart_fort,
         "type": type_, "libelle_type": libelle_type(type_, ctx.plan),
         "calque": calque, "reseau": calque, "nom_reseau": nom_calque(calque, ctx.plan),
         "de": ligne.get("de"), "a": ligne.get("a"), "faisceau": ligne.get("faisceau"),
@@ -623,6 +755,8 @@ def metrer(plan: dict) -> Metre:
             t["plan_m"] = arrondi(t["plan_m"] + l["plan_m"])
             t["total_m"] = arrondi(t["total_m"] + l["total_m"])
             t["lignes"].append(lid)
+        for t in par_type.values():
+            t["origine"] = origine_ensemble(lignes[i]["origine"] for i in t["lignes"])
         par_reseau[cle] = {
             "reseau": cle, "nom": nom_calque(cle, plan), "lignes": ids,
             "plan_m": arrondi(sum(lignes[i]["plan_m"] for i in ids)),
@@ -630,6 +764,10 @@ def metrer(plan: dict) -> Metre:
             "vertical_m": arrondi(sum(lignes[i]["vertical_m"] for i in ids)),
             "reserve_m": arrondi(sum(lignes[i]["reserve_m"] for i in ids)),
             "total_m": arrondi(sum(lignes[i]["total_m"] for i in ids)),
+            "total_estime_m": arrondi(sum(lignes[i]["total_m"] for i in ids if lignes[i]["origine"] != MESUREE)),
+            "total_mesure_m": arrondi(sum(lignes[i]["total_m"] for i in ids if lignes[i]["origine"] == MESUREE)),
+            "estimation_plan_m": arrondi(sum(lignes[i]["estimation_plan_m"] for i in ids)),
+            "origine": origine_ensemble(lignes[i]["origine"] for i in ids),
             "par_type": par_type,
         }
 
@@ -647,7 +785,8 @@ def metrer(plan: dict) -> Metre:
         ids = groupes[k]
         par_diametre[k] = {"type": k[0], "libelle_type": libelle_type(k[0], plan), "diametre": k[1], "lignes": ids,
                            "plan_m": arrondi(sum(lignes[i]["plan_m"] for i in ids)),
-                           "total_m": arrondi(sum(lignes[i]["total_m"] for i in ids))}
+                           "total_m": arrondi(sum(lignes[i]["total_m"] for i in ids)),
+                           "origine": origine_ensemble(lignes[i]["origine"] for i in ids)}
 
     # Hauteurs utilisées : d'abord la table `hauteurs` (ordre fixe), puis les surcharges.
     hypotheses = []
@@ -692,7 +831,7 @@ FOND_TOTAL = "#F5F5F5"
 
 def _table_html(entetes: list[str], rangs: list[list[str]], aligne: list[str], gras: set[int], note: str = "") -> str:
     """<table> simple (table, tr, td, b) avec styles en ligne : affichable dans une cellule draw.io. `note` : dernier
-    rang d'une seule cellule sur toute la largeur (légende « (hyp.) »)."""
+    rang d'une seule cellule sur toute la largeur (hauteurs de pose, diamètres et charge au fournisseur)."""
     e = _html.escape
 
     def td(texte: str, a: str, en_gras: bool, fond: str | None) -> str:

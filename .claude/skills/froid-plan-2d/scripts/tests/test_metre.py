@@ -18,7 +18,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # dossier scripts/
 from metre import (A_DEFINIR, ESPACE, HYPOTHESE, IMPOSEE_CALQUE, IMPOSEE_EQUIPEMENT, IMPOSEE_LIGNE,  # noqa: E402
-                   VALIDEE, ErreurMetre, arrondi, longueur_fr, metrer, nombre_fr, normaliser_diametre)
+                   PHRASE_LONGUEURS, VALIDEE, ErreurMetre, arrondi, longueur_fr, metrer, nombre_fr,
+                   normaliser_diametre)
+import metre as mtr  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 NB = ESPACE                                                     # espace insécable
@@ -263,7 +265,7 @@ class TestTotaux(unittest.TestCase):
             self.assertEqual(arrondi(r["plan_m"] + r["vertical_m"] + r["reserve_m"]), r["total_m"])
 
     def test_normaliser_diametre(self):
-        for brut in (None, "", "  ", "à définir", "A définir par le dimensionnement", "a definir"):
+        for brut in (None, "", "  ", "à définir", "A définir par le fournisseur", "a definir"):
             self.assertEqual(normaliser_diametre(brut), A_DEFINIR)
         self.assertEqual(normaliser_diametre(" 7/8\" "), "7/8\"")
 
@@ -282,18 +284,21 @@ class TestFormatFrancais(unittest.TestCase):
         for titre in ("### Métré par réseau", "### Détail du calcul par ligne", "### Métré par diamètre",
                       "### Hauteurs utilisées"):
             self.assertIn(titre, md)
-        # C2 : colonne « Dans le chemin (m) » et « (hyp.) » sur les valeurs qui dépendent d'une hauteur non validée.
+        # C2 : colonne « Dans le chemin (m) » ; F1 (2026-10-08) : plus de « (hyp.) », la phrase des estimations en tête.
         self.assertIn("| Réseau | Ligne | De → À | Type | En plan (m) | Dans le chemin (m) | Vertical (m) | Réserve (m) "
                       "| Total (m) | Diamètre |", md)
-        self.assertIn("| Froid – cuivres et condensats | L1 | EV1 → GR1 | Aspiration | 7,00 | 0,00 | 2,40 (hyp.) "
-                      "| 0,00 | 9,40 (hyp.) | à définir |", md)
-        self.assertIn("| **Total Électricité (froid + clim)** |  |  |  | **22,20** | **0,00** | **7,30 (hyp.)** "
-                      "| **3,00 (hyp.)** | **32,50 (hyp.)** |  |", md)
+        self.assertIn("| Froid – cuivres et condensats | L1 | EV1 → GR1 | Aspiration | 7,00 | 0,00 | 2,40 "
+                      "| 0,00 | 9,40 | à définir |", md)
+        self.assertIn("| **Total Électricité (froid + clim)** |  |  |  | **22,20** | **0,00** | **7,30** "
+                      "| **3,00** | **32,50** |  |", md)
+        self.assertNotIn("(hyp.)", md)
+        self.assertIn(PHRASE_LONGUEURS, md)
         self.assertIn("| Diamètre | Type | Total (m) |", md)
         self.assertIn("| Hauteur | Valeur (m) | Statut |", md)
         self.assertIn("| Tableau électrique | 1,50 | hypothèse |", md)
         self.assertIn(f"- **L1** (Aspiration, EV1 → GR1) : 7,00{NB}m en plan", md)
-        self.assertIn("« hypothèse »", md)
+        self.assertIn("Les montées et descentes utilisent les hauteurs de pose ci-dessous, à valider (question 13). "
+                      "Diamètres et charge de fluide : à définir par le fournisseur.", md)
         self.assertIsNone(re.search(r"\d\.\d", md), "aucun point décimal dans le markdown")
 
     def test_markdown_echappe_les_barres(self):
@@ -306,7 +311,9 @@ class TestFormatFrancais(unittest.TestCase):
         self.assertIn("Aucune ligne à métrer.", md)
 
     def test_note_absente_si_tout_valide(self):
-        self.assertNotIn("« hypothèse »", metrer(charger("a2-surcharges.json")).markdown())
+        md = metrer(charger("a2-surcharges.json")).markdown()
+        self.assertNotIn("question 13", md)
+        self.assertIn("Les montées et descentes utilisent les hauteurs de pose ci-dessous, validées.", md)
 
 
 class TestHtml(unittest.TestCase):
@@ -429,18 +436,22 @@ class TestCableDansLeCheminDeCables(unittest.TestCase):
         self.assertEqual(l["origines_hauteurs"]["arrivee"], "équipement TD")
         self.assertEqual(l["total_m"], arrondi(6.20 + 10.10 + 0.50 + 1.60 + 1.00))
 
-    def test_tableaux_colonne_chemin_et_hyp(self):
+    def test_tableaux_colonne_chemin_sans_hyp(self):
+        # F1 (2026-10-08) : plus de « (hyp.) » sur la page « Métré » ; la note (question 13, fournisseur) reste.
         m = metrer(plan_chemin())
         md = m.markdown()
-        self.assertIn("| Électricité (froid + clim) | C1 | EV1 → K1 | Câble | 6,20 | 10,10 | 1,80 (hyp.) "
-                      "| 1,00 (hyp.) | 19,10 (hyp.) | à définir |", md)
+        self.assertIn("| Électricité (froid + clim) | C1 | EV1 → K1 | Câble | 6,20 | 10,10 | 1,80 "
+                      "| 1,00 | 19,10 | à définir |", md)
         reseau = m.tableaux_html()[0][1]
         html_bien_forme(reseau)
         self.assertIn(">Dans le chemin (m)<", reseau)
         self.assertIn(">10,10<", reseau)
-        self.assertIn(">19,10 (hyp.)<", reseau)
-        self.assertIn("question 13", reseau)                          # légende de « (hyp.) » sous le tableau
-        self.assertIn(">19,10 (hyp.)<", m.tableaux_html()[1][1])      # métré par diamètre
+        self.assertIn(">19,10<", reseau)
+        self.assertIn("question 13", reseau)                          # note sous le tableau
+        self.assertIn("à définir par le fournisseur", reseau)
+        self.assertIn(">19,10<", m.tableaux_html()[1][1])             # métré par diamètre
+        for _, fragment in m.tableaux_html():
+            self.assertNotIn("(hyp.)", fragment)
 
     def test_sans_hyp_quand_les_hauteurs_sont_validees(self):
         m = metrer(plan_chemin(hauteurs_validees=True))
@@ -482,6 +493,148 @@ class TestErreurs(unittest.TestCase):
         avant = copy.deepcopy(plan)
         metrer(plan)
         self.assertEqual(plan, avant)
+
+
+def plan_mesure(longueur=None, par="Loïc", date="2026-10-08", note="test", liquide=None) -> dict:
+    """Ligne en L (L1 : 6,40 en plan + 2,40 = 8,80 m estimés) ; `liquide` : longueur mesurée d'une 2e ligne L2
+    (liquide, même tracé, 8,80 m estimés), None = non mesurée, « estimee » = ligne présente mais estimée."""
+    plan = charger("a2-ligne-en-l.json")
+    if longueur is not None:
+        plan["lignes"][0].update(longueur_mesuree=longueur, mesure={"par": par, "date": date, "note": note})
+    if liquide is not None:
+        l2 = copy.deepcopy(plan["lignes"][0])
+        l2.update(id="L2", type="liquide")
+        l2.pop("longueur_mesuree", None)
+        l2.pop("mesure", None)
+        if liquide != "estimee":
+            l2.update(longueur_mesuree=liquide, mesure={"par": par, "date": date, "note": note})
+        plan["lignes"].append(l2)
+    return plan
+
+
+class TestLongueurMesuree(unittest.TestCase):
+    """F1 (décision du 2026-10-08) : toute longueur est estimée d'après le plan, sauf celle mesurée sur chantier par
+    le frigoriste (`longueur_mesuree` + `mesure`), qui devient le total ; l'estimation du plan reste à côté."""
+
+    def test_estimee_par_defaut(self):
+        l = metrer(plan_mesure()).lignes["L1"]
+        self.assertEqual((l["origine"], l["total_m"], l["estimation_plan_m"]), (mtr.ESTIMEE, 8.80, 8.80))
+        self.assertIsNone(l["longueur_mesuree_m"])
+        self.assertIsNone(l["mesure"])
+        self.assertIsNone(l["ecart_m"])
+        self.assertFalse(l["ecart_fort"])
+
+    def test_mesure_retenue_comme_total(self):
+        l = metrer(plan_mesure(9.10)).lignes["L1"]
+        self.assertEqual((l["origine"], l["total_m"], l["estimation_plan_m"], l["longueur_mesuree_m"]),
+                         (mtr.MESUREE, 9.10, 8.80, 9.10))
+        # les composantes gardent l'estimation du plan
+        self.assertEqual((l["plan_m"], l["vertical_m"], l["reserve_m"]), (6.40, 2.40, 0.0))
+        self.assertEqual(l["mesure"], {"par": "Loïc", "date": "2026-10-08", "note": "test"})
+        self.assertEqual(l["ecart_m"], 0.30)
+        self.assertAlmostEqual(l["ecart_rel"], 0.30 / 8.80, places=9)
+        self.assertFalse(l["ecart_fort"])
+        self.assertTrue(l["formule"].endswith(f"= 8,80{NB}m ; mesurée sur chantier par Loïc : 9,10{NB}m, retenue"))
+        self.assertEqual(mtr.ecart_fr(l), f"+0,30{NB}m (+3,4{NB}%)")
+
+    def test_seuil_de_20_pct(self):
+        # 8,80 × 1,20 = 10,56 : à la limite, pas d'alerte ; au delà (ou en dessous de 7,04), alerte
+        for longueur, fort in ((10.56, False), (10.57, True), (7.04, False), (7.03, True), (12.0, True)):
+            m = metrer(plan_mesure(longueur))
+            self.assertEqual(m.lignes["L1"]["ecart_fort"], fort, longueur)
+            self.assertEqual(m.lignes_ecart_fort(), ["L1"] if fort else [])
+        self.assertEqual(mtr.ecart_fr(metrer(plan_mesure(7.03)).lignes["L1"]), f"−1,77{NB}m (−20,1{NB}%)")
+
+    def test_mesure_invalide(self):
+        for v in (0, -1.0, "12", True, float("nan")):
+            with self.assertRaises(ErreurMetre, msg=repr(v)):
+                metrer(plan_mesure(v))
+
+    def test_totaux_par_reseau_et_par_type(self):
+        r = metrer(plan_mesure(liquide="estimee")).par_reseau["froid_cuivres"]
+        self.assertEqual((r["origine"], r["total_m"], r["total_estime_m"], r["total_mesure_m"]),
+                         (mtr.ESTIMEE, 17.60, 17.60, 0.0))
+        m = metrer(plan_mesure(9.10, liquide="estimee"))
+        r = m.par_reseau["froid_cuivres"]
+        self.assertEqual((r["origine"], r["total_m"], r["total_estime_m"], r["total_mesure_m"], r["estimation_plan_m"]),
+                         (mtr.MIXTE, 17.90, 8.80, 9.10, 17.60))
+        self.assertEqual(r["par_type"]["aspiration"]["origine"], mtr.MESUREE)
+        self.assertEqual(r["par_type"]["liquide"]["origine"], mtr.ESTIMEE)
+        r = metrer(plan_mesure(9.10, liquide=9.00)).par_reseau["froid_cuivres"]
+        self.assertEqual((r["origine"], r["total_m"], r["total_estime_m"], r["total_mesure_m"]),
+                         (mtr.MESUREE, 18.10, 0.0, 18.10))
+
+    def test_marques_de_la_page_metre(self):
+        m = metrer(plan_mesure(9.10, liquide="estimee"))
+        reseau, diametres = m.tableaux_html()[0][1], m.tableaux_html()[1][1]
+        html_bien_forme(reseau)
+        self.assertIn(">9,10 (mesurée)<", reseau)                    # L1 : mesurée
+        self.assertIn(">8,80<", reseau)                              # L2 : estimée, sans marque
+        self.assertIn("<b>17,90</b>", reseau)                        # total mixte : sans marque
+        self.assertIn(">9,10 (mesurée)<", diametres)                 # groupe « aspiration » entièrement mesuré
+        self.assertIn(">8,80<", diametres)
+        self.assertEqual(reseau.count("(mesurée)"), 1)
+        m = metrer(plan_mesure(9.10, liquide=9.00))
+        self.assertIn("<b>18,10 (mesurée)</b>", m.tableaux_html()[0][1])   # toutes mesurées : le total aussi
+        for _, fragment in m.tableaux_html():
+            self.assertNotIn("(hyp.)", fragment)
+
+    def test_contrat_metre_json(self):
+        m = metrer(plan_mesure(9.10, liquide="estimee"))
+        c = m.contrat_json({"L1": "Évaporateur de test → Groupe de test"}, dossier="test-a2", plan_version=3,
+                           echelle="1:50", genere_le="2026-10-08T10:12:00")
+        self.assertEqual(list(c), ["version", "genere_le", "plan_version", "dossier", "echelle", "phrase",
+                                   "hauteurs_validees", "reseaux", "par_type", "recapitulatif"])
+        self.assertEqual((c["version"], c["plan_version"], c["dossier"], c["echelle"], c["hauteurs_validees"]),
+                         (1, 3, "test-a2", "1:50", False))
+        self.assertEqual(c["phrase"], "Toutes les longueurs sont des estimations d'après le plan (tracé et hauteurs "
+                                      "de pose), sauf celles marquées « (mesurée) », relevées sur chantier.")
+        r = c["reseaux"][0]
+        self.assertEqual({k: r[k] for k in ("cle", "nom", "famille", "total_m", "total_estime_m", "total_mesure_m",
+                                            "origine")},
+                         {"cle": "froid_cuivres", "nom": "Froid : cuivres et condensats", "famille": "cuivre_froid",
+                          "total_m": 17.90, "total_estime_m": 8.80, "total_mesure_m": 9.10, "origine": mtr.MIXTE})
+        l1, l2 = r["lignes"]
+        self.assertEqual(list(l1), ["id", "troncon", "de", "a", "type", "type_nom", "en_plan_m", "chemin_m",
+                                    "vertical_m", "reserve_m", "total_m", "origine", "estimation_plan_m",
+                                    "longueur_mesuree_m", "mesure", "diametre"])
+        self.assertEqual(l1, {"id": "L1", "troncon": "Évaporateur de test → Groupe de test", "de": "EV1", "a": "GR1",
+                              "type": "aspiration", "type_nom": "Aspiration", "en_plan_m": 6.40, "chemin_m": 0.0,
+                              "vertical_m": 2.40, "reserve_m": 0.0, "total_m": 9.10, "origine": "mesuree",
+                              "estimation_plan_m": 8.80, "longueur_mesuree_m": 9.10,
+                              "mesure": {"par": "Loïc", "date": "2026-10-08", "note": "test"},
+                              "diametre": "à définir par le fournisseur"})
+        self.assertEqual((l2["troncon"], l2["origine"], l2["total_m"], l2["longueur_mesuree_m"], l2["mesure"]),
+                         ("", "estimee", 8.80, None, None))
+        self.assertEqual(c["par_type"], [
+            {"reseau": "froid_cuivres", "type": "aspiration", "type_nom": "Aspiration", "total_m": 9.10,
+             "origine": "mesuree"},
+            {"reseau": "froid_cuivres", "type": "liquide", "type_nom": "Liquide", "total_m": 8.80,
+             "origine": "estimee"}])
+        self.assertEqual(c["recapitulatif"], [{"cle": "froid_cuivres", "nom": "Froid : cuivres et condensats",
+                                               "total_m": 17.90, "origine": "mixte"}])
+        # nombres JSON à 2 décimales au plus, point décimal
+        texte = json.dumps(c, ensure_ascii=False)
+        self.assertIsNone(re.search(r"\d\.\d{3,}", texte), texte)
+
+    def test_contrat_familles_et_diametres(self):
+        c = metrer(charger("a2-defauts-par-type.json")).contrat_json({}, dossier=None, plan_version=None,
+                                                                      echelle=None, genere_le=None)
+        self.assertEqual([(r["cle"], r["famille"]) for r in c["reseaux"]],
+                         [("froid_cuivres", "cuivre_froid"), ("electricite", "electricite"),
+                          ("clim_cuivres", "cuivre_clim"), ("eau_chaude", "libre")])
+        lignes = {l["id"]: l for r in c["reseaux"] for l in r["lignes"]}
+        self.assertIsNone(lignes["L7"]["diametre"])                   # chemin de câbles : pas un tuyau
+        self.assertEqual(lignes["L4"]["diametre"], "à définir par le fournisseur")
+        self.assertEqual(lignes["L8"]["type_nom"], "Eau chaude")
+        self.assertTrue(all(l["origine"] == "estimee" for l in lignes.values()))
+        self.assertTrue(c["reseaux"][0]["total_m"] == c["reseaux"][0]["total_estime_m"])
+
+    def test_hauteurs_validees_dans_le_contrat(self):
+        plan = plan_mesure()
+        plan["hauteurs_validees"] = True
+        self.assertTrue(metrer(plan).contrat_json({}, dossier=None, plan_version=None, echelle=None,
+                                                  genere_le=None)["hauteurs_validees"])
 
 
 if __name__ == "__main__":

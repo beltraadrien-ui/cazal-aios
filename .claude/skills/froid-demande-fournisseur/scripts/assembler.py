@@ -32,6 +32,11 @@ Sources lues (rien n'est écrit en dehors de 3-demande-fournisseur/<vN>/) :
     emetteur.json             coordonnées de l'émetteur (Cazal Réfrigération), local, non versionné : <dossier>/
                               emetteur.json, sinon dimensionnement/dossiers/emetteur.json, sinon --emetteur
     sources/photos/           photos (chemins relatifs à la racine du dossier, ex. sources/photos/<nn-poste>/pNN-k.jpeg)
+    plan/metre.json           s'il existe (étape P, skill froid-plan-2d, contrat du plan des Lots 5-6 § 11) : longueurs
+                              de cuivre par réseau ; seules les familles cuivre_froid et cuivre_clim sont reprises
+                              (jamais l'électricité ni les réseaux libres), nombres recopiés tels quels
+    plan/plan.pdf             s'il existe : sa page 1 (le plan à l'échelle, A4) est fusionnée à la fin du PDF de la
+                              demande par generer_livrable.py (annexes.documents)
 
 Sorties dans 3-demande-fournisseur/<vN>/ :
     demande.json              schéma commun avec generer_livrable.py (ci-dessous)
@@ -52,12 +57,23 @@ racine du dossier) :
      "production": {"lignes": [{"poste", "compresseurs", "volume_balaye", "puissance", "statut"}],
                     "sous_totaux": [{"libelle", "puissance", "statut"}], "note"},
      "evaporateurs": {"lignes": [{"chambre", "modele", "annee", "puissance"}], "note"} | null (fabricant),
+     "longueurs": {"phrase", "reseaux": [{"cle", "nom", "famille", "lignes": [{"troncon", "type_nom", "total_m",
+                   "origine"}], "total_m", "origine"}], "diametres", "source": "plan/metre.json", "plan_version"}
+                  | {"absentes": true, "phrase": "Longueurs de lignes non relevées, à estimer par vos soins."},
      "demande": {"titre", "intro", "points": [{"lettre", "titre", "texte", "sous_points": [...]}], "resume"},
      "postes": [{"id", "titre", "dessert", "existant": [...], "puissance", "statut", "remplacement",
                  "photos": [{"fichier", "legende", "type": "plaque" | "ensemble"}]}],
-     "annexes": {"vues_ensemble": [{"fichier", "legende"}], "plan_implantation": "à suivre", "pieces_jointes": []},
+     "annexes": {"vues_ensemble": [{"fichier", "legende"}], "plan_implantation": "à suivre" | "plan du local en annexe",
+                 "pieces_jointes": [],
+                 "documents": [{"type": "plan", "fichier": "../../plan/plan.pdf", "titre", "pages": 1}]},
      "mail": {"objet", "salutation", "corps", "formule", "signature"},
      "exclus_internes": [{"element", "postes": [id du poste…], "texte", "raison"}]}
+« longueurs » : familles cuivre_froid et cuivre_clim de plan/metre.json, réseau par réseau (total_m en mètres, nombre
+JSON à 2 décimales ; origine « estimee » ou « mesuree » par ligne, « estimee », « mesuree » ou « mixte » par réseau) ;
+toute longueur est une estimation d'après le plan, sauf celle mesurée sur chantier par Loïc ; diamètres et charge de
+fluide laissés au fournisseur. Sans metre.json (ou sans réseau de cuivre) : {"absentes": true, "phrase": …}.
+« annexes.documents » : PDF dont les pages sont ajoutées à la fin de la demande ; « fichier » est relatif au dossier
+de la version (3-demande-fournisseur/<vN>/), contrairement aux photos.
 « remplacement » d'un poste : les propositions du bloc E qui le concernent (découpage décrit dans _bloc_e : poste,
 chambre, marque / modèle / année cités, sinon code de la colonne Existant). « exclus_internes » : les propositions du
 bloc E interrogatives ou qui contiennent « à confirmer », « lesquels garder », « ? » : questions pour Loïc, jamais
@@ -104,7 +120,8 @@ rapport ; à confirmer) » si le fluide est une hypothèse), famille_actuelle, f
 installation_actuelle, remplace, par_quoi, marche, planning_client, nb_entreprises, planning_cazal (vide : à dicter),
 disposition, chiffres_cles, regimes, condensation, note_hypotheses, chambres_resume, regulateurs_negatif,
 regulateurs_positif, liste_<nom>, destinataire_prenom, destinataire_nom, delai_reponse, contact,
-societe_et_telephone, mail_emetteur.
+societe_et_telephone, mail_emetteur, phrase_longueurs (phrase du mail sur les longueurs et le plan joint ; vide sans
+plan ni métré : la ligne disparaît).
 
 Dépendances : aucune hors du dépôt (valeur.py et controles.py du skill froid-dimensionnement).
 """
@@ -113,6 +130,8 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
+import os
 import re
 import sys
 import unicodedata
@@ -151,8 +170,31 @@ REMPLACEMENTS = {"client": "le client", "adresse": "le site", "rue": "le site", 
                  "code_postal": "(code postal retiré)", "telephone": "(téléphone retiré)",
                  "mail": "(adresse mail retirée)", "fiche": "(référence retirée)"}
 CLES_DEMANDE = ("version", "date", "variante", "destinataire", "anonymise", "emetteur", "site", "titre", "mention",
-                "contexte", "chambres", "production", "evaporateurs", "demande", "postes", "annexes", "mail",
-                "exclus_internes")
+                "contexte", "chambres", "production", "evaporateurs", "longueurs", "demande", "postes", "annexes",
+                "mail", "exclus_internes")
+CLES_ANNEXES = ("vues_ensemble", "plan_implantation", "pieces_jointes", "documents")
+
+# Lot 7 : longueurs de cuivre et plan du local (étape P, skill froid-plan-2d ; contrat plan/metre.json)
+PLAN = "plan"
+FAMILLES_CUIVRE = ("cuivre_froid", "cuivre_clim")
+FAMILLES_METRE = FAMILLES_CUIVRE + ("electricite", "libre")
+ORIGINES_LIGNE = ("estimee", "mesuree")
+ORIGINES_TOTAL = ("estimee", "mesuree", "mixte")
+PHRASE_ESTIMATION = ("Toutes les longueurs sont des estimations d'après le plan (tracé et hauteurs de pose), sauf "
+                     "celles marquées « (mesurée) », relevées sur chantier.")
+PHRASE_NON_RELEVEES = "Longueurs de lignes non relevées, à estimer par vos soins."
+PHRASE_DIAMETRES = "Diamètres et charge de fluide à définir par vos soins."
+SOURCE_METRE = "plan/metre.json"
+TITRE_ANNEXE_PLAN = "Plan du local (A4, échelle écrite sur le plan)"
+PLAN_EN_ANNEXE = "plan du local en annexe"
+A4_PT = (595.28, 841.89)
+TOLERANCE_A4_PT = 3.0
+# Phrase du mail selon (longueurs présentes, plan joint) ; vide : la ligne du gabarit disparaît.
+PHRASES_MAIL = {(True, True): "Les longueurs de cuivre estimées d'après le plan figurent dans le PDF, avec le plan du "
+                              "local en annexe.",
+                (True, False): "Les longueurs de cuivre estimées d'après le plan figurent dans le PDF.",
+                (False, True): "Le plan du local figure en annexe du PDF.",
+                (False, False): ""}
 
 
 class Refus(Exception):
@@ -879,6 +921,137 @@ def _serie_evaporateur(releve: Releve, ev: dict, refs: list[str], rang: int) -> 
 
 
 # =====================================================================================================
+# Plan du local et longueurs de cuivre (plan/metre.json, plan/plan.pdf)
+# =====================================================================================================
+def _longueur_ok(x: Any) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and x >= 0
+
+
+def ecarts_metre(m: Any) -> list[str]:
+    """Écarts de plan/metre.json au contrat (vide = conforme). Les lignes ne sont vérifiées que pour les réseaux de
+    cuivre, les seuls repris : un réseau d'électricité mal formé ne bloque pas la demande."""
+    if not isinstance(m, dict):
+        return ["objet JSON attendu"]
+    err = []
+    if m.get("version") != 1:
+        err.append(f"version {m.get('version')!r} (attendue : 1)")
+    if not isinstance(m.get("reseaux"), list):
+        return err + ["« reseaux » : liste attendue"]
+    for i, r in enumerate(m["reseaux"], 1):
+        if not isinstance(r, dict):
+            err.append(f"réseau {i} : objet attendu")
+            continue
+        if r.get("famille") not in FAMILLES_CUIVRE:
+            continue
+        ou = f"réseau {i} ({r.get('cle') or '?'})"
+        for k in ("cle", "nom"):
+            if not isinstance(r.get(k), str) or not r[k].strip():
+                err.append(f"{ou} : « {k} » texte non vide attendu")
+        if not _longueur_ok(r.get("total_m")):
+            err.append(f"{ou} : « total_m » nombre positif attendu, reçu {r.get('total_m')!r}")
+        if not isinstance(r.get("lignes"), list):
+            err.append(f"{ou} : « lignes » liste attendue")
+            continue
+        for j, l in enumerate(r["lignes"], 1):
+            if not isinstance(l, dict):
+                err.append(f"{ou}, ligne {j} : objet attendu")
+                continue
+            for k in ("troncon", "type_nom"):
+                if not isinstance(l.get(k), str) or not l[k].strip():
+                    err.append(f"{ou}, ligne {j} : « {k} » texte non vide attendu")
+            if not _longueur_ok(l.get("total_m")):
+                err.append(f"{ou}, ligne {j} : « total_m » nombre positif attendu, reçu {l.get('total_m')!r}")
+            if l.get("origine") not in ORIGINES_LIGNE:
+                err.append(f"{ou}, ligne {j} : origine {l.get('origine')!r} (attendue : estimee ou mesuree)")
+    return err
+
+
+def lire_metre(dossier: Path) -> dict | None:
+    """plan/metre.json relu et vérifié (Refus s'il est illisible ou hors contrat) ; None s'il n'existe pas."""
+    chemin = Path(dossier) / PLAN / "metre.json"
+    if not chemin.is_file():
+        return None
+    try:
+        m = json.loads(chemin.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        raise Refus(f"{chemin} illisible ({e}) : relancer generer.py du skill froid-plan-2d") from None
+    err = ecarts_metre(m)
+    if err:
+        raise Refus(f"{chemin} hors contrat : " + " ; ".join(err))
+    return m
+
+
+def origine_totale(lignes: list[dict]) -> str:
+    """« mesuree » si toutes les lignes sont mesurées, « estimee » si aucune, « mixte » sinon."""
+    mesurees = sum(1 for l in lignes if l["origine"] == "mesuree")
+    return "mesuree" if mesurees == len(lignes) else "estimee" if mesurees == 0 else "mixte"
+
+
+def longueurs_depuis_metre(metre: dict | None, avert: list) -> dict:
+    """Champ « longueurs » de demande.json : réseaux de cuivre (froid, clim) de metre.json, chiffres recopiés ;
+    {"absentes": true, …} sans metre.json ou sans réseau de cuivre."""
+    if metre is None:
+        return {"absentes": True, "phrase": PHRASE_NON_RELEVEES}
+    reseaux = []
+    for r in metre["reseaux"]:
+        famille = r.get("famille") if isinstance(r, dict) else None
+        if famille not in FAMILLES_CUIVRE:
+            if famille not in FAMILLES_METRE:
+                avert.append(f"plan/metre.json : réseau « {(r or {}).get('cle')} » de famille inconnue "
+                             f"« {famille} », non repris")
+            continue
+        lignes = [{"troncon": l["troncon"].strip(), "type_nom": l["type_nom"].strip(),
+                   "total_m": round(float(l["total_m"]), 2), "origine": l["origine"]} for l in r["lignes"]]
+        if not lignes:
+            continue
+        total = round(float(r["total_m"]), 2)
+        somme_lignes = sum(l["total_m"] for l in lignes)
+        if abs(somme_lignes - total) > 0.005 * len(lignes) + 0.005:
+            avert.append(f"plan/metre.json, réseau « {r['cle']} » : total {total:.2f} m, somme des lignes "
+                         f"{somme_lignes:.2f} m (repris tels quels ; à vérifier côté plan)")
+        reseaux.append({"cle": r["cle"], "nom": r["nom"].strip(), "famille": famille, "lignes": lignes,
+                        "total_m": total, "origine": origine_totale(lignes)})
+    if not reseaux:
+        avert.append("plan/metre.json ne contient aucun réseau de cuivre (froid ou clim) : longueurs « non relevées »")
+        return {"absentes": True, "phrase": PHRASE_NON_RELEVEES}
+    if metre.get("hauteurs_validees") is False:
+        avert.append("plan/metre.json : hauteurs de pose pas encore validées par Loïc (longueurs estimées sous "
+                     "hypothèses de hauteur)")
+    pv = metre.get("plan_version")
+    return {"phrase": str(metre.get("phrase") or PHRASE_ESTIMATION).strip(), "reseaux": reseaux,
+            "diametres": PHRASE_DIAMETRES, "source": SOURCE_METRE,
+            "plan_version": pv if isinstance(pv, int) and not isinstance(pv, bool) else None}
+
+
+def est_a4(largeur: float, hauteur: float) -> bool:
+    """Page A4 (portrait ou paysage), à TOLERANCE_A4_PT près."""
+    petit, grand = sorted((largeur, hauteur))
+    return abs(petit - A4_PT[0]) <= TOLERANCE_A4_PT and abs(grand - A4_PT[1]) <= TOLERANCE_A4_PT
+
+
+def annexe_plan(dossier: Path, sortie: Path, avert: list) -> dict | None:
+    """Annexe « plan du local » (page 1 de plan/plan.pdf) si le fichier existe et s'ouvre ; chemin relatif au dossier
+    de la version."""
+    plan = Path(dossier) / PLAN / "plan.pdf"
+    if not plan.is_file():
+        return None
+    try:
+        import pymupdf
+        with pymupdf.open(plan) as doc:
+            if doc.page_count < 1:
+                raise ValueError("aucune page")
+            rect = doc[0].rect
+    except Exception as e:                                  # PDF tronqué, pas un PDF
+        avert.append(f"plan/plan.pdf illisible ({e}) : pas d'annexe plan")
+        return None
+    if not est_a4(rect.width, rect.height):
+        avert.append(f"page 1 de plan/plan.pdf hors format A4 ({rect.width:.0f} × {rect.height:.0f} pt) : le contrôle "
+                     "la refusera")
+    return {"type": "plan", "fichier": os.path.relpath(plan, sortie).replace("\\", "/"),
+            "titre": TITRE_ANNEXE_PLAN, "pages": 1}
+
+
+# =====================================================================================================
 # Assemblage
 # =====================================================================================================
 def _lire_emetteur(dossier: Path, chemin: str | None, dossier_md: str, avert: list) -> dict:
@@ -1113,6 +1286,11 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
         raise Refus(f"{sortie / 'demande.json'} existe déjà (textes peut-être ajustés par Claude) : --force pour le "
                     "remplacer, ou une nouvelle version")
 
+    # --- plan du local et longueurs de cuivre (étape P) ---
+    longueurs = longueurs_depuis_metre(lire_metre(dossier), avert)
+    avec_longueurs = not longueurs.get("absentes")
+    doc_plan = annexe_plan(dossier, sortie, avert)
+
     etape = re.search(r"\*\*Étape en cours\*\*\s*:\s*(.+)", s.dossier_md)
     if etape is None or "a valider" in _norm(etape.group(1)):
         avert.append("étapes 1 et 2 pas encore validées par Loïc (dossier.md, « Étape en cours ») : le SKILL demande "
@@ -1231,6 +1409,7 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
         "regulateurs_positif": "", "destinataire_prenom": (dest or {}).get("prenom", ""),
         "destinataire_nom": destinataire_nom, "delai_reponse": DELAI_DEFAUT if delai is None else delai,
         "contact": em["contact"], "societe_et_telephone": societe_tel, "mail_emetteur": em["mail"],
+        "phrase_longueurs": PHRASES_MAIL[(avec_longueurs, doc_plan is not None)],
         "chambre": "", "les_evaporateurs": ""}
     cats = {_norm(categorie(p)) for p in postes if categorie(p)}
     gab = Gabarit(TEMPLATES / f"textes-{variante}.md")
@@ -1349,11 +1528,12 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
                     "points": points,
                     "resume": gab.texte("demande.resume", ctx, "phrases") if gab.a("demande.resume") else ""}
 
-    # renvoi vers le point de la demande sur l'armoire de régulation (chapitre 5, ou 4 sans les évaporateurs)
+    # renvoi vers le point de la demande sur l'armoire de régulation : chapitre 4, + 1 avec les évaporateurs,
+    # + 1 avec les longueurs de cuivre (chapitres placés avant la demande)
     pt_reg = next((x for x in points if "armoire" in _norm(x["titre"])), None) or \
         next((x for x in points if "regulation" in _norm(x["titre"])), None)
-    renvoi_regulation = (f"Régulation : voir § {5 if evaporateurs is not None else 4} {pt_reg['lettre']})"
-                         if pt_reg else "")
+    chapitre_demande = 4 + (evaporateurs is not None) + avec_longueurs
+    renvoi_regulation = f"Régulation : voir § {chapitre_demande} {pt_reg['lettre']})" if pt_reg else ""
 
     # --- postes : existant, puissance, remplacement, photos ---
     utilisees: set[str] = set()
@@ -1554,9 +1734,12 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
         "production": {"lignes": lignes_prod, "sous_totaux": sous_totaux,
                        "note": gab.texte("production.note", ctx, "phrases")},
         "evaporateurs": evaporateurs,
+        "longueurs": longueurs,
         "demande": demande_bloc,
         "postes": postes_json,
-        "annexes": {"vues_ensemble": vues, "plan_implantation": PLAN_IMPLANTATION, "pieces_jointes": []},
+        "annexes": {"vues_ensemble": vues,
+                    "plan_implantation": PLAN_EN_ANNEXE if doc_plan else PLAN_IMPLANTATION,
+                    "pieces_jointes": [], "documents": [doc_plan] if doc_plan else []},
         "mail": mail,
         "exclus_internes": exclus_internes,
     }
@@ -1667,6 +1850,38 @@ def verifier_schema(d: Any) -> list[str]:
     if d["evaporateurs"] is not None and cles(d["evaporateurs"], ("lignes", "note"), "evaporateurs"):
         for i, l in enumerate(liste(d["evaporateurs"]["lignes"], "evaporateurs.lignes")):
             textes(l, ("chambre", "modele", "annee", "puissance"), f"evaporateurs.lignes[{i}]")
+    lg = d["longueurs"]
+    if isinstance(lg, dict) and "absentes" in lg:
+        if cles(lg, ("absentes", "phrase"), "longueurs"):
+            if lg["absentes"] is not True or not isinstance(lg["phrase"], str) or not lg["phrase"]:
+                err.append("longueurs : « absentes » vrai et phrase non vide attendus")
+    elif cles(lg, ("phrase", "reseaux", "diametres", "source", "plan_version"), "longueurs"):
+        for k in ("phrase", "diametres", "source"):
+            if not isinstance(lg[k], str) or not lg[k]:
+                err.append(f"longueurs.{k} : texte non vide attendu")
+        if lg["plan_version"] is not None and (not isinstance(lg["plan_version"], int)
+                                               or isinstance(lg["plan_version"], bool)):
+            err.append("longueurs.plan_version : entier ou null attendu")
+        reseaux = liste(lg["reseaux"], "longueurs.reseaux")
+        if not reseaux:
+            err.append("longueurs.reseaux : au moins un réseau (sinon « absentes »)")
+        for i, r in enumerate(reseaux):
+            ou = f"longueurs.reseaux[{i}]"
+            if not cles(r, ("cle", "nom", "famille", "lignes", "total_m", "origine"), ou):
+                continue
+            if r["famille"] not in FAMILLES_CUIVRE:
+                err.append(f"{ou}.famille « {r['famille']} » (seuls {', '.join(FAMILLES_CUIVRE)})")
+            if r["origine"] not in ORIGINES_TOTAL or not _longueur_ok(r["total_m"]):
+                err.append(f"{ou} : origine ou total_m invalide")
+            lignes = liste(r["lignes"], f"{ou}.lignes")
+            if not lignes:
+                err.append(f"{ou}.lignes : au moins une ligne")
+            for j, l in enumerate(lignes):
+                if cles(l, ("troncon", "type_nom", "total_m", "origine"), f"{ou}.lignes[{j}]"):
+                    if not isinstance(l["troncon"], str) or not isinstance(l["type_nom"], str) or \
+                            not _longueur_ok(l["total_m"]) or l["origine"] not in ORIGINES_LIGNE:
+                        err.append(f"{ou}.lignes[{j}] : troncon, type_nom (textes), total_m (nombre), origine "
+                                   "(estimee ou mesuree) attendus")
     if cles(d["demande"], ("titre", "intro", "points", "resume"), "demande"):
         for i, p in enumerate(liste(d["demande"]["points"], "demande.points")):
             if cles(p, ("lettre", "titre", "texte", "sous_points"), f"demande.points[{i}]"):
@@ -1681,10 +1896,16 @@ def verifier_schema(d: Any) -> list[str]:
                 textes(ph, ("fichier", "legende", "type"), f"postes[{i}].photos[{j}]")
                 if isinstance(ph, dict) and ph.get("type") not in ("plaque", "ensemble"):
                     err.append(f"postes[{i}].photos[{j}].type « {ph.get('type')} »")
-    if cles(d["annexes"], ("vues_ensemble", "plan_implantation", "pieces_jointes"), "annexes"):
+    if cles(d["annexes"], CLES_ANNEXES, "annexes"):
         for j, v in enumerate(liste(d["annexes"]["vues_ensemble"], "annexes.vues_ensemble")):
             textes(v, ("fichier", "legende"), f"annexes.vues_ensemble[{j}]")
         liste(d["annexes"]["pieces_jointes"], "annexes.pieces_jointes")
+        for j, doc in enumerate(liste(d["annexes"]["documents"], "annexes.documents")):
+            if cles(doc, ("type", "fichier", "titre", "pages"), f"annexes.documents[{j}]"):
+                if doc["type"] != "plan" or not isinstance(doc["fichier"], str) or not doc["fichier"] or \
+                        not isinstance(doc["titre"], str) or not isinstance(doc["pages"], int) or doc["pages"] < 1:
+                    err.append(f"annexes.documents[{j}] : type « plan », fichier et titre (textes), pages (≥ 1) "
+                               "attendus")
     textes(d["mail"], ("objet", "salutation", "corps", "formule", "signature"), "mail")
     for i, x in enumerate(liste(d["exclus_internes"], "exclus_internes")):
         if cles(x, ("element", "postes", "texte", "raison"), f"exclus_internes[{i}]"):
@@ -1732,6 +1953,14 @@ def main(argv: list[str] | None = None) -> int:
           f"{len(d['annexes']['vues_ensemble'])} vue(s) d'ensemble, {len(d['demande']['points'])} point(s) de demande")
     for l in d["production"]["sous_totaux"]:
         print(f"  {l['libelle']} : {l['puissance']} ({l['statut']})")
+    lg = d["longueurs"]
+    if lg.get("absentes"):
+        print(f"  longueurs : {lg['phrase']}")
+    else:
+        print(f"  longueurs de cuivre (plan v{lg['plan_version']}) : "
+              + " ; ".join(f"{r['nom']} " + f"{r['total_m']:.2f}".replace(".", ",") + " m" for r in lg["reseaux"]))
+    for doc in d["annexes"]["documents"]:
+        print(f"  annexe fusionnée en fin de PDF : {doc['titre']} ({doc['fichier']})")
     for m in r["avertissements"]:
         print(f"  attention : {m}")
     return 0

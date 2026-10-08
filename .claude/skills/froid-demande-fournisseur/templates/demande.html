@@ -2,7 +2,9 @@
 <!--
   Gabarit A4 de la demande de prix (étape 3), rempli par scripts/generer_livrable.py : syntaxe du mini-moteur
   (doubles accolades = texte échappé, triples = HTML préparé par le script, dièse / accent circonflexe = blocs)
-  décrite en tête de ce script. Numéros de chapitres : clés n.* (le chapitre « évaporateurs » peut manquer).
+  décrite en tête de ce script. Numéros de chapitres : clés n.* (les chapitres « évaporateurs » et « longueurs »
+  peuvent manquer). Chapitre « longueurs » (Lot 7) entre les évaporateurs et la demande : il suit les tableaux de
+  l'existant et précède ce qu'on demande au fournisseur, qui chiffre les cuivres avec ces longueurs.
   Sobre : noir sur blanc, un seul accent (--accent), polices système. Imprimé par Edge sans tête (--print-to-pdf).
 -->
 <html lang="fr">
@@ -89,6 +91,14 @@ td.statut-col, th.statut-col { width: 1%; white-space: nowrap; }
 .statut, .hyp { font-size: 0.82em; color: var(--gris-clair); font-weight: normal; }
 .a-confirmer { color: var(--orange); font-weight: 600; }
 .legende-statuts { font-size: 8pt; color: var(--gris-clair); margin-top: -2mm; }
+
+/* Longueurs de cuivre (Lot 7) */
+.reseau-longueurs h3 { margin: 4mm 0 1.5mm; }
+table.longueurs th:nth-child(2), table.longueurs td:nth-child(2) { width: 32mm; }
+table.longueurs th:nth-child(3), table.longueurs td:nth-child(3) { width: 38mm; }
+.mesuree { font-size: 0.82em; color: var(--accent); font-weight: 600; }
+p.longueurs-absentes { margin: 0 0 4mm; font-style: italic; }
+p.diametres { margin: 1mm 0 0; font-weight: 600; }
 
 /* Notre demande */
 .point { margin: 0 0 4mm; break-inside: avoid; }
@@ -219,6 +229,29 @@ ul.pieces { margin-bottom: 4mm; }
 </section>
 {{/evaporateurs}}
 
+{{#longueurs}}
+<section class="chapitre" id="longueurs">
+  <div class="entree-chapitre">
+  <h1 class="chapitre-titre"><span class="num">{{n.longueurs}}.</span>{{t.longueurs}}</h1>
+  <p class="phrase-longueurs">{{phrase}}</p>
+  </div>
+  {{#reseaux}}
+  <div class="tableau reseau-longueurs">
+    <h3>{{nom}}</h3>
+    <table class="donnees longueurs" data-reseau="{{cle}}">
+      <thead><tr><th>Tronçon</th><th>Type</th><th class="num">Longueur (m)</th></tr></thead>
+      <tbody>
+        {{#lignes}}<tr><td>{{troncon}}</td><td>{{type_nom}}</td><td class="num">{{{longueur_html}}}</td></tr>
+        {{/lignes}}
+        <tr class="sous-total"><td colspan="2">Total</td><td class="num">{{{total_html}}}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {{/reseaux}}
+  <p class="diametres">{{diametres}}</p>
+</section>
+{{/longueurs}}
+
 <section class="chapitre" id="demande">
   {{#demande}}
   <div class="entree-chapitre">
@@ -232,6 +265,7 @@ ul.pieces { margin-bottom: 4mm; }
     {{#avec_sous_points}}<ul>{{#sous_points}}<li>{{{.}}}</li>{{/sous_points}}</ul>{{/avec_sous_points}}
   </div>
   {{/points}}
+  {{#longueurs_absentes}}<p class="longueurs-absentes">{{longueurs_absentes}}</p>{{/longueurs_absentes}}
   {{#resume_html}}<div class="encadre">{{{resume_html}}}</div>{{/resume_html}}
   {{/demande}}
 </section>
@@ -258,6 +292,8 @@ ul.pieces { margin-bottom: 4mm; }
   <h1 class="chapitre-titre"><span class="num">{{n.annexes}}.</span>{{t.annexes}}</h1>
   {{#annexes}}
   <p class="plan"><strong>Plan d'implantation :</strong> <span class="valeur">{{plan_implantation}}</span></p>
+  {{#documents}}<p class="plan document-annexe"><strong>{{titre}} :</strong> <span class="valeur">{{position}}</span></p>
+  {{/documents}}
   <p class="pieces"><strong>Pièces jointes :</strong>{{^pieces_jointes}} <span class="valeur">aucune en plus de ce document</span>{{/pieces_jointes}}</p>
   {{#avec_pieces}}<ul class="pieces">{{#pieces_jointes}}<li>{{.}}</li>{{/pieces_jointes}}</ul>{{/avec_pieces}}
   <h3>Vues d'ensemble</h3>

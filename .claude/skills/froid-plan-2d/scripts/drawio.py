@@ -1,6 +1,6 @@
 """Écriture et lecture de `plan.drawio` (XML mxGraph non compressé, 2 pages : « Plan » et « Métré »).
 
-Écriture : `ecrire(plan, echelle, chemin, tableaux_html=None) -> Path`
+Écriture : `ecrire(plan, echelle, chemin, tableaux_html=None, entete=None) -> Path`
 - page A4 selon `echelle` (pageScale = 1, grille = 10 cm) ; calques = cellules `parent="0"` dans l'ordre
   de `Plan.calques()` (plan_de_base … croisements, cartouche) ;
 - identifiant de cellule = identifiant du modèle (M1, D1, F1, CF1, EV1, L1, C1, X1…) ; sous-éléments
@@ -17,7 +17,9 @@
 - cartouche : titre, dossier, date, « Échelle 1:S » (cellule `cartouche-echelle`, qui garde aussi l'origine
   du modèle dans son style), barre d'échelle (`barre-echelle`, longueur exacte), règle de contrôle de
   100 mm (`regle-controle`), mention d'impression, légende des calques ;
-- page 2 « Métré » : les `tableaux_html` [(titre, html), …] dans des cellules texte `html=1`.
+- page 2 « Métré » : sous le titre, la phrase `entete` (cellule `metre-phrase` : « Toutes les longueurs sont des
+  estimations… », décision du 2026-10-08), puis les `tableaux_html` [(titre, html), …] dans des cellules texte
+  `html=1`.
 
 Lecture : `lire(chemin) -> Lecture` (fichier écrit ici, ou modifié par draw.io Desktop, compressé ou non) :
 `Lecture.echelle` (reconstruite depuis le cartouche), `.page`, `.calques` [(id, nom)], `.elements`
@@ -48,6 +50,7 @@ from echelle import PAGES_PX, Echelle, ErreurEchelle, mm_vers_px, nombre_fr  # n
 
 TAG = "plan2d"
 HOTE = "froid-plan-2d"
+ID_PHRASE_METRE = "metre-phrase"       # page « Métré » : phrase sous le titre (longueurs estimées / mesurées)
 CADRE_PORTE_PX = 5.0          # mxgraph.floorplan.doorLeft : bandeau de 5 px, hauteur = largeur + 5
 
 # ---------- styles (décision du 2026-10-07, conventions du skill et exemple validé v2) ----------
@@ -648,8 +651,10 @@ def _modele_graphe(diagramme: ET.Element, page_px: tuple[int, int], grille: int)
         "pageHeight": str(h), "math": "0", "shadow": "0"})
 
 
-def construire(plan: mod.Plan, echelle: Echelle, tableaux_html: list[tuple[str, str]] | None = None) -> ET.Element:
-    """Arbre XML `<mxfile>` complet (2 pages) ; `ecrire` le sérialise."""
+def construire(plan: mod.Plan, echelle: Echelle, tableaux_html: list[tuple[str, str]] | None = None,
+               entete: str | None = None) -> ET.Element:
+    """Arbre XML `<mxfile>` complet (2 pages) ; `ecrire` le sérialise. `entete` : phrase écrite en haut de la page
+    « Métré », sous son titre (cellule `metre-phrase`)."""
     ec = _Ecrivain(plan, echelle)
     ec.pieces()
     ec.murs()
@@ -691,6 +696,10 @@ def construire(plan: mod.Plan, echelle: Echelle, tableaux_html: list[tuple[str, 
     style_titre = "text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=14;fontStyle=1;fontColor=#212121;"
     texte2("metre-titre", marge, marge, largeur, 24, _html_valeur(f"Métré : {plan.titre or 'plan'}"), style_titre)
     y = marge + 32
+    if entete:
+        texte2(ID_PHRASE_METRE, marge, y, largeur, 18, _html_valeur(entete),
+               "text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontStyle=2;fontColor=#37474F;")
+        y += 26
     if not tableaux_html:
         texte2("metre-vide", marge, y, largeur, 20, _html_valeur("Aucun tableau de métré dans cette version."),
                "text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#607D8B;")
@@ -713,9 +722,9 @@ def construire(plan: mod.Plan, echelle: Echelle, tableaux_html: list[tuple[str, 
 
 
 def ecrire(plan: mod.Plan, echelle: Echelle, chemin: str | Path,
-           tableaux_html: list[tuple[str, str]] | None = None) -> Path:
+           tableaux_html: list[tuple[str, str]] | None = None, entete: str | None = None) -> Path:
     """Écrit `plan.drawio` (XML non compressé, UTF-8, indenté). Renvoie le chemin écrit."""
-    arbre = ET.ElementTree(construire(plan, echelle, tableaux_html))
+    arbre = ET.ElementTree(construire(plan, echelle, tableaux_html, entete))
     ET.indent(arbre, space="  ")
     chemin = Path(chemin)
     chemin.parent.mkdir(parents=True, exist_ok=True)

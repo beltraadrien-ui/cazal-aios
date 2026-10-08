@@ -367,6 +367,22 @@ class TestDetails(_AvecDossier):
         self.assertEqual(lec2.tableaux, [])
         self.assertIn("metre-vide", [c["id"] for c in lec2.pages[1]["cellules"]])
 
+    def test_phrase_en_tete_de_la_page_metre(self):
+        # F1 (2026-10-08) : la phrase des longueurs estimées sous le titre de la page « Métré », avant les tableaux
+        plan = mod.depuis_dict(plan_chambre_seule())
+        tableaux = [("Métré cuivres", "<table><tr><td>LA1</td><td>7,40</td></tr></table>")]
+        ech = choisir_echelle(plan.bbox(), plan.page)
+        lec = drawio.lire(drawio.ecrire(plan, ech, self.dossier / "phrase.drawio", tableaux,
+                                        entete="Toutes les longueurs sont des estimations « test ».")).pages[1]
+        cellules = {c["id"]: c for c in lec["cellules"]}
+        self.assertEqual(drawio.texte_brut(cellules[drawio.ID_PHRASE_METRE]["valeur"]),
+                         "Toutes les longueurs sont des estimations « test ».")
+        self.assertLess(cellules["metre-titre"]["geometrie"]["y"], cellules[drawio.ID_PHRASE_METRE]["geometrie"]["y"])
+        self.assertLess(cellules[drawio.ID_PHRASE_METRE]["geometrie"]["y"] + 18,
+                        cellules["metre-tableau-1-titre"]["geometrie"]["y"])
+        _, _, sans = _generer(plan, self.dossier, "sans-phrase.drawio", tableaux)
+        self.assertNotIn(drawio.ID_PHRASE_METRE, [c["id"] for c in sans.pages[1]["cellules"]])
+
     def test_identifiant_avec_tiret_sans_parent(self):
         # Une ligne importée par importer_drawio (« LE1-nouveau ») reste un élément principal.
         d = plan_chambre_seule()

@@ -19,11 +19,14 @@ Loïc décrit un local (ou donne un croquis, un plan d'architecte, un relevé) *
   réseau (tronçon en noms, en plan, montées et descentes, total) et son récapitulatif, les croisements en mots (un par
   repère G), les cotes et ce qu'elles mesurent, les hauteurs de pose, les questions ouvertes, des détails techniques
   courts ; `metre-detail.md` (mémoire de Claude, non rendue en HTML) : métré par ligne avec codes, formules, hauteurs
-  et diamètres, métré par diamètre, croisements un par un, calques, notes du relevé ; `verification.md` : dernier contrôle ;
+  et diamètres, métré par diamètre, longueurs mesurées et leur écart, croisements un par un, calques, notes du relevé ;
+  `metre.json` : le métré pour la demande fournisseur (section « Longueurs estimées et mesurées ») ;
+  `verification.md` : dernier contrôle ;
 - Lot 6 : une feuille A4 à repères par réseau, que Loïc trace au marqueur et photographie ; la photo devient un calque.
 
-L'étape P est **indépendante** des étapes 1 à 3 : avant ou après l'étape 2. Le métré nourrira l'étape 2 (longueurs de
-lignes) et le PDF l'étape 3 (pièce jointe, point f) ; ce branchement est prévu au Lot 7, il n'existe pas encore.
+L'étape P est **indépendante** des étapes 1 à 3 : avant ou après l'étape 2. Le métré nourrit la **demande
+fournisseur** par `plan/metre.json` (longueurs de cuivre estimées, Lot 7) et `plan/plan.pdf` y est joint en annexe
+« Plan du local » ; le branchement vers l'étape 2 (longueurs de lignes du dimensionnement) n'existe pas encore.
 Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). **Claude n'écrit que `plan.json`** (et `dossier.md`) :
 le dessin, les tableaux, les PDF et les rapports sortent des scripts, jamais d'une retouche à la main.
 
@@ -76,7 +79,7 @@ python -c "import pymupdf,sys; [p.get_pixmap(dpi=150).save(f'{sys.argv[2]}/page-
 
 **D'abord la liste des cotes.** Avant d'écrire, Claude donne à Loïc, court, chaque cote avec sa valeur et sa source, puis
 **ce qui manque, en questions** (« Il me manque la largeur de la chambre négative et la position de la porte du labo
-depuis le coin nord-ouest »). **Cote manquante = question ; jamais une longueur estimée**, ni « environ », ni valeur
+depuis le coin nord-ouest »). **Cote manquante = question ; jamais une cote estimée**, ni « environ », ni valeur
 « habituelle ». Seuls défauts permis, écrits dans `notes` : dimensions d'équipement par type, épaisseurs de mur (0,20
 extérieur, 0,10 cloison), hauteurs de pose (hypothèses R14). Un emplacement que Loïc ne précise pas (« le groupe est
 dans la cour ») se place en principe, est écrit dans `notes` et devient une question : il change le métré.
@@ -106,11 +109,47 @@ modèle ; copie suivie dans le dépôt : `scripts/tests/fixtures/a1-boucherie-pl
   `chemin_cables`, ou la clé d'un calque libre), `de`, `a` (équipement, chambre, mur ou autre ligne ; `null` pour des
   condensats qui sortent du bâtiment), `points` du départ à l'arrivée (premier et dernier point à 0,15 m de leur
   équipement), `faisceau` (aspiration + liquide d'un même évaporateur), `diametre: "à définir"`, `hauteur_depart`,
-  `hauteur_passage`, `hauteur_arrivee` (vides = défauts), `repere` (câbles C1…), `etiquette`, `position_etiquette`.
+  `hauteur_passage`, `hauteur_arrivee` (vides = défauts), `repere` (câbles C1…), `etiquette`, `position_etiquette` ;
+  `longueur_mesuree` (m, > 0) et `mesure` (`{"par", "date", "note"}`) seulement quand Loïc a mesuré la ligne sur
+  chantier (section suivante).
 - **Calques libres** (`eau_chaude`, `eau_glacee`, `gaine`…) : `cle`, `nom`, `couleur`, `trait` (simple | double).
 - **`exigences`** : une exception à la complétude (`{"CF1": {"cable": "non_requis", "motif": "câble existant
   conservé"}}`, motif obligatoire) transforme l'erreur en avertissement.
 - **`hauteurs`** (table R14) et **`hauteurs_validees`** (`false`, ou la liste des hauteurs que Loïc a validées).
+
+## Longueurs estimées et mesurées (décision du 2026-10-08)
+
+**Deux états pour toute longueur**, partout : `estimee` = « estimée d'après le plan » (tracé + hauteurs de pose) ;
+`mesuree` = « mesurée sur chantier » par Loïc, la seule qu'on tient pour fiable. Dans `plan.md` / `plan.html` et sur
+la page « Métré », le métré commence par la phrase « Toutes les longueurs sont des estimations d'après le plan (tracé
+et hauteurs de pose), sauf celles marquées « (mesurée) », relevées sur chantier. » ; le total d'une ligne mesurée porte
+**« (mesurée) »** (un total de réseau aussi, si toutes ses lignes le sont) ; plus aucune « (hyp.) » dans ces vues. La
+note sous le métré : « Les montées et descentes utilisent les hauteurs de pose ci-dessous, à valider (question 13).
+Diamètres et charge de fluide : à définir par le fournisseur. » `metre-detail.md` garde tout : estimation du plan,
+mesure, écart, « (hyp.) » sur les valeurs qui dépendent d'une hauteur supposée.
+
+- **Loïc donne une mesure** (« l'aspiration de la chambre viande, je l'ai mesurée : 12 mètres », « le câble du groupe
+  fait 16,50 ») : Claude retrouve la ligne (type + équipements, ou repère C1…), demande si c'est ambigu, puis écrit
+  sur CETTE ligne de `plan.json` : `"longueur_mesuree": 12.0, "mesure": {"par": "Loïc", "date": "AAAA-MM-JJ",
+  "note": "<ce qu'il a dit, court>"}`. Le tracé (`points`) ne bouge pas. `par` et `date` sont obligatoires
+  (`valider()`), la longueur est positive, en mètres, au centimètre.
+- **Le métré** prend la mesure comme total de la ligne (origine `mesuree`) et garde l'estimation du plan à côté
+  (`estimation_plan_m`). **Écart > 20 %** entre les deux : question dans `plan.md` (« La ligne « Aspiration :
+  Évaporateur CF1 (EV1) → Centrale positive » mesurée à 12,00 m s'écarte de l'estimation du plan (16,30 m) : le tracé
+  correspond-il à la réalité ? ») et avertissement E6 du vérificateur. Se dit à Loïc : soit le tracé est faux (le
+  corriger dans `points`), soit la mesure.
+- **`plan/metre.json`** (écrit par `generer.py`, contrat du 2026-10-08) : `version`, `genere_le`, `plan_version`,
+  `dossier`, `echelle`, `phrase`, `hauteurs_validees`, `reseaux` (par réseau : `cle`, `nom`, `famille`
+  `cuivre_froid` | `cuivre_clim` | `electricite` | `libre`, `lignes` avec `troncon` (libellé de `plan.md`), `de`, `a`,
+  `type`, `type_nom`, `en_plan_m`, `chemin_m`, `vertical_m`, `reserve_m`, `total_m`, `origine`, `estimation_plan_m`,
+  `longueur_mesuree_m`, `mesure`, `diametre`, puis `total_m`, `total_estime_m`, `total_mesure_m`, `origine`),
+  `par_type`, `recapitulatif`. Mètres à 2 décimales ; `origine` d'un total : `estimee`, `mesuree` ou `mixte`. La
+  skill `froid-demande-fournisseur` le lit (s'il existe) et met dans le PDF un chapitre « Longueurs de cuivre
+  (estimées d'après le plan) » : les réseaux `cuivre_froid` et `cuivre_clim`, « (mesurée) » sur les lignes
+  mesurées, puis « Diamètres et charge de fluide à définir par vos soins. ». **Jamais modifié à la main** : E6 le
+  recalcule depuis le dessin.
+- **Diamètres et charge de fluide** : laissés au fournisseur (« à définir par le fournisseur ») ; aucun diamètre
+  calculé par la skill (option future, voir `savoir/methodes/plan-2d.md`).
 
 ## La boucle : dessiner, vérifier, corriger (5 tours au plus)
 
@@ -128,7 +167,9 @@ modèle ; copie suivie dans le dépôt : `scripts/tests/fixtures/a1-boucherie-pl
    `--sans-pdf` seulement pendant les tours rapides ; **le dernier tour se fait toujours avec le PDF**. Contrôles :
    E1 échelle du fichier, E2 cotes, E3 barre d'échelle, E4 tout dans la page, E5 complétude (porte, évaporateur,
    aspiration, liquide, condensats et câble par chambre ; gaz, liquide et câble par split), E6 tableaux = recalcul
-   depuis le XML (page « Métré », `metre-detail.md` ligne par ligne, `plan.md` par réseau et récapitulatif), E7
+   depuis le XML (page « Métré », `metre-detail.md` ligne par ligne, `plan.md` par réseau et récapitulatif,
+   `metre.json` ; phrase des estimations, marques « (mesurée) » conformes à `plan.json`, plus de « (hyp.) » ; mesure
+   à plus de 20 % de l'estimation = avertissement), E7
    croisements, E8 textes qui se chevauchent, E9 cohérence (calques, rien sur une porte ou une fenêtre, extrémités
    de lignes), E10 PDF, E11 PNG. Croisements : ceux à 0,50 m ou moins l'un de l'autre partagent
    un seul cercle (repère G, étiquette « X1-X3 » posée à côté) ; les tableaux gardent une ligne par croisement avec
@@ -144,8 +185,9 @@ modèle ; copie suivie dans le dépôt : `scripts/tests/fixtures/a1-boucherie-pl
    illisible ou trop petit ; cartouche et légende lisibles. Un défaut : corriger `plan.json`, reprendre en 1.
 6. **Montrer à Loïc ✋** : ouvrir `plan.pdf` (`Start-Process`) et `plan.html` (`--ouvrir`). Présenter court : échelle
    et orientation, ce qui est dessiné, le métré par réseau **recopié de `plan.md`** (aucun nombre de tête), les
-   croisements, puis les « Questions ouvertes » de `plan.md` (extrémités libres, hauteurs en hypothèse, diamètres à
-   définir, exceptions). Lui demander de vérifier la règle de 100 mm au réglet après impression. Puis `dossier.md`.
+   croisements, puis les « Questions ouvertes » de `plan.md` (extrémités libres, écarts entre une mesure et
+   l'estimation du plan, hauteurs en hypothèse, diamètres au fournisseur, exceptions). Dire les longueurs comme
+   `plan.md` les dit : « estimées d'après le plan », sauf les « mesurées ». Lui demander de vérifier la règle de 100 mm au réglet après impression. Puis `dossier.md`.
 
 ## Modifier à la voix
 
@@ -157,6 +199,7 @@ Claude édite `plan.json`, puis générer, vérifier, relire le PNG. Le sens des
 | « descends-le de 10 cm » / « décale à droite de 20 cm » / « à gauche » | y + 0,10 / x + 0,20 / x diminue |
 | « tourne le split » / « souffle vers la porte » | `rotation` (90, 180, 270) / `soufflage` (haut, bas, gauche, droite) |
 | « pose-le à 2,40 », « plus haut au mur » | c'est une **hauteur** : `hauteur` de l'équipement ou `hauteur_*` de la ligne (métré) |
+| « l'aspiration de CF1, je l'ai mesurée : 12 m » | `longueur_mesuree: 12.0` et `mesure: {"par": "Loïc", "date": …, "note": …}` sur cette ligne ; `points` inchangés |
 | « la chambre fait 4,10, pas 4,00 » | la `valeur` de la cote **et** la géométrie (chambre, murs, porte) ensemble |
 
 - « Remonter » est ambigu (sur le plan ou au mur) : une question courte en cas de doute.
@@ -234,13 +277,14 @@ tracer une nouvelle ligne dans le bon calque (Affichage, Calques), en trait droi
 
 - **Ni murs ni percements** : il dessine les murs relevés ; il ne conçoit ni cloison ni carottage, et une traversée de
   mur n'est ni cotée ni décrite.
-- **Aucun diamètre choisi** : « à définir par le dimensionnement », toujours ; aucune section de câble non plus.
+- **Aucun diamètre choisi** : « à définir par le fournisseur », toujours, comme la charge de fluide ; aucune section
+  de câble non plus. Diamètres calculés (puissance + longueur) : option future.
 - **Pas de 3D** : le vertical n'existe que dans le métré (formule avec les hauteurs de pose). Un câble qui
   s'arrête sur le chemin de câbles (`a` = le chemin, ou dernier point à 0,10 m du chemin) compte en plus son
   parcours dans le chemin jusqu'à l'extrémité côté tableau (colonne « Dans le chemin »), puis la descente au
   tableau et la réserve ; le chemin lui-même est métré une fois, à part.
 - Pas de lecture automatique d'un plan d'architecte ou d'un croquis (Claude les regarde, les cotes écrites font foi) ;
-  pas d'A3 ; pas de branchement vers les étapes 2 et 3 avant le Lot 7. Lot 6 : deux réseaux de même couleur sur une
+  pas d'A3 ; pas de branchement vers l'étape 2 (le métré part seulement vers la demande fournisseur, `metre.json`). Lot 6 : deux réseaux de même couleur sur une
   feuille ne sont pas séparés, le crayon et les couleurs pâles ne sont pas lus ; pas encore validé sur photo réelle.
   Une extrémité **libre** (non accrochée à un équipement ou à un mur) est lue 0,1 à 0,4 mm trop court sur le
   papier (1 à 4 cm au 1:100) : biais connu, non corrigé (voir le journal du Lot 6) ; les extrémités accrochées
@@ -256,7 +300,8 @@ dimensionnement/dossiers/<slug>/plan/
 │                            sa longueur ; plan.png = image du plan pour la relecture
 ├── plan.md, plan.html     ← vue lisible : plan, contenu, métré par réseau, croisements, cotes, hauteurs, questions
 │                            (Loïc lit le .html ; aucun code de ligne)
-├── metre-detail.md        ← mémoire : métré par ligne (codes, formules, diamètres), croisements un par un, notes
+├── metre-detail.md        ← mémoire : métré par ligne (codes, formules, diamètres), mesures et écarts, croisements, notes
+├── metre.json             ← métré pour la demande fournisseur (contrat du 2026-10-08) ; jamais écrit à la main
 ├── plan-base.json         ← échelle, orientation, origine en mm (repris par les feuilles du Lot 6)
 ├── rendu.json             ← facteur de calibration du PDF (règle de 100 mm), revérifié à chaque rendu
 ├── verification.md, .json ← dernier rapport de verifier_plan.py
@@ -288,7 +333,8 @@ dimensionnement/dossiers/<slug>/plan/
 
 ## Règles fermes
 
-- **Cote manquante = question** ; aucune longueur estimée, aucun diamètre inventé.
+- **Cote manquante = question** ; aucune cote estimée, aucun diamètre inventé (fournisseur). Une longueur
+  « mesurée » ne s'écrit que si Loïc l'a dite (`mesure.par`, `mesure.date`).
 - **`verifier_plan.py` à 0 erreur** (avec le PDF) et PNG relu avant de montrer le plan à Loïc ; sinon, le rapport de
   ce qui reste après 5 tours.
 - Les nombres montrés à Loïc viennent de `plan.md` (script), jamais d'un calcul de tête.

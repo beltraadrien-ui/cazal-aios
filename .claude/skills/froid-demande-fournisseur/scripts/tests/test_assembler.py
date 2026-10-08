@@ -241,8 +241,10 @@ class TestAssembler(unittest.TestCase):
             self.assertEqual(list(d.keys()), list(assembler.CLES_DEMANDE))
             self.assertEqual(set(d["emetteur"]), {"societe", "contact", "telephone", "mail", "adresse"})
             self.assertEqual(set(d["site"]), {"nom", "localite", "reference_dossier"})
-            self.assertEqual(set(d["annexes"]), {"vues_ensemble", "plan_implantation", "pieces_jointes"})
+            self.assertEqual(set(d["annexes"]), {"vues_ensemble", "plan_implantation", "pieces_jointes", "documents"})
             self.assertEqual(d["annexes"]["plan_implantation"], "à suivre")
+            self.assertEqual(d["annexes"]["documents"], [])               # pas de plan/plan.pdf
+            self.assertEqual(d["longueurs"], {"absentes": True, "phrase": assembler.PHRASE_NON_RELEVEES})
             self.assertEqual(set(d["mail"]), {"objet", "salutation", "corps", "formule", "signature"})
             for p in d["postes"]:
                 self.assertEqual(set(p), {"id", "titre", "dessert", "existant", "puissance", "statut",

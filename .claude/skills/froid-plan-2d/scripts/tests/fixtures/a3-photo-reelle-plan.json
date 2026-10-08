@@ -143,7 +143,7 @@
   "notes": [
     "Fixture de test construite depuis l'exemple validé v2 du 2026-09-28 (1 m = 50 px, page A3) : coordonnées = px / 50, arrondies au cm.",
     "Les groupes (centrale positive, groupe négatif) et le moteur de clim sont dehors : centrale et groupe dans la cour arrière (zone technique, emplacement de principe, non dessinée), moteur contre la façade est.",
-    "Diamètres et sections : à définir par le dimensionnement.",
+    "Diamètres, sections et charge de fluide : à définir par le fournisseur.",
     "Hauteurs : hypothèses de l'exemple (évaporateurs 2,30 m, traversée 2,60 m, raccords 0,50 m ; TD 1,50 m, chemin de câbles 2,80 m, réserve 1 m ; splits 2,20 m), à faire valider par le frigoriste."
   ]
 }

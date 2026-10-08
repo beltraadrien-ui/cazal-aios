@@ -43,9 +43,10 @@ le corps du mail, PDF de photos seules) ; une page de tableaux à coller dans Ou
 | 2. Les chambres à traiter | Chambre · Régime · Surface · Volume · Évaporateurs ; chambres accolées ou communicantes, condensation de référence |
 | 3. La production frigorifique existante | Poste · Compresseurs · Volume balayé · Puissance · Statut ; sous-total par régime ; note : calculée à partir des plaques, deux méthodes croisées, régimes, fluide actuel |
 | 4. Les évaporateurs en place | Chambre · Fabricant / modèle · Année · Puissance « à confirmer par vos calculs » (variante grossiste) |
+| (5.) Longueurs de cuivre | Seulement si l'étape P a produit `plan/metre.json` (§ 6 bis) ; les chapitres suivants prennent un numéro de plus |
 | 5. Notre demande | Grossiste : a) à f) puis « En résumé » (§ 4). Fabricant : options techniques, implantation, planning |
 | 6. Le détail par poste | Pour chaque centrale ou groupe : ce qu'il dessert, l'existant (une ligne par équipement), la puissance retenue, ce qu'on remplace (seulement ce qui concerne ce poste dans le bloc E ; les questions pour Loïc en sont retirées ; « Régulation : voir § 5 c) » si la régulation est demandée à part), les photos des plaques légendées, deux par rangée. Une légende ne garde que ce qui est lu avec certitude : les annotations de lecture (« ? », « douteux », « lecture : … ») sont retirées et la légende dit « plaque partiellement lisible » |
-| 7. Annexes | Plan d'implantation (« à suivre » jusqu'au Lot 7), pièces jointes, vues d'ensemble légendées (régulation, condenseurs, échangeurs, locaux, chambres) |
+| 7. Annexes | Plan d'implantation (« à suivre » sans plan, sinon « plan du local en annexe »), pièces jointes, vues d'ensemble légendées (régulation, condenseurs, échangeurs, locaux, chambres) ; la page 1 du plan du local en dernière page du PDF si `plan/plan.pdf` existe (§ 6 bis) |
 
 A4, numéros de page, titre en en-tête, mention en pied de page ; chapitres 1 à 5 à la suite, nouvelle page pour le
 contexte, le détail par poste et les annexes. Sans chapitre 4 (variante fabricant), les suivants se renumérotent.
@@ -107,7 +108,26 @@ carénage contre les rongeurs ?), planning.
 - Photos réduites à 800 px de large, JPEG qualité 80 : un dossier de 43 photos tient en 2,5 Mo environ (essai du
   2026-10-07). Trop lourd : retirer des vues d'ensemble, jamais une plaque.
 
+## 6 bis. Longueurs de cuivre et plan du local (Lot 7, décision d'Adrien du 2026-10-08)
+
+- Le fournisseur chiffre les cuivres : on lui donne **les longueurs de cuivre estimées d'après le plan** (étape P,
+  `plan/metre.json`), réseau par réseau (froid : aspiration, liquide, condensats ; clim : gaz, liquide), jamais
+  l'électricité ni les autres réseaux (eau glacée). Chapitre « Longueurs de cuivre (estimées d'après le plan) »,
+  entre les évaporateurs et la demande : la phrase « Toutes les longueurs sont des estimations d'après le plan (tracé
+  et hauteurs de pose), sauf celles marquées « (mesurée) », relevées sur chantier. », un tableau par réseau (Tronçon · Type ·
+  Longueur (m), total), puis « Diamètres et charge de fluide à définir par vos soins. ».
+- **Toute longueur est une estimation**, sauf celle **mesurée sur chantier par Loïc**, seule fiable, marquée
+  « (mesurée) ». Les **diamètres et la charge de fluide restent au fournisseur** (diamètres calculés : option future).
+- Sans métré : pas de chapitre, une ligne « Longueurs de lignes non relevées, à estimer par vos soins. » dans la
+  demande, rien dans le mail.
+- Le **plan du local** (page 1 de `plan/plan.pdf`, A4 à l'échelle) est ajouté en dernière page du PDF, sans mise à
+  l'échelle (à imprimer à 100 %) ; il ne porte pas les numéros de page du document. Variante grossiste : le cartouche
+  est anonymisé comme le reste.
+- Mail : une seule phrase, « Les longueurs de cuivre estimées d'après le plan figurent dans le PDF, avec le plan du
+  local en annexe. » ; aucun tableau.
+
 ## 7. Hors V1
 
-Page de tableaux pour Outlook (option future) · plan d'implantation et métré joints (Lot 7) · traduction ·
+Page de tableaux pour Outlook (option future) · métré complet joint (électricité, croisements ; seules les longueurs
+de cuivre et le plan le sont depuis le Lot 7) · diamètres calculés · traduction ·
 suivi des réponses des fournisseurs · **envoi automatique : jamais** (Loïc envoie lui-même).

@@ -1,6 +1,8 @@
 """Tests de verifier_plan.py : la boucherie passe à 0 erreur ; CHAQUE contrôle E1 à E11 a au moins un test qui le
-fait échouer par mutation d'une copie (XML de plan.drawio, plan.json, plan.md, metre-detail.md, PDF fabriqué exprès à l'échelle
-fausse avec PyMuPDF, PNG absent ou de mauvaise taille) ; format de verification.md / verification.json.
+fait échouer par mutation d'une copie (XML de plan.drawio, plan.json, plan.md, metre-detail.md, metre.json, PDF
+fabriqué exprès à l'échelle fausse avec PyMuPDF, PNG absent ou de mauvaise taille) ; format de verification.md /
+verification.json. F1 (2026-10-08) : metre.json falsifié, phrase des estimations retirée, marque « (mesurée) »
+ajoutée à tort ou retirée, « (hyp.) » réintroduite, mesure à plus de 20 % de l'estimation (avertissement).
 
 Usage, depuis la racine du dépôt :
     PYTHONUTF8=1 python -m unittest discover -s .claude/skills/froid-plan-2d/scripts/tests -p "test_verifier_plan.py" -v
@@ -20,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import drawio  # noqa: E402
 import generer  # noqa: E402
+import metre as mtr  # noqa: E402
 import outils_tests_plan as ot  # noqa: E402
 import rendu  # noqa: E402
 import verifier_plan as vp  # noqa: E402
@@ -236,7 +239,7 @@ class TestE5(Base):
 class TestE6(Base):
     def test_tableau_de_la_page_metre_falsifie(self):
         d = self.copie()
-        ot.changer_attribut(d, "metre-tableau-1", "value", (">4,21 (hyp.)<", ">4,51 (hyp.)<"), page="metre")
+        ot.changer_attribut(d, "metre-tableau-1", "value", (">4,21<", ">4,51<"), page="metre")
         r = self.verifier(d)
         self.assertIn("E6", erreurs(r))
         self.assertTrue(any("page Métré" in e and "LA1" in e for e in elements(r, "E6")))
@@ -249,7 +252,7 @@ class TestE6(Base):
     def test_plan_md_falsifie(self):
         # plan.md n'a pas de codes de ligne : le tronçon falsifié (1re ligne du tableau froid) est retrouvé par son rang
         d = self.copie()
-        self._falsifier(d, "plan.md", "| 4,21 (hyp.) |", "| 4,51 (hyp.) |")
+        self._falsifier(d, "plan.md", "| 4,21 |", "| 4,51 |")
         r = self.verifier(d)
         self.assertIn("plan.md · Froid : cuivres et condensats · LA1", elements(r, "E6"))
         self.assertTrue(all(not e.startswith("metre-detail.md") for e in elements(r, "E6")))
@@ -263,7 +266,7 @@ class TestE6(Base):
 
     def test_total_de_reseau_falsifie(self):
         d = self.copie()
-        self._falsifier(d, "plan.md", "**36,02 (hyp.)**", "**37,02 (hyp.)**")
+        self._falsifier(d, "plan.md", "**36,02**", "**37,02**")
         self.assertTrue(any(e.startswith("plan.md") and "Total" in e for e in elements(self.verifier(d), "E6")))
 
     def test_total_du_detail_falsifie(self):
@@ -274,8 +277,8 @@ class TestE6(Base):
 
     def test_recapitulatif_falsifie(self):
         d = self.copie()
-        self._falsifier(d, "plan.md", "| Électricité (froid et clim) | 86,88 (hyp.) |",
-                        "| Électricité (froid et clim) | 87,88 (hyp.) |")
+        self._falsifier(d, "plan.md", "| Électricité (froid et clim) | 86,88 |",
+                        "| Électricité (froid et clim) | 87,88 |")
         self.assertIn("plan.md · Récapitulatif · Électricité (froid et clim)", elements(self.verifier(d), "E6"))
 
     def test_troncon_retire_de_plan_md(self):
@@ -342,8 +345,8 @@ class TestE6(Base):
     def test_colonne_dans_le_chemin_falsifiee(self):
         # plan.md : « En plan » = 1,60 + 10,10 dans le chemin = 11,70, colonne « dont chemin de câbles » = 10,10
         d = self.copie()
-        self._falsifier(d, "plan.md", "| 11,70 | 10,10 | 3,60 (hyp.) | 1,00 (hyp.) | 16,30 (hyp.) |",
-                        "| 11,70 | 0,00 | 3,60 (hyp.) | 1,00 (hyp.) | 16,30 (hyp.) |")
+        self._falsifier(d, "plan.md", "| 11,70 | 10,10 | 3,60 | 1,00 | 16,30 |",
+                        "| 11,70 | 0,00 | 3,60 | 1,00 | 16,30 |")
         r = self.verifier(d)
         self.assertTrue(any(c["element"] == "plan.md · Électricité (froid et clim) · LE1"
                             and "dont chemin de câbles" in c["attendu"] for c in r["constats"] if c["code"] == "E6"))
@@ -353,16 +356,209 @@ class TestE6(Base):
         r = self.verifier(d)
         self.assertTrue(any(e.startswith("metre-detail.md") and "LE1" in e for e in elements(r, "E6")))
 
-    def test_page_metre_imprimee_avec_hyp(self):
-        """C2 (écart n° 6) : la page « Métré » porte « (hyp.) » comme plan.md, et E6 la relit sans erreur."""
+    def test_page_metre_imprimee_sans_hyp(self):
+        """F1 (2026-10-08) : la page « Métré » ne porte plus « (hyp.) » (phrase des estimations en tête de page),
+        garde la note (question 13, fournisseur), et E6 la relit sans erreur."""
         d = self.copie()
         tableaux = dict(drawio.lire(d / "plan.drawio").tableaux)
         reseau = tableaux["Métré par réseau"]
-        self.assertIn(">16,30 (hyp.)<", reseau)
-        self.assertIn(">86,88 (hyp.)<", reseau)                    # total électricité : 25,94 + 35,94 + 18 + 7
+        self.assertIn(">16,30<", reseau)
+        self.assertIn("<b>86,88</b>", reseau)                     # total électricité : 25,94 + 35,94 + 18 + 7
         self.assertIn("question 13", reseau)
-        self.assertIn(">76,38 (hyp.)<", tableaux["Métré par diamètre"])   # câbles : 40,44 + 35,94
+        self.assertNotIn("(hyp.)", reseau)
+        self.assertIn(">76,38<", tableaux["Métré par diamètre"])   # câbles : 40,44 + 35,94
+        self.assertEqual(vp.phrase_page_metre(drawio.lire(d / "plan.drawio")), mtr.PHRASE_LONGUEURS)
         self.assertNotIn("E6", erreurs(self.verifier(d)))
+
+
+class TestE6MetreJsonEtMarques(Base):
+    """F1 (2026-10-08) : metre.json = recalcul depuis le dessin ; phrase des estimations dans plan.md et sur la page
+    « Métré » ; « (mesurée) » exactement sur les totaux des lignes mesurées dans plan.json ; plus de « (hyp.) »."""
+
+    @staticmethod
+    def _json(d: Path) -> dict:
+        return json.loads((d / "metre.json").read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _ecrire_json(d: Path, c: dict) -> None:
+        (d / "metre.json").write_text(json.dumps(c, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _falsifier(self, d: Path, fichier: str, avant: str, apres: str) -> None:
+        texte = (d / fichier).read_text(encoding="utf-8")
+        self.assertIn(avant, texte)
+        (d / fichier).write_text(texte.replace(avant, apres, 1), encoding="utf-8")
+
+    def test_metre_json_total_de_ligne_falsifie(self):
+        d = self.copie()
+        c = self._json(d)
+        self.assertEqual(c["reseaux"][0]["lignes"][0]["id"], "LA1")
+        c["reseaux"][0]["lignes"][0]["total_m"] = 4.51
+        self._ecrire_json(d, c)
+        r = self.verifier(d)
+        self.assertEqual(r["code"], 1)
+        self.assertEqual(elements(r, "E6"), ["metre.json · froid_cuivres · LA1 · total_m"])
+
+    def test_metre_json_totaux_falsifies(self):
+        d = self.copie()
+        c = self._json(d)
+        c["reseaux"][1]["total_m"] = 87.88
+        c["par_type"][0]["total_m"] = 14.50
+        c["recapitulatif"][2]["total_m"] = 1.00
+        self._ecrire_json(d, c)
+        e6 = elements(self.verifier(d), "E6")
+        for attendu in ("metre.json · electricite · total_m", "metre.json · par_type · froid_cuivres · aspiration · "
+                        "total_m", "metre.json · récapitulatif · clim_cuivres · total_m"):
+            self.assertIn(attendu, e6)
+
+    def test_metre_json_origine_falsifiee(self):
+        d = self.copie()
+        c = self._json(d)
+        c["reseaux"][0]["lignes"][0]["origine"] = "mesuree"
+        c["reseaux"][0]["origine"] = "mixte"
+        self._ecrire_json(d, c)
+        e6 = elements(self.verifier(d), "E6")
+        self.assertIn("metre.json · froid_cuivres · LA1 · origine", e6)
+        self.assertIn("metre.json · froid_cuivres · origine", e6)
+
+    def test_metre_json_ligne_retiree_et_cle_absente(self):
+        d = self.copie()
+        c = self._json(d)
+        del c["reseaux"][2]["lignes"][0]
+        del c["reseaux"][0]["lignes"][1]["diametre"]
+        c["reseaux"][0]["lignes"][2]["troncon"] = "Évaporateur CF2 → Groupe négatif"
+        self._ecrire_json(d, c)
+        e6 = elements(self.verifier(d), "E6")
+        self.assertIn("metre.json · clim_cuivres · lignes", e6)
+        self.assertIn("metre.json · froid_cuivres · LL1 · diametre", e6)
+        self.assertIn("metre.json · froid_cuivres · LA2 · troncon", e6)
+
+    def test_metre_json_phrase_version_echelle(self):
+        d = self.copie()
+        c = self._json(d)
+        c.update(phrase="Longueurs exactes.", plan_version=7, echelle="1:50")
+        c["reseaux"][0]["famille"] = "cuivre_clim"
+        self._ecrire_json(d, c)
+        e6 = elements(self.verifier(d), "E6")
+        for attendu in ("metre.json · phrase", "metre.json · plan_version", "metre.json · echelle",
+                        "metre.json · froid_cuivres · famille"):
+            self.assertIn(attendu, e6)
+
+    def test_metre_json_absent_ou_illisible(self):
+        d = self.copie()
+        (d / "metre.json").unlink()
+        r = self.verifier(d)
+        self.assertIn("metre.json", elements(r, "E6"))
+        self.assertEqual(r["code"], 1)
+        (d / "metre.json").write_text("{", encoding="utf-8")
+        self.assertIn("metre.json", elements(self.verifier(d), "E6"))
+
+    def test_phrase_retiree_de_plan_md(self):
+        d = self.copie()
+        self._falsifier(d, "plan.md", mtr.PHRASE_LONGUEURS + "\n\n", "")
+        self.assertEqual(elements(self.verifier(d), "E6"), ["plan.md · Métré · phrase"])
+
+    def test_phrase_retiree_de_la_page_metre(self):
+        d = self.copie()
+        ot.supprimer_cellule(d, drawio.ID_PHRASE_METRE, page="metre")
+        self.assertEqual(elements(self.verifier(d), "E6"), ["page Métré · phrase"])
+
+    def test_marque_ajoutee_a_tort_dans_plan_md(self):
+        d = self.copie()
+        self._falsifier(d, "plan.md", "| 4,21 |", "| 4,21 (mesurée) |")          # LA1 : estimée
+        r = self.verifier(d)
+        self.assertEqual(elements(r, "E6"), ["plan.md · Froid : cuivres et condensats · LA1 · marque"])
+        self._falsifier(d, "plan.md", "| Clim : cuivres | 13,12 |", "| Clim : cuivres | 13,12 (mesurée) |")
+        self.assertIn("plan.md · Récapitulatif · Clim : cuivres · marque", elements(self.verifier(d), "E6"))
+
+    def test_marque_ajoutee_a_tort_sur_la_page_metre(self):
+        d = self.copie()
+        ot.changer_attribut(d, "metre-tableau-1", "value", (">4,21<", ">4,21 (mesurée)<"), page="metre")
+        self.assertEqual(elements(self.verifier(d), "E6"), ["page Métré · Métré par réseau · LA1 · marque"])
+
+    def test_hyp_reintroduite(self):
+        d = self.copie()
+        self._falsifier(d, "plan.md", "| 4,21 |", "| 4,21 (hyp.) |")
+        self.assertIn("plan.md · Froid : cuivres et condensats · (hyp.)", elements(self.verifier(d), "E6"))
+        d = self.copie()
+        ot.changer_attribut(d, "metre-tableau-1", "value", (">4,21<", ">4,21 (hyp.)<"), page="metre")
+        self.assertIn("page Métré · Métré par réseau · (hyp.)", elements(self.verifier(d), "E6"))
+
+    def test_mesure_ecrite_dans_plan_json_sans_regenerer(self):
+        d = self.copie()
+        donnees = json.loads((d / "plan.json").read_text(encoding="utf-8"))
+        la1 = next(l for l in donnees["lignes"] if l["id"] == "LA1")
+        la1.update(longueur_mesuree=4.50, mesure={"par": "Loïc", "date": "2026-10-08", "note": "test"})
+        ot.ecrire_plan(d, donnees)
+        e6 = elements(self.verifier(d), "E6")
+        for attendu in ("plan.md · Froid : cuivres et condensats · LA1 · marque",
+                        "page Métré · Métré par réseau · LA1 · marque", "metre.json · froid_cuivres · LA1 · origine",
+                        "metre.json · froid_cuivres · LA1 · total_m"):
+            self.assertIn(attendu, e6)
+
+
+def boucherie_mesuree(longueurs: dict[str, float]) -> dict:
+    donnees = ot.charger_boucherie()
+    for l in donnees["lignes"]:
+        if l["id"] in longueurs:
+            l.update(longueur_mesuree=longueurs[l["id"]], mesure={"par": "Loïc", "date": "2026-10-08",
+                                                                   "note": "mesure de test"})
+    return donnees
+
+
+class TestE6Mesures(Base):
+    """Une boucherie avec LA1 mesurée à 4,50 m (estimée 4,21 m, +6,9 %) : 0 erreur, 0 avertissement."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.racine = Path(cls.tmp.name)
+        cls.base = ot.dossier_boucherie(cls.racine, "base", boucherie_mesuree({"LA1": 4.50}))
+        cls.n = 0
+
+    def _falsifier(self, d: Path, fichier: str, avant: str, apres: str) -> None:
+        texte = (d / fichier).read_text(encoding="utf-8")
+        self.assertIn(avant, texte)
+        (d / fichier).write_text(texte.replace(avant, apres, 1), encoding="utf-8")
+
+    def test_zero_erreur_zero_avertissement(self):
+        r = self.verifier(self.copie())
+        self.assertEqual((r["code"], r["erreurs"], r["avertissements"]), (0, 0, 0), r["constats"])
+
+    def test_marque_retiree(self):
+        d = self.copie()
+        self._falsifier(d, "plan.md", "| 4,50 (mesurée) |", "| 4,50 |")
+        self.assertEqual(elements(self.verifier(d), "E6"), ["plan.md · Froid : cuivres et condensats · LA1 · marque"])
+        d = self.copie()
+        self._falsifier(d, "metre-detail.md", "| 4,50 (mesurée) |", "| 4,50 |")
+        self.assertEqual(elements(self.verifier(d), "E6"), ["metre-detail.md · Métré par réseau · LA1 · marque"])
+        d = self.copie()
+        ot.changer_attribut(d, "metre-tableau-1", "value", (">4,50 (mesurée)<", ">4,50<"), page="metre")
+        self.assertEqual(elements(self.verifier(d), "E6"), ["page Métré · Métré par réseau · LA1 · marque"])
+
+    def test_mesure_retiree_de_plan_json_sans_regenerer(self):
+        d = self.copie()
+        donnees = json.loads((d / "plan.json").read_text(encoding="utf-8"))
+        la1 = next(l for l in donnees["lignes"] if l["id"] == "LA1")
+        del la1["longueur_mesuree"], la1["mesure"]
+        ot.ecrire_plan(d, donnees)
+        e6 = elements(self.verifier(d), "E6")
+        self.assertIn("plan.md · Froid : cuivres et condensats · LA1 · marque", e6)
+        self.assertIn("metre.json · froid_cuivres · LA1 · longueur_mesuree_m", e6)
+
+    def test_ecart_au_dela_de_20_pct_avertit(self):
+        d = ot.dossier_boucherie(self.racine, "ecart", boucherie_mesuree({"LA1": 4.50, "LL1": 6.00}))
+        r = self.verifier(d)
+        self.assertEqual((r["code"], r["erreurs"]), (0, 0), r["constats"])
+        self.assertEqual(r["avertissements"], 1)
+        c = next(c for c in r["constats"] if c["code"] == "E6")
+        self.assertEqual(c["element"], "LL1 · longueur mesurée")
+        self.assertIn("4,21", c["attendu"])
+        self.assertIn("6,00", c["trouve"])
+        # la question a disparu de plan.md : erreur
+        md = (d / "plan.md").read_text(encoding="utf-8")
+        q = next(l for l in md.splitlines() if l.startswith("- La ligne « Liquide"))
+        (d / "plan.md").write_text(md.replace(q + "\n", "", 1), encoding="utf-8")
+        self.assertIn("plan.md · Questions ouvertes · LL1", elements(self.verifier(d), "E6"))
 
 
 def _ajouter_cercle(racine, ident: str, cx: float, cy: float, g: dict, style: str) -> None:

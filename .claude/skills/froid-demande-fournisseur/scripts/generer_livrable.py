@@ -8,11 +8,20 @@ Sorties, dans <dossier>/3-demande-fournisseur/<vN>/ :
     img/<photo>.jpg             photos redimensionnées (800 px de large au plus, JPEG qualité 80) ; les originaux
                                 de sources/photos/ ne sont jamais touchés
     demande-<vN>.html           page A4 (gabarit templates/demande.html, CSS d'impression, chemins relatifs vers img/)
-    demande-<vN>.pdf            impression de la page par Edge en mode sans tête (Chrome en repli)
+    demande-<vN>.pdf            impression de la page par Edge en mode sans tête (Chrome en repli), puis, s'il y a
+                                des annexes.documents (Lot 7 : page 1 de plan/plan.pdf), leurs pages ajoutées à la fin
+                                telles quelles par PyMuPDF (insert_pdf, aucune mise à l'échelle) ; variante anonymisée :
+                                les lignes de texte de ces pages qui portent un identifiant du client
+                                (identifiants-client.json) sont effacées et réécrites anonymisées (cartouche du plan)
     mail-<variante>.txt         objet en première ligne, ligne vide, salutation, corps, formule, signature
     mail-<variante>.html        le même texte en paragraphes, pour le copier-coller (aucun tableau)
 
-Le PDF est vérifié avec PyMuPDF (nombre de pages, poids) ; un avertissement est affiché au-delà de 5 Mo.
+Le PDF est vérifié avec PyMuPDF (nombre de pages, poids) ; un avertissement est affiché au-delà de 5 Mo. Les numéros
+de page (« Page k / N », CSS d'Edge) ne comptent que les pages d'Edge : la page du plan ajoutée n'en porte pas.
+Chapitre « Longueurs de cuivre (estimées d'après le plan) » (Lot 7), entre les évaporateurs et la demande, seulement si
+demande.json a des longueurs : la phrase d'estimation, un tableau par réseau (Tronçon | Type | Longueur (m), total,
+« (mesurée) » sur les longueurs mesurées sur chantier), « Diamètres et charge de fluide à définir par vos soins. ».
+Sans longueurs (« absentes ») : pas de chapitre, une ligne « Longueurs de lignes non relevées… » dans la demande.
 Rien n'est calculé ni réécrit ici : chaque texte et chaque chiffre vient tel quel de demande.json (échappé), avec la
 seule typographie du rendu (page, PDF et mail ; demande.json n'est jamais modifié) : « CO2 » → « CO₂ », espace
 insécable après « et avant », signe moins (U+2212) devant une température négative. « à confirmer » n'est coloré que
@@ -30,7 +39,8 @@ Usage, depuis la racine du dépôt :
 Python :
     from generer_livrable import generer
     resultat = generer(dossier, "v1", pdf=True, ouvrir=False)
-    # {"html", "pdf", "mail_txt", "mail_html", "images", "pages", "mo", "navigateur", "commande", "avertissements"}
+    # {"html", "pdf", "mail_txt", "mail_html", "images", "pages", "pages_edge", "annexes_fusionnees", "mo",
+    #  "navigateur", "commande", "avertissements"}
 
 Dépendances : Pillow pour les photos (repli : PyMuPDF), PyMuPDF pour vérifier le PDF, Edge ou Chrome déjà
 présent sur le PC pour l'impression. Mini-moteur de gabarit maison (aucune bibliothèque de gabarits) :
@@ -78,12 +88,19 @@ TITRES_CHAPITRES = {
     "chambres": "Les chambres à traiter",
     "production": "La production frigorifique existante",
     "evaporateurs": "Les évaporateurs en place",
+    "longueurs": "Longueurs de cuivre (estimées d'après le plan)",
     "demande": "Notre demande",
     "postes": "Le détail par poste",
     "annexes": "Annexes",
 }
 MOIS = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
         "novembre", "décembre")
+MARQUE_MESUREE = "(mesurée)"           # longueur mesurée sur chantier par Loïc (toutes les autres sont estimées)
+POSITION_ANNEXE = "dernière page de ce document (à imprimer à 100 %, sans ajustement à la page)"
+POSITION_ANNEXES = "à la fin de ce document (à imprimer à 100 %, sans ajustement à la page)"
+A4_PT, TOLERANCE_A4_PT = (595.28, 841.89), 3.0
+CLES_IDENTIFIANTS = ("noms", "mots_distinctifs", "adresses", "rues", "codes_postaux", "localites", "telephones",
+                     "mails", "domaines_mail", "fiches")
 
 # Navigateurs : Edge d'abord (présent sur tout Windows récent), Chrome en repli.
 EMPLACEMENTS = {
@@ -391,6 +408,147 @@ def slug(texte: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]+", "-", t).strip("-").lower() or "x"
 
 
+# ── Longueurs de cuivre (Lot 7) ──────────────────────────────────────────────────────────────────────
+
+def longueur_fr(x) -> str:
+    """4.21 → « 4,21 » (virgule décimale, espace insécable entre les milliers ; l'unité est dans l'en-tête
+    « Longueur (m) ») ; texte d'origine si ce n'est pas un nombre."""
+    if not isinstance(x, (int, float)) or isinstance(x, bool):
+        return _texte(x)
+    return f"{float(x):,.2f}".replace(",", "\u00a0").replace(".", ",")
+
+
+def longueur_html(x, origine) -> str:
+    """Cellule de longueur : nombre rendu, et « (mesurée) » si la longueur a été mesurée sur chantier."""
+    marque = f' <span class="mesuree">{MARQUE_MESUREE}</span>' if origine == "mesuree" else ""
+    return echapper(longueur_fr(x)) + marque
+
+
+def longueurs_presentes(demande: dict) -> bool:
+    """Vrai si demande.json porte des longueurs de cuivre (chapitre rendu) ; faux si « absentes » ou champ absent
+    (demande antérieure au Lot 7)."""
+    lg = demande.get("longueurs")
+    return isinstance(lg, dict) and not lg.get("absentes") and bool(lg.get("reseaux"))
+
+
+def _vue_longueurs(demande: dict) -> tuple[dict | None, str]:
+    """(données du chapitre ou None, ligne « non relevées » ou « »)."""
+    lg = demande.get("longueurs")
+    if not isinstance(lg, dict):
+        return None, ""
+    if not longueurs_presentes(demande):
+        return None, _texte(lg.get("phrase")) if lg.get("absentes") else ""
+    reseaux = [{"cle": slug(r.get("cle")), "nom": _texte(r.get("nom")),
+                "lignes": [{"troncon": _texte(l.get("troncon")), "type_nom": _texte(l.get("type_nom")),
+                            "longueur_html": longueur_html(l.get("total_m"), l.get("origine"))}
+                           for l in r.get("lignes") or []],
+                "total_html": longueur_html(r.get("total_m"), r.get("origine"))}
+               for r in lg.get("reseaux") or []]
+    return {"phrase": _texte(lg.get("phrase")), "diametres": _texte(lg.get("diametres")), "reseaux": reseaux}, ""
+
+
+# ── Annexes en PDF (plan du local) ───────────────────────────────────────────────────────────────────
+
+def est_a4(rect) -> bool:
+    """Page A4, portrait ou paysage (à 3 pt près)."""
+    petit, grand = sorted((rect.width, rect.height))
+    return abs(petit - A4_PT[0]) <= TOLERANCE_A4_PT and abs(grand - A4_PT[1]) <= TOLERANCE_A4_PT
+
+
+def documents_annexes(demande: dict, dossier_version: Path) -> list[tuple[dict, Path]]:
+    """(entrée, chemin résolu) de chaque annexes.documents ; « fichier » est relatif au dossier de la version.
+    Un document introuvable arrête tout."""
+    docs = [d for d in (demande.get("annexes") or {}).get("documents") or [] if isinstance(d, dict)]
+    resolus = [(d, (dossier_version / _texte(d.get("fichier"))).resolve()) for d in docs]
+    manquants = [f"{_texte(d.get('fichier'))} ({c})" for d, c in resolus if not c.is_file()]
+    if manquants:
+        raise ErreurLivrable("Annexes introuvables (chemins relatifs au dossier de la version) :\n  "
+                             + "\n  ".join(manquants))
+    return resolus
+
+
+def motifs_client(dossier_version: Path):
+    """(module assembler, motifs d'anonymisation) relus dans identifiants-client.json ; None si le fichier manque.
+    Même mécanisme que le reste de la demande (assembler.motifs_anonymisation)."""
+    chemin = dossier_version / "identifiants-client.json"
+    if not chemin.is_file():
+        return None
+    ids = json.loads(chemin.read_text(encoding="utf-8"))
+    ici = str(Path(__file__).resolve().parent)
+    if ici not in sys.path:
+        sys.path.insert(0, ici)
+    import assembler
+    complet = {k: [str(x) for x in ids.get(k) or []] for k in CLES_IDENTIFIANTS}
+    complet["slug"] = str(ids.get("slug") or "")
+    if not any(complet.values()):                     # fichier réduit à la liste « recherches »
+        complet["noms"] = [str(x) for x in ids.get("recherches") or []]
+    return assembler, assembler.motifs_anonymisation(complet)
+
+
+def anonymiser_page(page, module, motifs) -> int:
+    """Efface (redaction PyMuPDF, texte seulement : traits et images intacts, donc l'échelle aussi) chaque ligne de
+    texte de la page qui porte un identifiant du client et la réécrit anonymisée au même endroit (« Le client : plan
+    froid et clim »). Renvoie le nombre de lignes remplacées."""
+    remplacees = []
+    for bloc in page.get_text("dict")["blocks"]:
+        for ligne in bloc.get("lines", []):
+            spans = [s for s in ligne["spans"] if s["text"].strip()]
+            if not spans:
+                continue
+            texte = "".join(s["text"] for s in ligne["spans"])
+            nouveau = module._remplacer(texte, motifs)
+            nouveau = re.sub(r"\b\d{4}-\d{2}-\d{2}-(?=[Ll]e client\b)", "", nouveau).strip()
+            if nouveau == texte.strip():
+                continue
+            r = pymupdf.Rect(ligne["bbox"])
+            marge = r.height * 0.25                   # n'atteint pas les lignes voisines
+            page.add_redact_annot(pymupdf.Rect(r.x0, r.y0 + marge, r.x1, r.y1 - marge), fill=False, cross_out=False)
+            dx, dy = ligne.get("dir", (1, 0))
+            angle = {(1, 0): 0, (0, -1): 90, (-1, 0): 180, (0, 1): 270}.get((round(dx), round(dy)), 0)
+            remplacees.append((nouveau, spans[0]["origin"], spans[0]["size"], spans[0]["font"], spans[0]["color"],
+                               angle))
+    if remplacees:
+        page.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE, graphics=pymupdf.PDF_REDACT_LINE_ART_NONE,
+                              text=pymupdf.PDF_REDACT_TEXT_REMOVE)
+        for texte, origine, taille, police, couleur, angle in remplacees:
+            rgb = tuple(((int(couleur) >> d) & 255) / 255 for d in (16, 8, 0))
+            page.insert_text(origine, texte, fontsize=taille, color=rgb, rotate=angle,
+                             fontname="hebo" if "bold" in police.lower() else "helv")
+    return len(remplacees)
+
+
+def fusionner_annexes(pdf: Path, documents: list[tuple[dict, Path]], anonymisation=None) -> tuple[int, list[str]]:
+    """Ajoute à la fin de `pdf` les premières pages de chaque document (champ « pages », 1 pour le plan), telles
+    quelles : insert_pdf copie la page sans la mettre à l'échelle (le plan reste à l'échelle écrite dessus).
+    anonymisation = (module, motifs) : identifiants du client effacés des pages ajoutées. Renvoie (pages d'Edge,
+    avertissements)."""
+    avert: list[str] = []
+    pdf = Path(pdf)
+    provisoire = pdf.with_name(pdf.stem + "-fusion.pdf")
+    with pymupdf.open(pdf) as doc:
+        pages_edge = doc.page_count
+        for d, chemin in documents:
+            n = int(d.get("pages") or 1)
+            with pymupdf.open(chemin) as source:
+                if source.page_count < n:
+                    raise ErreurLivrable(f"{chemin} n'a que {source.page_count} page(s), {n} attendue(s).")
+                debut = doc.page_count
+                doc.insert_pdf(source, from_page=0, to_page=n - 1, links=False, annots=False)
+            for i in range(debut, doc.page_count):
+                if not est_a4(doc[i].rect):
+                    avert.append(f"{_texte(d.get('titre')) or chemin.name} : page {i + 1} hors format A4 "
+                                 f"({doc[i].rect.width:.0f} × {doc[i].rect.height:.0f} pt)")
+                if anonymisation is not None:
+                    anonymiser_page(doc[i], *anonymisation)
+        doc.save(provisoire, garbage=3, deflate=True)
+    try:
+        os.replace(provisoire, pdf)
+    except PermissionError:
+        provisoire.unlink(missing_ok=True)
+        raise ErreurLivrable(f"Le PDF est ouvert dans un lecteur : le fermer puis relancer ({pdf}).") from None
+    return pages_edge, avert
+
+
 # ── Photos ───────────────────────────────────────────────────────────────────────────────────────────
 
 def redimensionner(source: Path, cible: Path, largeur: int = LARGEUR_MAX, qualite: int = QUALITE_JPEG,
@@ -509,8 +667,10 @@ def preparer_vue(demande: dict, carte: dict[str, str]) -> dict:
     else:
         destinataire = "Grossistes (consultation)"
 
-    cles = [c for c in TITRES_CHAPITRES if c != "evaporateurs" or demande.get("evaporateurs") is not None]
+    cles = [c for c in TITRES_CHAPITRES if (c != "evaporateurs" or demande.get("evaporateurs") is not None)
+            and (c != "longueurs" or longueurs_presentes(demande))]
     n = {c: str(i) for i, c in enumerate(cles, 1)}
+    vue_longueurs, longueurs_absentes = _vue_longueurs(demande)
 
     chambres = demande.get("chambres") or {}
     production = demande.get("production") or {}
@@ -563,6 +723,9 @@ def preparer_vue(demande: dict, carte: dict[str, str]) -> dict:
     pieces = [_texte(x) for x in (demande.get("annexes") or {}).get("pieces_jointes") or [] if _texte(x).strip()]
 
     annexes = demande.get("annexes") or {}
+    docs = [d for d in annexes.get("documents") or [] if isinstance(d, dict)]
+    position = POSITION_ANNEXE if len(docs) == 1 and int(docs[0].get("pages") or 1) == 1 else POSITION_ANNEXES
+    documents = [{"titre": _texte(d.get("titre")) or "Annexe", "position": position} for d in docs]
     return {
         "titre": titre, "titre_principal": parties[0] if parties else titre, "sous_titre": sous_titre,
         "titre_css": texte_css(titre), "mention": mention, "mention_css": texte_css(mention),
@@ -579,12 +742,13 @@ def preparer_vue(demande: dict, carte: dict[str, str]) -> dict:
                        "avec_a_confirmer": avec_a_confirmer,
                        "note_html": paragraphes_html(production.get("note"))},
         "evaporateurs": vue_evap,
+        "longueurs": vue_longueurs, "longueurs_absentes": longueurs_absentes,
         "demande": {"intro_html": paragraphes_html(dem.get("intro")), "points": points,
                     "resume_html": paragraphes_html(dem.get("resume"))},
         "postes": postes,
         "annexes": {"rangees": _rangees(annexes.get("vues_ensemble") or [], carte, plaques=False),
                     "plan_implantation": _texte(annexes.get("plan_implantation")) or "à suivre",
-                    "pieces_jointes": pieces, "avec_pieces": bool(pieces)},
+                    "pieces_jointes": pieces, "avec_pieces": bool(pieces), "documents": documents},
     }
 
 
@@ -753,15 +917,17 @@ def generer(dossier: Path | str, version: str, pdf: bool = True, ouvrir: bool = 
 
     pdf    : imprimer le PDF (Edge sans tête, Chrome en repli) et le vérifier ; False = HTML et mail seulement.
     ouvrir : ouvrir le PDF (ou la page HTML) et le mail HTML.
-    Renvoie {"html", "pdf", "mail_txt", "mail_html", "images", "pages", "mo", "navigateur", "commande",
-    "avertissements"} (pdf, pages, mo, navigateur, commande à None sans PDF). Lève ErreurLivrable si quelque
-    chose manque (dossier, demande.json, photo, navigateur).
+    Renvoie {"html", "pdf", "mail_txt", "mail_html", "images", "pages", "pages_edge", "annexes_fusionnees", "mo",
+    "navigateur", "commande", "avertissements"} (pdf, pages, pages_edge, mo, navigateur, commande à None sans PDF ;
+    pages = pages_edge + pages des annexes fusionnées). Lève ErreurLivrable si quelque chose manque (dossier,
+    demande.json, photo, annexe, navigateur).
     """
     if not RE_VERSION.match(version):
         raise ErreurLivrable(f"Version attendue sous la forme v1, v2… ou v1-fabricant (reçu : {version!r}).")
     d = resoudre_dossier(dossier)
     dv = d / SOUS_DOSSIER / version
     demande = lire_demande(dv / "demande.json")
+    documents = documents_annexes(demande, dv)
 
     carte = preparer_photos(demande, d, dv)
     rendu = typographier(demande)                           # typographie du rendu, demande.json inchangé
@@ -771,17 +937,31 @@ def generer(dossier: Path | str, version: str, pdf: bool = True, ouvrir: bool = 
     mail_txt, mail_html = ecrire_mail(rendu, dv)
 
     resultat = {"html": page_html, "pdf": None, "mail_txt": mail_txt, "mail_html": mail_html,
-                "images": [dv / c for c in carte.values()], "pages": None, "mo": None, "navigateur": None,
-                "commande": None, "avertissements": []}
+                "images": [dv / c for c in carte.values()], "pages": None, "pages_edge": None,
+                "annexes_fusionnees": 0, "mo": None, "navigateur": None, "commande": None, "avertissements": []}
     if pdf:
         chemin_pdf = dv / f"demande-{version}.pdf"
         navigateur, commande = imprimer_pdf(page_html, chemin_pdf)
+        pages_edge = None
+        if documents:
+            anonymisation = motifs_client(dv) if demande.get("anonymise") else None
+            if demande.get("anonymise") and anonymisation is None:
+                resultat["avertissements"].append("identifiants-client.json absent : page du plan non anonymisée "
+                                                  "(relancer assembler.py)")
+            pages_edge, avert = fusionner_annexes(chemin_pdf, documents, anonymisation)
+            resultat["avertissements"] += avert
         pages, mo = verifier_pdf(chemin_pdf)
-        resultat.update(pdf=chemin_pdf, pages=pages, mo=mo, navigateur=navigateur, commande=commande)
+        resultat.update(pdf=chemin_pdf, pages=pages, pages_edge=pages if pages_edge is None else pages_edge,
+                        annexes_fusionnees=pages - (pages if pages_edge is None else pages_edge), mo=mo,
+                        navigateur=navigateur, commande=commande)
         if mo > SEUIL_MO:
             resultat["avertissements"].append(
                 f"Le PDF pèse {mo:.2f} Mo, au-delà de {SEUIL_MO:g} Mo : risque de refus par la messagerie "
                 "(retirer des vues d'ensemble ou des doublons de photos).")
+    elif documents:
+        resultat["avertissements"].append(
+            "Sans PDF, les annexes ne sont pas fusionnées : joindre à la main la page 1 de "
+            + ", ".join(_texte(x.get("fichier")) for x, _ in documents) + ".")
     if ouvrir:
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
@@ -807,6 +987,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Photos    : {len(r['images'])} redimensionnées dans {r['html'].parent / 'img'}")
     if r["pdf"]:
         print(f"PDF       : {r['pdf']} ({r['pages']} pages, {r['mo']:.2f} Mo, imprimé par {r['navigateur']})")
+        if r["annexes_fusionnees"]:
+            print(f"Annexes   : {r['annexes_fusionnees']} page(s) ajoutée(s) après les {r['pages_edge']} pages "
+                  "d'Edge (plan du local, sans numéro de page)")
     print(f"Mail      : {r['mail_txt']}")
     print(f"            {r['mail_html']}")
     for avertissement in r["avertissements"]:

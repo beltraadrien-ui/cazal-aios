@@ -12,6 +12,8 @@ tout ; la référence à un autre chantier (« même principe que notre projet �
 (portes, soupapes) ne sont reprises que si le bloc F de l'étape 2 les écrit ({qte …}) ; les phrases liées au
 dossier ne sortent que si l'étape 2 (bloc F, bloc A ou projet) en parle (conditions [si …]).
 Aucun nom de client ni coordonnée dans ce fichier : tout vient du dossier par les champs.
+Lot 7 : {phrase_longueurs} (mail) dit que les longueurs de cuivre estimées d'après le plan et le plan du local sont
+dans le PDF ; vide sans plan ni métré, la ligne disparaît. Jamais de tableau de longueurs dans le mail.
 -->
 # Textes par défaut · demande de prix · variante « grossiste »
 
@@ -179,6 +181,7 @@ Nous avons besoin d'une offre de prix compétitive de votre part pour une instal
 
 Tout le détail (chambres, production existante, évaporateurs en place, notre demande point par point, plaques
 signalétiques et photos) est dans le PDF joint.
+{phrase_longueurs}
 
 Pourriez-vous nous faire parvenir votre offre {delai_reponse} ?
 Merci d'avance pour votre proposition. N'hésitez pas à revenir vers nous pour tout complément.

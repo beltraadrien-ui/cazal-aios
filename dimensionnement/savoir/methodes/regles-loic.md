@@ -1,7 +1,7 @@
 # Règles de Loïc (dimensionnement et demande fournisseur)
 
 > v1 du 2026-10-06 (Lot 2), complétée le 2026-10-07 (Lot 3 : R9 à R13, demande fournisseur ; Lots 5 et 6 : R14 à
-> R19, plans 2D, toutes en hypothèse tant que Loïc ne les a pas validées). Chaque règle est
+> R20, plans 2D, en hypothèse tant que Loïc ne les a pas validées, sauf R18 et R20 qui sont des décisions d'Adrien). Chaque règle est
 > **datée et sourcée**. Sources : « conversation Claude de Loïc
 > du 16/09/2026 » (numéro de capture d'écran) et « visio du 24/09/2026 » (minute de l'enregistrement).
 > Une règle énoncée pour un seul dossier est marquée « à confirmer comme règle générale ». Les réponses de
@@ -171,21 +171,39 @@ Conversation du 16/09/2026, message daté du 24/09, capture 21 :
 - **Statut : hypothèse** sur la pratique de Loïc : à valider à la livraison (question 16 : marqueurs et imprimante A4 ;
   question 17 : A4 seulement ou parfois A3 ; question 18 : métré sur la page 2 et dans la vue HTML).
 
-## R18. Diamètres jamais inventés sur un plan (règle du système du 2026-10-07)
+## R18. Diamètres et charge de fluide : au fournisseur (décision du 2026-10-08)
 
-- Chaque ligne porte **« à définir »** comme diamètre tant que le dimensionnement ne l'a pas fixé ; aucune section de
-  câble non plus. Application des règles de fiabilité 1 et 2 de `dimensionnement/CLAUDE.md` (une source sur chaque
-  chiffre ; ne jamais inventer). Le métré par diamètre regroupe ces lignes sous « à définir ».
-- **Statut : hypothèse** quant à la pratique de Loïc (qui fixe les diamètres, et quand) : à lui confirmer.
+- Chaque ligne porte **« à définir par le fournisseur »** comme diamètre ; aucune section de câble non plus. Le
+  système ne calcule ni les diamètres ni la charge de fluide : la demande de prix le dit en toutes lettres
+  (« Diamètres et charge de fluide à définir par vos soins »). Application des règles de fiabilité 1 et 2 de
+  `dimensionnement/CLAUDE.md` (une source sur chaque chiffre ; ne jamais inventer). Le métré par diamètre regroupe
+  ces lignes sous « à définir par le fournisseur ». Diamètres calculés (puissance + longueur) : option future.
+- **Statut : décision d'Adrien du 2026-10-08** ; la pratique de Loïc (qui fixe les diamètres chez ses fournisseurs)
+  reste à confirmer.
 
 ## R19. Cote manquante = question (règle du système du 2026-10-07)
 
-- **Aucune longueur estimée** sur un plan : une cote que Loïc n'a pas donnée (ni écrite sur un croquis ou un plan
-  d'architecte) est une question, jamais une valeur « environ » ni une mesure prise sur un croquis. Chaque cote garde
+- **Aucune cote estimée** sur un plan : une cote (dimension d'un mur, d'une pièce, d'une chambre) que Loïc n'a pas
+  donnée (ni écrite sur un croquis ou un plan d'architecte) est une question, jamais une valeur « environ » ni une
+  mesure prise sur un croquis. Les **longueurs de lignes** (cuivres, câbles) sont une autre chose : elles sont
+  calculées depuis le tracé et annoncées comme estimations (R20). Chaque cote garde
   sa source (télémètre, croquis, plan d'architecte, rapport) ; une description incohérente de plus de 1 cm est
   signalée, jamais arrondie en silence. Seuls défauts permis, écrits comme tels : dimensions d'équipement par type,
   épaisseurs de mur, hauteurs de pose (R14).
 - **Statut : hypothèse** quant à la tolérance de Loïc (1 cm entre ses cotes et le dessin) : à lui confirmer.
+
+## R20. Toute longueur de ligne est une estimation, sauf mesurée sur chantier (décision d'Adrien du 2026-10-08)
+
+- Deux états, partout (page du plan, page Métré du fichier draw.io, PDF de demande fournisseur) : **estimée d'après
+  le plan** (tracé + hauteurs de pose supposées) et **mesurée sur chantier** (relevée par Loïc). L'estimation est la
+  règle, annoncée une fois en tête du métré ; la mesure est l'exception, marquée « (mesurée) » sur la ligne.
+- Une mesure de Loïc s'écrit sur la ligne du modèle (`longueur_mesuree`, qui l'a mesurée, quand) ; elle remplace
+  l'estimation dans les totaux ; un écart de plus de 20 % entre les deux déclenche une question (le tracé
+  correspond-il à la réalité ?).
+- Le dimensionnement (étape 2) n'utilise pas les longueurs ; la demande fournisseur (étape 3) reprend les longueurs
+  de cuivre du plan, avec la phrase d'estimation, via `plan/metre.json`.
+- **Statut : décision d'Adrien** ; la pratique de Loïc (mesure-t-il ses lignes sur chantier, et comment) reste à
+  confirmer.
 
 ## Réponses attendues (six questions posées le 2026-10-06)
 

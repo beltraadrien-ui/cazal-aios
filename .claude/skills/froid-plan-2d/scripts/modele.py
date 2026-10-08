@@ -509,6 +509,18 @@ def _normaliser(donnees: dict) -> dict:
             l[cle] = n.nombre(l, cle, ou, defaut=None)
         l["repere"] = n.texte(l, "repere", ou, defaut=None)
         l["etiquette"] = n.texte(l, "etiquette", ou, defaut=None)
+        # longueur mesurée sur chantier par le frigoriste (décision du 2026-10-08) : retenue par le métré
+        l["longueur_mesuree"] = n.nombre(l, "longueur_mesuree", ou, defaut=None)
+        mesure = l.get("mesure")
+        if mesure is not None and not isinstance(mesure, dict):
+            n.faute(ou, f"« mesure » doit être un objet {{par, date, note}}, trouvé {mesure!r}")
+            l["mesure"] = None
+        elif isinstance(mesure, dict):
+            for cle in ("par", "date", "note"):
+                n.texte(mesure, cle, f"{ou}, mesure")
+            l["mesure"] = dict(mesure)
+        else:
+            l["mesure"] = None
         l["position_etiquette"] = n.point(l.get("position_etiquette"), ou, "position_etiquette", obligatoire=False)
         if pts is None or l["type"] is None:
             continue
@@ -907,6 +919,18 @@ class Plan:
             for h in ("hauteur_depart", "hauteur_passage", "hauteur_arrivee"):
                 if l.get(h) is not None and l[h] < 0:
                     E(f"{nom} : {h} négative.")
+            lm, mesure = l.get("longueur_mesuree"), l.get("mesure")
+            if lm is not None and lm <= 0:
+                E(f"{nom} : longueur mesurée de {nombre_fr(lm)} m : une longueur mesurée est positive (en mètres).")
+            if lm is not None and not (isinstance(mesure, dict) and str(mesure.get("par") or "").strip()
+                                       and str(mesure.get("date") or "").strip()):
+                E(f"{nom} : longueur mesurée sans « mesure » complète : écrire qui l'a mesurée et quand "
+                  '(« mesure » : {"par": "Loïc", "date": "AAAA-MM-JJ", "note": "…"}).')
+            if mesure is not None and lm is None:
+                E(f"{nom} : « mesure » sans « longueur_mesuree » : écrire la longueur mesurée (m) ou retirer « mesure ».")
+            if isinstance(mesure, dict) and mesure.get("date") and not re.fullmatch(r"\d{4}-\d{2}-\d{2}",
+                                                                                    str(mesure["date"])):
+                E(f"{nom} : date de mesure « {mesure['date']} » : format AAAA-MM-JJ attendu.")
             pts = l["points"]
             if len(pts) < 2:
                 E(f"{nom} : il faut au moins deux points (départ et arrivée).")

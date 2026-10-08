@@ -16,6 +16,8 @@ pas dans ce fichier), désurchauffeur (dicté « surchauffeur »), gas cooler (d
 Retiré : le nom de l'autre chantier prévu avant celui-ci dans le planning de Loïc (champ {planning_cazal}, vide par
 défaut : à dicter par Loïc, la phrase n'apparaît que s'il est rempli).
 Aucun nom de client ni coordonnée dans ce fichier : tout vient du dossier par les champs.
+Lot 7 : {phrase_longueurs} (mail) dit que les longueurs de cuivre estimées d'après le plan et le plan du local sont
+dans le PDF ; vide sans plan ni métré, la ligne disparaît. Jamais de tableau de longueurs dans le mail.
 -->
 # Textes par défaut · demande de prix · variante « fabricant »
 
@@ -170,6 +172,7 @@ Puissance frigorifique existante, calculée à partir des plaques des compresseu
 [tu] implantation, planning).
 [vous] Tout le détail, plaques et photos comprises, est dans le PDF joint (chambres, production existante,
 [vous] implantation, planning).
+{phrase_longueurs}
 
 Nous sommes en phase de prix, {nb_entreprises} sociétés en lice : il nous faut une offre assez concurrentielle.
 [tu] Peux-tu nous faire ton offre {delai_reponse} ?

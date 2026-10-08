@@ -20,7 +20,7 @@
     {"id": "L4", "type": "liquide", "calque": "froid_cuivres", "de": "EV2", "a": "GR1",
      "points": [[0, 2.1], [10, 2.1]], "diametre": null, "faisceau": "EV2-GR1"},
     {"id": "L5", "type": "condensats", "calque": "froid_cuivres", "de": "EV1", "a": null,
-     "points": [[0, 0], [0, 1]], "diametre": "à définir par le dimensionnement"},
+     "points": [[0, 0], [0, 1]], "diametre": "à définir par le fournisseur"},
     {"id": "L6", "type": "cable", "calque": "electricite", "de": "EV1", "a": "TD",
      "points": [[0, 0], [0, 5]], "diametre": "3G1,5"}
   ]

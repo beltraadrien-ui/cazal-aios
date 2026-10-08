@@ -15,7 +15,7 @@ Python :
     controles = controler(dossier, "v1")            # [Controle(numero, titre, statut, resume, details)]
     print(rapport(controles, "<nom du dossier>", "v1"))
 
-Les six contrôles :
+Les sept contrôles :
  1. Anonymisation (si demande.json dit "anonymise": true) : aucun identifiant du client lu dans
     identifiants-client.json (liste « recherches » : nom, mots distinctifs, adresse, rue, code postal, localité,
     téléphone, mail et domaine, n° de fiche, slug) n'apparaît, en majuscules, sans accents ou sans espaces, dans
@@ -34,6 +34,18 @@ Les six contrôles :
  5. Mail : mail-<variante>.txt existe, objet non vide, aucun « | » ni « <table » (ni dans le .html), il cite au moins
     un chiffre clé, chaque nombre avec unité qu'il cite existe dans 2-resultats.json (même rendu), il renvoie au PDF.
  6. Annexes : annexes.pieces_jointes (liste) et annexes.plan_implantation (texte non vide) présents dans demande.json.
+    Plan du local (Lot 7) : si plan/plan.pdf existe, il est dans annexes.documents ; chaque document existe, son titre
+    est dans le texte du PDF, le mail cite le plan ; le PDF final a exactement les pages d'Edge (lues dans la
+    pagination « Page k / N » du pied de page) + les pages d'annexe, chaque page d'annexe est A4, a la taille de la
+    page source et en reprend le texte (≥ 80 % des mots ; le cartouche anonymisé en change quelques-uns).
+ 7. Longueurs de cuivre (Lot 7), sans objet pour une demande antérieure (ni champ « longueurs » ni plan/metre.json) :
+    (a) les longueurs de demande.json et celles du chapitre du PDF (chaque ligne puis le total de chaque réseau, dans
+    l'ordre) sont celles des réseaux cuivre_froid et cuivre_clim de plan/metre.json, à 0,01 m près, même version du
+    plan ; (b) la phrase d'estimation et « Diamètres et charge de fluide à définir par vos soins. » sont dans le texte
+    du PDF ; (c) sans metre.json : aucun chapitre ni tableau de longueurs, et la ligne « Longueurs de lignes non
+    relevées, à estimer par vos soins. » dans le PDF ; (e) « (mesurée) » exactement sur les longueurs d'origine
+    « mesuree » (lignes, et total d'un réseau entièrement mesuré) ; le mail cite les longueurs si et seulement si
+    elles existent, sans tableau.
 
 Dépendances : PyMuPDF ; generer_livrable.py (même dossier) ; valeur.py du skill froid-dimensionnement.
 """
@@ -57,6 +69,8 @@ for _chemin in (ICI, ICI.parents[1] / "froid-dimensionnement" / "scripts"):
     if str(_chemin) not in sys.path:
         sys.path.insert(0, str(_chemin))
 import generer_livrable as gl  # noqa: E402
+from assembler import (FAMILLES_CUIVRE, PHRASE_DIAMETRES, PHRASE_NON_RELEVEES,  # noqa: E402
+                       TITRE_ANNEXE_PLAN)
 from valeur import DECIMALES, DECIMALES_DEFAUT, Valeur, depuis_json, nombre_fr  # noqa: E402
 
 OK, ECHEC, SANS_OBJET = "OK", "ÉCHEC", "sans objet"
@@ -84,6 +98,13 @@ RE_MULTIPLICATEUR = re.compile(rf"^[{ESPACES}]*[×x][{ESPACES}]")
 RE_REF_PHOTO = re.compile(r"(?<![A-Za-z0-9])(p\d{2,}-\d+)(?!\d)")
 RE_TABLEAU_PHOTOS = re.compile(r"^#{2,3}\s+(B2|B|C)\b")
 RE_IMG = re.compile(r"<img\b[^>]*?\bsrc=\"([^\"]*)\"", re.I)
+# Lot 7 : pagination d'Edge, longueurs du chapitre (« 4,21 », « 1 234,50 », « 12,00 (mesurée) » ; unité dans l'en-tête)
+RE_PAGINATION = re.compile(r"Page\s+(\d+)\s*/\s*(\d+)")
+RE_LONGUEUR = re.compile(r"(?<![\d,.])(\d{1,3}(?:[\u00a0\u202f]\d{3})*,\d{2})(?![\d,])"
+                         r"(?:[ \u00a0]?(\(mesurée\)))?")
+MARQUE_MESUREE = "(mesurée)"
+TOLERANCE_M = 0.01
+PART_MOTS_ANNEXE = 0.8
 
 
 @dataclass
@@ -112,6 +133,8 @@ class Livrable:
     texte_pdf: str | None = None        # None : PDF absent ou illisible
     pages_pdf: int | None = None
     erreur_pdf: str = ""
+    textes_pages: list[str] = field(default_factory=list)                  # texte de chaque page
+    tailles_pages: list[tuple[float, float]] = field(default_factory=list)  # (largeur, hauteur) en points
 
 
 class ErreurControle(Exception):
@@ -173,6 +196,30 @@ def textes_json(obj, chemin: str = "") -> list[tuple[str, str]]:
 
 def mo_fr(mo: float) -> str:
     return f"{mo:.2f}".replace(".", ",")
+
+
+def compacter(texte: str) -> str:
+    """Texte du PDF avec chaque suite d'espaces et de retours à la ligne réduite à un caractère : une espace
+    insécable si la suite en contient une (et pas de retour à la ligne), une espace sinon. Les insécables des
+    nombres (« 1 234,50 ») restent donc distinguables des espaces ordinaires."""
+    def un(m):
+        s = m.group()
+        return "\u00a0" if ("\u00a0" in s or "\u202f" in s) and "\n" not in s else " "
+    return re.sub(r"[ \t\r\n\u00a0\u202f]+", un, texte or "")
+
+
+def motif_phrase(phrase: str) -> re.Pattern:
+    """Motif d'une phrase dans le texte compacté : mots identiques, séparés par n'importe quelle espace."""
+    return re.compile(r"[ \u00a0]+".join(re.escape(m) for m in str(phrase).split()))
+
+
+def m_fr(x: float) -> str:
+    return f"{x:.2f}".replace(".", ",") + " m"
+
+
+def mots(texte: str) -> set[str]:
+    """Mots de 3 caractères ou plus, normalisés (comparaison d'une page d'annexe avec sa source)."""
+    return set(re.findall(r"[^\W_]{3,}", normaliser(texte)))
 
 
 def extrait(texte: str, debut: int, fin: int, marge: int = 30) -> str:
@@ -237,7 +284,9 @@ def charger(dossier: Path | str, version: str) -> Livrable:
         with pymupdf.open(liv.pdf) as doc:
             liv.pages_pdf = doc.page_count
             meta = [str(v) for k, v in (doc.metadata or {}).items() if k in METADONNEES_PDF and v]
-            liv.texte_pdf = "\n".join([p.get_text() for p in doc] + meta)
+            liv.textes_pages = [p.get_text() for p in doc]
+            liv.tailles_pages = [(p.rect.width, p.rect.height) for p in doc]
+            liv.texte_pdf = "\n".join(liv.textes_pages + meta)
     except Exception as e:                                  # PDF tronqué, chiffré, pas un PDF
         liv.erreur_pdf = f"{liv.pdf.name} ne s'ouvre pas ({e})"
     return liv
@@ -493,17 +542,237 @@ def controle_annexes(liv: Livrable) -> Controle:
         c.echec("annexes.plan_implantation absent ou vide (« à suivre » en V1)")
     c.resume = (f"plan d'implantation : {annexes.get('plan_implantation') or '—'} ; pièces jointes : "
                 f"{len(annexes.get('pieces_jointes') or []) or 'aucune'}")
+    docs = annexes.get("documents")
+    plan_dossier = liv.dossier / "plan" / "plan.pdf"
+    if docs is None:                                     # demande.json antérieur au Lot 7
+        if plan_dossier.is_file():
+            c.echec("plan/plan.pdf existe mais demande.json n'a pas d'annexes.documents (antérieur au Lot 7) : "
+                    "relancer assembler.py puis generer_livrable.py")
+        return c
+    if not isinstance(docs, list):
+        c.echec("annexes.documents : liste attendue")
+        return c
+    if plan_dossier.is_file() and not any(isinstance(d, dict) and d.get("type") == "plan" for d in docs):
+        c.echec("plan/plan.pdf existe mais n'est pas en annexe de la demande : relancer assembler.py puis "
+                "generer_livrable.py")
+    if docs:
+        verifier_annexes_pdf(liv, c, docs)
+    return c
+
+
+def pages_edge(textes: list[str]) -> int | None:
+    """Nombre de pages imprimées par Edge, lu dans la pagination « Page k / N » du pied de page (None si absente ou
+    incohérente)."""
+    totaux = {int(m.group(2)) for t in textes for m in RE_PAGINATION.finditer(t)}
+    return totaux.pop() if len(totaux) == 1 else None
+
+
+def verifier_annexes_pdf(liv: Livrable, c: Controle, docs: list) -> None:
+    """(d) Pages d'annexe à la fin du PDF : nombre, format A4, taille et texte de la page source ; titres listés dans
+    le PDF ; plan cité dans le mail."""
+    sources = []
+    for d in docs:
+        if not isinstance(d, dict):
+            c.echec("annexes.documents : objet attendu")
+            continue
+        chemin = (liv.dv / str(d.get("fichier") or "")).resolve()
+        if not chemin.is_file():
+            c.echec(f"annexe « {d.get('titre')} » introuvable : {d.get('fichier')} (relatif à {liv.dv.name}/)")
+            continue
+        sources.append((d, chemin, int(d.get("pages") or 1)))
+    if liv.texte_pdf is None or liv.pages_pdf is None:
+        c.echec(f"annexes non vérifiées dans le PDF : {liv.erreur_pdf or 'PDF illisible'}")
+        return
+    texte = compacter(liv.texte_pdf)
+    for d, _, _ in sources:
+        if not motif_phrase(d.get("titre") or TITRE_ANNEXE_PLAN).search(texte):
+            c.echec(f"titre de l'annexe « {d.get('titre')} » absent du texte du PDF (liste des annexes)")
+    n_annexes = sum(n for _, _, n in sources)
+    edge = pages_edge(liv.textes_pages)
+    if edge is None:
+        c.echec("pagination « Page k / N » d'Edge introuvable ou incohérente : nombre de pages d'Edge inconnu, "
+                "annexe non vérifiable (relancer generer_livrable.py)")
+        return
+    if liv.pages_pdf != edge + n_annexes:
+        c.echec(f"{liv.pdf.name} : {liv.pages_pdf} pages pour {edge} pages d'Edge + {n_annexes} page(s) d'annexe "
+                "(annexe absente ou en double : relancer generer_livrable.py avec Edge ou Chrome)")
+        return
+    debut = edge
+    for d, chemin, n in sources:
+        with pymupdf.open(chemin) as source:
+            for k in range(min(n, source.page_count)):
+                i = debut + k
+                largeur, hauteur = liv.tailles_pages[i]
+                if not gl.est_a4(pymupdf.Rect(0, 0, largeur, hauteur)):
+                    c.echec(f"page {i + 1} (annexe « {d.get('titre')} ») hors format A4 : {largeur:.0f} × {hauteur:.0f} pt")
+                r = source[k].rect
+                if abs(r.width - largeur) > 1 or abs(r.height - hauteur) > 1:
+                    c.echec(f"page {i + 1} : {largeur:.0f} × {hauteur:.0f} pt, la page {k + 1} de {chemin.name} fait "
+                            f"{r.width:.0f} × {r.height:.0f} pt (mise à l'échelle ?)")
+                attendus = mots(source[k].get_text())
+                if attendus and len(attendus & mots(liv.textes_pages[i])) / len(attendus) < PART_MOTS_ANNEXE:
+                    c.echec(f"page {i + 1} : ne reprend pas le texte de la page {k + 1} de {chemin.name}")
+        debut += n
+    variante = gl.slug(liv.demande.get("variante") or "grossiste")
+    mail = liv.dv / f"mail-{variante}.txt"
+    if mail.is_file() and "plan du local" not in mail.read_text(encoding="utf-8").lower():
+        c.echec(f"{mail.name} ne cite pas le plan du local joint en annexe")
+    if c.statut == OK:
+        c.resume += (f" ; annexe(s) en fin de PDF : " + ", ".join(str(d.get("titre")) for d, _, _ in sources)
+                     + f" (page{'s' if n_annexes > 1 else ''} {edge + 1}"
+                     + (f" à {edge + n_annexes}" if n_annexes > 1 else "") + f", après {edge} pages d'Edge)")
+
+
+# ── 7. Longueurs de cuivre ──────────────────────────────────────────────────────────────────────────
+
+def reseaux_cuivre(metre: dict) -> list[dict]:
+    """Réseaux cuivre_froid et cuivre_clim de metre.json (lecture indépendante d'assembler.py) :
+    [{"cle", "lignes": [(total, mesurée ?)], "total", "mesure"}] ; réseau sans ligne ignoré."""
+    reseaux = []
+    for r in metre.get("reseaux") or []:
+        if not isinstance(r, dict) or r.get("famille") not in FAMILLES_CUIVRE or not r.get("lignes"):
+            continue
+        lignes = [(float(l["total_m"]), l.get("origine") == "mesuree") for l in r["lignes"]]
+        reseaux.append({"cle": r.get("cle"), "lignes": lignes, "total": float(r["total_m"]),
+                        "mesure": all(m for _, m in lignes)})
+    return reseaux
+
+
+def controle_longueurs(liv: Livrable) -> Controle:
+    c = Controle(7, "Longueurs de cuivre")
+    lg = liv.demande.get("longueurs")
+    chemin_metre = liv.dossier / "plan" / "metre.json"
+    if lg is None:
+        if chemin_metre.is_file():
+            c.echec("plan/metre.json existe mais demande.json n'a pas de longueurs (antérieur au Lot 7) : relancer "
+                    "assembler.py puis generer_livrable.py")
+        else:
+            c.statut, c.resume = SANS_OBJET, "demande.json antérieur aux longueurs de cuivre, sans plan/metre.json"
+        return c
+    if not isinstance(lg, dict):
+        c.echec("longueurs : objet attendu dans demande.json")
+        return c
+    if liv.texte_pdf is None:
+        c.echec(f"longueurs non vérifiées dans le PDF : {liv.erreur_pdf or 'PDF illisible'}")
+        return c
+    texte = compacter(liv.texte_pdf)
+    page = liv.page.read_text(encoding="utf-8") if liv.page.is_file() else ""
+    variante = gl.slug(liv.demande.get("variante") or "grossiste")
+    chemin_mail = liv.dv / f"mail-{variante}.txt"
+    mail = chemin_mail.read_text(encoding="utf-8").lower() if chemin_mail.is_file() else ""
+    titre_chapitre = motif_phrase(gl.TITRES_CHAPITRES["longueurs"])
+
+    if not chemin_metre.is_file():
+        # (c) sans métré : aucun tableau, la ligne « non relevées »
+        if not lg.get("absentes"):
+            c.echec("demande.json porte des longueurs alors que plan/metre.json n'existe pas (retiré ?) : relancer "
+                    "assembler.py")
+        if not motif_phrase(PHRASE_NON_RELEVEES).search(texte):
+            c.echec(f"ligne « {PHRASE_NON_RELEVEES} » absente du texte du PDF")
+        if titre_chapitre.search(texte) or 'id="longueurs"' in page or "donnees longueurs" in page:
+            c.echec("chapitre ou tableau de longueurs dans le livrable sans plan/metre.json")
+        if MARQUE_MESUREE in texte:
+            c.echec(f"« {MARQUE_MESUREE} » dans le PDF sans plan/metre.json")
+        if "longueurs de cuivre" in mail:
+            c.echec(f"{chemin_mail.name} cite des longueurs de cuivre qui n'existent pas")
+        c.resume = "pas de plan/metre.json : ligne « non relevées » dans le PDF, aucun tableau de longueurs" \
+            if c.statut == OK else "pas de plan/metre.json"
+        return c
+
+    try:
+        metre = json.loads(chemin_metre.read_text(encoding="utf-8"))
+        attendus = reseaux_cuivre(metre)
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+        c.echec(f"plan/metre.json illisible ou hors contrat ({type(e).__name__} : {e})")
+        return c
+    if not attendus:                                     # métré sans cuivre : traité comme « non relevées »
+        if not lg.get("absentes"):
+            c.echec("demande.json porte des longueurs, plan/metre.json n'a aucun réseau de cuivre")
+        if not motif_phrase(PHRASE_NON_RELEVEES).search(texte):
+            c.echec(f"ligne « {PHRASE_NON_RELEVEES} » absente du texte du PDF")
+        c.resume = "plan/metre.json sans réseau de cuivre : longueurs « non relevées »"
+        return c
+    if lg.get("absentes"):
+        c.echec("plan/metre.json a des réseaux de cuivre mais demande.json dit les longueurs absentes : relancer "
+                "assembler.py puis generer_livrable.py")
+        return c
+
+    # (a) demande.json = metre.json
+    if lg.get("plan_version") != metre.get("plan_version"):
+        c.echec(f"demande.json reprend le plan v{lg.get('plan_version')}, plan/metre.json est à la v"
+                f"{metre.get('plan_version')} : relancer assembler.py")
+    if str(lg.get("phrase") or "").strip() != str(metre.get("phrase") or lg.get("phrase") or "").strip():
+        c.echec("phrase d'estimation de demande.json différente de celle de plan/metre.json")
+    recus = lg.get("reseaux") or []
+    if [r.get("cle") for r in recus] != [r["cle"] for r in attendus]:
+        c.echec(f"réseaux de demande.json {[r.get('cle') for r in recus]} au lieu de {[r['cle'] for r in attendus]} "
+                "(cuivre froid et clim de plan/metre.json, sans électricité ni réseaux libres)")
+    else:
+        for r, a in zip(recus, attendus):
+            lignes = r.get("lignes") or []
+            if len(lignes) != len(a["lignes"]):
+                c.echec(f"réseau {a['cle']} : {len(lignes)} ligne(s) dans demande.json, {len(a['lignes'])} dans "
+                        "plan/metre.json")
+                continue
+            for k, (l, (total, mesure)) in enumerate(zip(lignes, a["lignes"]), 1):
+                if not isinstance(l.get("total_m"), (int, float)) or abs(l["total_m"] - total) > TOLERANCE_M + 1e-9:
+                    c.echec(f"réseau {a['cle']}, ligne {k} : {l.get('total_m')} m dans demande.json, "
+                            f"{m_fr(total)} dans plan/metre.json")
+                if (l.get("origine") == "mesuree") != mesure:
+                    c.echec(f"réseau {a['cle']}, ligne {k} : origine « {l.get('origine')} » dans demande.json, "
+                            f"« {'mesuree' if mesure else 'estimee'} » dans plan/metre.json")
+            if not isinstance(r.get("total_m"), (int, float)) or abs(r["total_m"] - a["total"]) > TOLERANCE_M + 1e-9:
+                c.echec(f"réseau {a['cle']} : total {r.get('total_m')} m dans demande.json, {m_fr(a['total'])} dans "
+                        "plan/metre.json")
+
+    # (b) phrases dans le PDF
+    debut = motif_phrase(lg.get("phrase") or "").search(texte) if lg.get("phrase") else None
+    if debut is None:
+        c.echec("phrase d'estimation des longueurs absente du texte du PDF")
+    fin = motif_phrase(PHRASE_DIAMETRES).search(texte, debut.end() if debut else 0)
+    if fin is None:
+        c.echec(f"« {PHRASE_DIAMETRES} » absente du texte du PDF (après la phrase d'estimation)")
+    if debut is None or fin is None:
+        return c
+
+    # (a) et (e) : longueurs et marques « (mesurée) » du chapitre, dans l'ordre
+    segment = texte[debut.end():fin.start()]
+    trouvees = [(float(re.sub(r"[\u00a0\u202f]", "", m.group(1)).replace(",", ".")), bool(m.group(2)))
+                for m in RE_LONGUEUR.finditer(segment)]
+    attendues = []
+    for a in attendus:
+        attendues += [(a["cle"], f"ligne {k}", t, m) for k, (t, m) in enumerate(a["lignes"], 1)]
+        attendues.append((a["cle"], "total", a["total"], a["mesure"]))
+    if len(trouvees) != len(attendues):
+        c.echec(f"chapitre des longueurs du PDF : {len(trouvees)} longueur(s) lue(s), {len(attendues)} attendue(s) "
+                f"({len(attendus)} réseau(x) de cuivre de plan/metre.json, lignes et totaux)")
+    for (valeur, marque), (cle, ou, total, mesure) in zip(trouvees, attendues):
+        if abs(valeur - total) > TOLERANCE_M + 1e-9:
+            c.echec(f"PDF, réseau {cle}, {ou} : {m_fr(valeur)} au lieu de {m_fr(total)} (plan/metre.json)")
+        if marque != mesure:
+            c.echec(f"PDF, réseau {cle}, {ou} : « {MARQUE_MESUREE} » " + ("en trop (longueur estimée)" if marque
+                                                                          else "manquante (longueur mesurée)"))
+    if segment.count(MARQUE_MESUREE) != sum(1 for *_, m in attendues if m):
+        c.echec(f"chapitre des longueurs : {segment.count(MARQUE_MESUREE)} marque(s) « {MARQUE_MESUREE} » pour "
+                f"{sum(1 for *_, m in attendues if m)} longueur(s) mesurée(s)")
+    if "longueurs de cuivre estimées" not in mail:
+        c.echec(f"{chemin_mail.name} ne dit pas que les longueurs de cuivre estimées sont dans le PDF")
+    if c.statut == OK:
+        mesurees = sum(1 for *_, m in attendues if m)
+        c.resume = (f"{len(attendues)} longueurs (plan v{metre.get('plan_version')}, {len(attendus)} réseau(x) de "
+                    f"cuivre) identiques à plan/metre.json ; {mesurees} marquée(s) « {MARQUE_MESUREE} » ; phrases "
+                    "d'estimation et des diamètres présentes")
     return c
 
 
 # ── Ensemble ────────────────────────────────────────────────────────────────────────────────────────
 
 CONTROLES = (controle_anonymisation, controle_chiffres, controle_plaques, controle_pdf, controle_mail,
-             controle_annexes)
+             controle_annexes, controle_longueurs)
 
 
 def controler(dossier: Path | str, version: str) -> list[Controle]:
-    """Les six contrôles du livrable <dossier>/3-demande-fournisseur/<version>/ ; lève ErreurControle si rien n'est
+    """Les sept contrôles du livrable <dossier>/3-demande-fournisseur/<version>/ ; lève ErreurControle si rien n'est
     contrôlable. Un contrôle qui plante devient un échec expliqué (les autres continuent)."""
     return controler_livrable(charger(dossier, version))
 

@@ -1,6 +1,6 @@
 ---
 name: froid-demande-fournisseur
-description: Étape 3 du chiffrage d'un remplacement d'installation frigorifique, après le relevé et le dimensionnement validés — prépare la demande de prix aux fournisseurs, un PDF unique (contexte, tableaux, demande, un chapitre par poste avec les photos des plaques légendées, annexes) et un mail court, en variante grossiste anonymisée ou fabricant nommé, chaque chiffre repris de l'étape 2 et contrôlé par script, que Loïc relit et envoie lui-même ; se déclenche sur « prépare la demande », « demande de prix », « mail aux grossistes », « pour Advansor », « étape 3 ».
+description: Étape 3 du chiffrage d'un remplacement d'installation frigorifique, après le relevé et le dimensionnement validés — prépare la demande de prix aux fournisseurs, un PDF unique (contexte, tableaux, longueurs de cuivre estimées d'après le plan s'il existe, demande, un chapitre par poste avec les photos des plaques légendées, annexes, plan du local en dernière page) et un mail court, en variante grossiste anonymisée ou fabricant nommé, chaque chiffre repris de l'étape 2 et contrôlé par script, que Loïc relit et envoie lui-même ; se déclenche sur « prépare la demande », « demande de prix », « mail aux grossistes », « pour Advansor », « étape 3 ».
 ---
 
 # Demande de prix aux fournisseurs — étape 3 du chiffrage (Cazal Réfrigération)
@@ -10,8 +10,10 @@ description: Étape 3 du chiffrage d'un remplacement d'installation frigorifique
 Loïc a validé le relevé (`1-existant.md`, étape 1) et le dimensionnement (`2-dimensionnement.md`, étape 2). Il dit
 à qui il écrit (« prépare la demande pour les grossistes », « pour Advansor, demande-lui les options »). La skill
 produit, dans `3-demande-fournisseur/<vN>/`, **un PDF unique « Demande de prix »** (page de garde, 1. Contexte,
-2. Chambres, 3. Production existante, 4. Évaporateurs, 5. Notre demande, 6. Un chapitre par poste avec les photos
-des plaques légendées à côté, 7. Annexes) et **un mail court sans tableau** qui résume et renvoie au PDF.
+2. Chambres, 3. Production existante, 4. Évaporateurs, 5. Longueurs de cuivre estimées d'après le plan (si l'étape P
+a produit `plan/metre.json`), puis Notre demande, un chapitre par poste avec les photos des plaques légendées à côté,
+Annexes, et en dernière page le plan du local (si `plan/plan.pdf` existe)) et **un mail court sans tableau** qui
+résume et renvoie au PDF.
 **Chaque chiffre vient de `2-resultats.json`**, rendu tel quel ; rien n'est recalculé ni retapé.
 **Aucun envoi automatique, jamais** : Loïc relit, corrige, joint le PDF et envoie lui-même depuis sa messagerie.
 
@@ -25,6 +27,8 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
 - `dimensionnement/savoir/methodes/demande-fournisseur.md` (ce qu'un fournisseur attend, structure, variantes,
   a) à f), anonymisation, poids) et `methodes/regles-loic.md` (R4, R5, R7, R8, R9 à R13).
 - `3-demande-fournisseur/envois.md` : ce qui est déjà parti, à qui (une version envoyée ne se réécrit jamais).
+- `plan/metre.json` et `plan/plan.pdf` s'ils existent (étape P, skill `froid-plan-2d`) : longueurs de cuivre et plan
+  du local repris automatiquement (section « Longueurs de cuivre et plan du local » ci-dessous).
 
 ## Les 8 étapes
 
@@ -48,7 +52,8 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
    (fabricant anonyme), `--version vN`, `--force` (remplacer une version **jamais envoyée**), `--emetteur <json>`.
    Il écrit `3-demande-fournisseur/vN/` (grossiste) ou `vN-fabricant/` : `demande.json` (textes par défaut des
    gabarits `templates/textes-*.md`, tableaux rendus par `Valeur.texte()`, chapitres par poste, photos classées et
-   légendées, anonymisation, pièces jointes), `identifiants-client.json` (ce qui a été cherché et remplacé) et
+   légendées, longueurs de cuivre de `plan/metre.json` et annexe `plan/plan.pdf` s'ils existent, anonymisation,
+   pièces jointes), `identifiants-client.json` (ce qui a été cherché et remplacé) et
    `valeurs-derivees.json` (surfaces L × l et volumes balayés totaux, seuls calculs de l'étape 3, par script).
    Lire chaque « attention » affichée. Code 1 ou 2 : rien n'est écrit, lire le motif.
 
@@ -60,8 +65,9 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
    lui poser à l'étape 8 (en construction :
    les consigner), jamais les remettre telles quelles dans le PDF. Le « remplacement » de chaque poste ne garde que les
    propositions du bloc E qui le concernent.
-   **Jamais un chiffre** : aucun nombre ajouté, modifié ou arrondi ; les tableaux, les puissances, les légendes des
-   photos, les identifiants et l'émetteur ne se touchent pas. Un chiffre faux se corrige à l'étape 2
+   **Jamais un chiffre** : aucun nombre ajouté, modifié ou arrondi ; les tableaux, les puissances, les longueurs de
+   cuivre, les légendes des photos, les identifiants et l'émetteur ne se touchent pas (une longueur fausse se
+   corrige dans `plan/plan.json`, étape P, puis on reprend l'étape 3). Un chiffre faux se corrige à l'étape 2
    (`2-entrees.json`, `calculs.py`), puis on reprend à l'étape 3 ci-dessus (`--force` si la version n'est pas envoyée).
    Variante grossiste : ne réintroduire aucun nom, lieu ou référence du client.
 
@@ -70,19 +76,26 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
    PYTHONUTF8=1 python .claude/skills/froid-demande-fournisseur/scripts/generer_livrable.py dimensionnement/dossiers/<slug> vN
    ```
    (`vN-fabricant` pour la variante fabricant.) Il écrit `demande-vN.html`, `img/` (photos à 800 px, qualité 80),
-   `demande-vN.pdf` (Edge en mode sans tête, Chrome en repli), `mail-<variante>.txt` et `mail-<variante>.html`.
-   Sans navigateur : `--sans-pdf`, puis impression de la page HTML en PDF à la main (Ctrl+P).
+   `demande-vN.pdf` (Edge en mode sans tête, Chrome en repli, puis la page 1 de `plan/plan.pdf` ajoutée à la fin
+   telle quelle par PyMuPDF), `mail-<variante>.txt` et `mail-<variante>.html`.
+   Sans navigateur : `--sans-pdf`, puis impression de la page HTML en PDF à la main (Ctrl+P) ; le plan n'est alors
+   pas fusionné (le contrôle 6 échoue) : le joindre à part.
 
 6. **Contrôler** (obligatoire, après chaque génération) :
    ```
    PYTHONUTF8=1 python .claude/skills/froid-demande-fournisseur/scripts/controler.py dimensionnement/dossiers/<slug> vN
    ```
-   Six contrôles : (1) anonymisation (aucun identifiant du client, ni ses variantes de casse, d'accents ou
-   d'espaces, dans `demande.json`, la page, le mail ni le texte du PDF) ; (2) chaque nombre des tableaux et des
-   puissances par poste existe au même rendu dans `2-resultats.json` ou `valeurs-derivees.json` ; (3) chaque photo
-   des tableaux B, B2, C de l'étape 1 figure une fois, légendée ; (4) PDF lisible, plus d'une page, moins de 5 Mo,
-   pas plus ancien que `demande.json`, aucune image manquante ; (5) mail sans tableau, objet non vide, chiffres clés
-   présents et retrouvés dans `2-resultats.json`, renvoi au PDF ; (6) pièces jointes et plan d'implantation présents.
+   Sept contrôles : (1) anonymisation (aucun identifiant du client, ni ses variantes de casse, d'accents ou
+   d'espaces, dans `demande.json`, la page, le mail ni le texte du PDF, page du plan comprise) ; (2) chaque nombre
+   des tableaux et des puissances par poste existe au même rendu dans `2-resultats.json` ou `valeurs-derivees.json` ;
+   (3) chaque photo des tableaux B, B2, C de l'étape 1 figure une fois, légendée ; (4) PDF lisible, plus d'une page,
+   moins de 5 Mo, pas plus ancien que `demande.json`, aucune image manquante ; (5) mail sans tableau, objet non vide,
+   chiffres clés présents et retrouvés dans `2-resultats.json`, renvoi au PDF ; (6) pièces jointes et plan
+   d'implantation présents ; plan du local en annexe si `plan/plan.pdf` existe : PDF = pages d'Edge + 1, page A4 à
+   la taille et au texte de la page 1 du plan, titre listé dans les annexes, plan cité dans le mail ; (7) longueurs
+   de cuivre : chiffres du chapitre et de `demande.json` = `plan/metre.json` (chaque ligne et chaque total, à
+   0,01 m), phrase d'estimation et ligne des diamètres dans le PDF, « (mesurée) » exactement sur les longueurs
+   mesurées ; sans `metre.json`, aucun tableau et la ligne « non relevées » présente.
    **Sortie 1 = on ne montre rien à Loïc.** On corrige la cause (étape 2, textes de `demande.json`, photo), on
    relance les étapes 5 et 6. On ne modifie jamais le contrôle, la page HTML ni le PDF à la main.
 
@@ -121,6 +134,33 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
    qu'il a envoyé, une ligne dans `3-demande-fournisseur/envois.md` (date, version, variante, destinataires, envoyé
    par, remarque).
 
+## Longueurs de cuivre et plan du local (Lot 7, décision d'Adrien du 2026-10-08)
+
+- **Source** : `plan/metre.json`, écrit par `generer.py` du skill `froid-plan-2d` (contrat dans le plan des Lots 5-6,
+  § 11). Seuls les réseaux de famille `cuivre_froid` (aspiration, liquide, condensats) et `cuivre_clim` sont repris,
+  jamais l'électricité ni les réseaux libres (eau glacée…). Les nombres sont recopiés tels quels (mètres, 2 décimales),
+  rendus « 4,21 » sous l'en-tête « Longueur (m) » (pas d'unité dans les cases).
+- **Toute longueur est une estimation** d'après le plan (tracé et hauteurs de pose), **sauf celle mesurée sur
+  chantier par Loïc** (origine `mesuree`), seule fiable : marquée « (mesurée) » dans sa case. La phrase du métré le
+  dit en tête du chapitre.
+- **Diamètres et charge de fluide : au fournisseur.** Le chapitre finit par « Diamètres et charge de fluide à définir
+  par vos soins. » (les diamètres calculés sont une option future).
+- **Place** : chapitre 5 (4 en variante fabricant) « Longueurs de cuivre (estimées d'après le plan) », après les
+  tableaux de l'existant et avant
+  « Notre demande » (les suivants se renumérotent ; le renvoi « Régulation : voir § N c) » suit). Un tableau par
+  réseau : Tronçon · Type · Longueur (m), puis le total.
+- **Sans `metre.json`** (ou sans réseau de cuivre) : pas de chapitre ; une ligne « Longueurs de lignes non relevées,
+  à estimer par vos soins. » dans « Notre demande », après les points ; rien dans le mail.
+- **Plan du local** : si `plan/plan.pdf` existe, sa **page 1** (le plan à l'échelle, A4) est ajoutée en dernière
+  page du PDF, sans mise à l'échelle (`annexes.documents`, listée dans les annexes : « à imprimer à 100 % »). Elle ne
+  porte pas les numéros de page d'Edge (« Page k / N » ne compte que les pages d'avant). Variante anonymisée : les
+  lignes du cartouche qui portent un identifiant du client sont effacées et réécrites (« Le client : plan froid et
+  clim ») ; un nom écrit en dessin et non en texte ne serait vu que par le vérificateur.
+- **Mail** : une phrase, « Les longueurs de cuivre estimées d'après le plan figurent dans le PDF, avec le plan du
+  local en annexe. » (variantes sans plan ou sans métré) ; jamais de tableau ni de longueur dans le mail.
+- Un nom de tronçon vient du plan (équipements, pièces) : en variante grossiste il passe par la même anonymisation
+  que le reste (un nom d'équipement qui contiendrait le nom du client est masqué).
+
 ## Les deux variantes et le versionnement
 
 | | Grossiste (défaut) | Fabricant de centrale |
@@ -128,7 +168,8 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
 | Destinataire | plusieurs grossistes, non nommés (« Grossistes (consultation) ») | une personne nommée, ex. chez Advansor |
 | Ton | vouvoiement, formel | tutoiement (`--tutoiement`) ou vouvoiement, cordial |
 | Client | **anonymisé** : ni nom, ni adresse, ni localité, ni téléphone, ni mail, ni n° de fiche | chantier nommé, avec sa référence |
-| PDF | chapitres 1 à 7, demande a) à f) | sans le chapitre des évaporateurs (renumérotation) ; options techniques, implantation, planning |
+| PDF | chapitres 1 à 7 (8 avec les longueurs de cuivre), demande a) à f) | sans le chapitre des évaporateurs (renumérotation) ; options techniques, implantation, planning |
+| Plan du local | page 1 du plan en dernière page, cartouche anonymisé | page 1 du plan en dernière page, telle quelle |
 | Mail | résumé, chiffres clés, renvoi au PDF | résumé cordial, options et questions, « phase de prix », renvoi au PDF |
 | Dossier | `v1/`, `v2/`… | `v1-fabricant/`, `v2-fabricant/`… |
 
@@ -168,8 +209,9 @@ questions se posent courtes, dans la conversation, et ses réponses vont dans `d
 
 - **Pas de tableaux dans le mail** (décision du 2026-10-07) : tout est dans le PDF. Une page de tableaux à coller
   dans Outlook reste une **option future**, si un fournisseur la réclame.
-- **Plan d'implantation « à suivre »** et point f) (prix du cuivre K65 pour les métrés) sans plan joint jusqu'au
-  Lot 7 (plans et métrés) ; `annexes.pieces_jointes` est prêt à les recevoir.
+- **Plan d'implantation « à suivre »** tant que l'étape P n'a pas produit `plan/plan.pdf` ; ensuite « plan du local
+  en annexe ». Le métré complet (électricité, croisements, hauteurs) n'est pas joint : seules les longueurs de
+  cuivre le sont. La page du plan ajoutée ne porte pas de numéro de page.
 - **Puissance des évaporateurs non calculée** : « à confirmer par vos calculs » ; températures de chambre inconnues
   → régime « négatif / positif ».
 - **Les photos ne sont pas lues par le contrôle** : un nom visible sur une photo (enseigne, étiquette) n'est vu
@@ -180,7 +222,7 @@ questions se posent courtes, dans la conversation, et ses réponses vont dans `d
 
 - `scripts/assembler.py` : dossier (étapes 1 et 2) → `demande.json`, `identifiants-client.json`, `valeurs-derivees.json`.
 - `scripts/generer_livrable.py` : `demande.json` → page A4, PDF (Edge sans tête), mail `.txt` et `.html`.
-- `scripts/controler.py` : les six contrôles, rapport en français, sortie 0 / 1, `--ouvrir`.
+- `scripts/controler.py` : les sept contrôles, rapport en français, sortie 0 / 1, `--ouvrir`.
 - `templates/textes-grossiste.md`, `templates/textes-fabricant.md` : textes par défaut (champs `{…}`, conditions) ;
   `templates/demande.html` : gabarit du PDF.
 - Dépendances : `valeur.py` et `controles.py` du skill `froid-dimensionnement`, PyMuPDF, Edge ou Chrome déjà installé.

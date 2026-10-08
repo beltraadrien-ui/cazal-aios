@@ -129,6 +129,15 @@ class TestChargement(unittest.TestCase):
         d["hauteurs_validees"] = True
         self.assertEqual(messages(d), [])
 
+    def test_longueur_mesuree_acceptee(self):
+        d = plan_minimal()
+        d["lignes"][0].update(longueur_mesuree=4.5, mesure={"par": "Loïc", "date": "2026-10-08", "note": "au mètre"})
+        plan = depuis_dict(d)
+        self.assertEqual(plan.valider(), [])
+        self.assertEqual(plan.ligne(d["lignes"][0]["id"])["longueur_mesuree"], 4.5)
+        self.assertEqual(plan.ligne(d["lignes"][0]["id"])["mesure"]["par"], "Loïc")
+        self.assertIsNone(plan.ligne(d["lignes"][1]["id"])["longueur_mesuree"])
+
     def test_calques_dans_l_ordre(self):
         d = plan_minimal()
         d["calques_libres"] = [{"cle": "eau_glacee", "nom": "Eau glacée"}, {"cle": "gaine", "nom": "Gaines"}]
@@ -215,6 +224,16 @@ INCOHERENCES = [
     ("regime_inconnu", lambda d: d["chambres_froides"][0].update(regime="tiede"), "régime"),
     ("suffixe_reserve", lambda d: d["equipements"].append({"id": "EV1-txt", "type": "autre", "position": [0, 0]}),
      "sous-élément"),
+    # F1 (2026-10-08) : longueur mesurée sur chantier
+    ("longueur_mesuree_negative", lambda d: d["lignes"][0].update(
+        longueur_mesuree=-2.0, mesure={"par": "Loïc", "date": "2026-10-08"}), "une longueur mesurée est positive"),
+    ("longueur_mesuree_sans_mesure", lambda d: d["lignes"][0].update(longueur_mesuree=4.5), "sans « mesure » complète"),
+    ("mesure_sans_date", lambda d: d["lignes"][0].update(longueur_mesuree=4.5, mesure={"par": "Loïc"}),
+     "sans « mesure » complète"),
+    ("mesure_sans_longueur", lambda d: d["lignes"][0].update(mesure={"par": "Loïc", "date": "2026-10-08"}),
+     "« mesure » sans « longueur_mesuree »"),
+    ("date_de_mesure", lambda d: d["lignes"][0].update(longueur_mesuree=4.5,
+                                                       mesure={"par": "Loïc", "date": "8 octobre"}), "AAAA-MM-JJ"),
 ]
 
 ILLISIBLES = [
@@ -224,6 +243,8 @@ ILLISIBLES = [
     ("ligne_sans_points", lambda d: d["lignes"][0].pop("points"), "« points »"),
     ("murs_pas_une_liste", lambda d: d.update(murs={"M1": {}}), "liste"),
     ("cote_sans_valeur", lambda d: d["cotes"][0].pop("valeur"), "« valeur »"),
+    ("longueur_mesuree_texte", lambda d: d["lignes"][0].update(longueur_mesuree="12 m"), "« longueur_mesuree »"),
+    ("mesure_pas_un_objet", lambda d: d["lignes"][0].update(longueur_mesuree=4.5, mesure="Loïc"), "« mesure »"),
 ]
 
 

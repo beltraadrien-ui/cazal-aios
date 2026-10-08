@@ -11,7 +11,7 @@ le PDF est mesuré avec PyMuPDF (règle n° 1 : « 15 m de cuivre annoncés = 15
 | E3 | barre d'échelle (longueur exacte à 0,5 px, texte) et règle de contrôle de 100 mm (393,70 px à 0,5 px) |
 | E4 | toute la géométrie dans la zone utile (cartouche dans le cartouche) |
 | E5 | complétude : chambres (porte, évaporateur, aspiration + liquide vers groupe/centrale, condensats, câble vers un tableau) ; splits (gaz + liquide vers un moteur, câble) ; `exigences` → avertissement motivé |
-| E6 | métré recalculé depuis les points RELUS = tableaux de la page « Métré » et de `metre-detail.md` (ligne par ligne, totaux, diamètres) et de `plan.md` (un tableau par réseau : chaque tronçon dans l'ordre, ligne de total, récapitulatif) |
+| E6 | métré recalculé depuis les points RELUS = tableaux de la page « Métré » et de `metre-detail.md` (ligne par ligne, totaux, diamètres) et de `plan.md` (un tableau par réseau : chaque tronçon dans l'ordre, ligne de total, récapitulatif) et `metre.json` (lignes, réseaux, types, récapitulatif, origine) ; phrase « Toutes les longueurs sont des estimations… » en tête du métré de `plan.md` et de la page « Métré » ; « (mesurée) » exactement sur les totaux des lignes mesurées (plan.json), plus de « (hyp.) » dans `plan.md` ni la page « Métré » ; mesure à plus de 20 % de l'estimation du plan → avertissement (et question dans `plan.md`) |
 | E7 | ellipses du calque « Croisements » = groupes recalculés (repères G, même nombre, centre à 0,05 m) ; tableaux de la page « Métré » et de `metre-detail.md` = croisements individuels (point à 0,05 m, colonne Repère) ; `plan.md` : une ligne par repère G |
 | E8 | lisibilité : aucune boîte de texte sur une autre, sur une porte ou sur un équipement (sauf son propre élément) ; avertissement si un texte est posé sur le trait d'un autre élément (ligne, cote, attache, flèche) |
 | E9 | cohérence : calques présents, rien sur l'emprise d'une porte ou d'une fenêtre, extrémités à 0,15 m de leur équipement, évaporateur face à la porte (avertissement), modèle valide |
@@ -38,6 +38,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import croisements as crx  # noqa: E402
 import drawio  # noqa: E402
+import generer  # noqa: E402
 import geometrie as geo  # noqa: E402
 import metre as mtr  # noqa: E402
 import modele as mod  # noqa: E402
@@ -73,6 +74,16 @@ FACTEUR_PNG = 2                                   # 200 dpi = 2 px par px draw.i
 TITRE_CROISEMENTS_PAGE = "Croisements entre réseaux"
 TITRE_CROISEMENTS_MD = "Croisements"              # section de plan.md : une ligne « - **G1**, … » par repère
 TITRE_CROISEMENTS_DETAIL = "Croisements et recouvrements"   # section de metre-detail.md : tableau par croisement
+TITRE_METRE_MD = "Métré"                          # section de plan.md : la phrase des longueurs en tête
+CLES_METRE_JSON = ("version", "genere_le", "plan_version", "dossier", "echelle", "phrase", "hauteurs_validees",
+                   "reseaux", "par_type", "recapitulatif")
+CLES_LIGNE_JSON = ("id", "troncon", "de", "a", "type", "type_nom", "en_plan_m", "chemin_m", "vertical_m", "reserve_m",
+                   "total_m", "origine", "estimation_plan_m", "longueur_mesuree_m", "mesure", "diametre")
+NOMBRES_LIGNE_JSON = ("en_plan_m", "chemin_m", "vertical_m", "reserve_m", "total_m", "estimation_plan_m",
+                      "longueur_mesuree_m")
+CONSEIL_METRE_JSON = "metre.json ne correspond plus au dessin : regénérer (generer.py) ; jamais d'écriture à la main."
+CONSEIL_MARQUE = ("Regénérer le plan ; une longueur mesurée s'écrit dans plan.json (longueur_mesuree + mesure), "
+                  "jamais dans les tableaux.")
 
 
 class FichierManquant(Exception):
@@ -122,8 +133,8 @@ def _ptx(v) -> str:
 # Outils de lecture
 # ======================================================================
 def lire_nombre(texte: str) -> float | None:
-    """« 1 234,50 (hyp.) » → 1234.5 ; None si illisible."""
-    t = str(texte).replace("**", "").replace("(hyp.)", "").replace("(hyp)", "")
+    """« 1 234,50 (hyp.) » ou « 4,50 (mesurée) » → 1234.5 / 4.5 ; None si illisible."""
+    t = str(texte).replace("**", "").replace("(hyp.)", "").replace("(hyp)", "").replace(mtr.MARQUE_MESUREE.strip(), "")
     t = re.sub(r"[\s\u00a0\u202f]", "", t).replace(",", ".").replace("\u2212", "-")
     try:
         return float(t)
@@ -168,6 +179,23 @@ def rangs_markdown(md: str, titre: str) -> list[list[str]] | None:
 def texte_section(md: str, titre: str) -> str:
     m = re.search(r"^#{2,4}\s+" + re.escape(titre) + r"\s*$(.*?)(?=^#{1,4}\s|\Z)", md, flags=re.S | re.M)
     return m.group(1) if m else ""
+
+
+def _controler_marque(R: "Rapport", element: str, cellule: str, attendue: bool) -> None:
+    """« (mesurée) » dans une case de total ⇔ toutes les lignes de ce total sont mesurées sur chantier (plan.json)."""
+    if (mtr.MARQUE_MESUREE.strip() in str(cellule)) != attendue:
+        R.erreur("E6", f"{element} · marque", "« (mesurée) » (longueur mesurée sur chantier, plan.json)" if attendue
+                 else "sans « (mesurée) » (longueur estimée d'après le plan)", str(cellule).replace("**", "") or "vide",
+                 CONSEIL_MARQUE)
+
+
+def phrase_page_metre(lecture) -> str | None:
+    """Texte de la phrase écrite sous le titre de la page « Métré » (cellule `metre-phrase`) ; None si absente."""
+    page = next((p for p in lecture.pages if p.get("id") == "metre" or p.get("nom") == "Métré"), None)
+    for c in (page or {}).get("cellules") or []:
+        if c.get("id") == drawio.ID_PHRASE_METRE:
+            return drawio.texte_brut(c.get("valeur") or "")
+    return None
 
 
 def boite_e8(e: dict) -> tuple[float, float, float, float] | None:
@@ -515,6 +543,7 @@ def _comparer_reseaux(ctx: Contexte, rangs: list[list[str]] | None, source: str)
         R.erreur("E6", source, "colonnes Ligne, En plan, Dans le chemin, Vertical, Réserve, Total", " | ".join(entete),
                  "Regénérer le plan.")
         return
+    i_total = next(c[0] for c in cols if c[1] == "total_m")
     lignes_tab, totaux_tab = {}, {}
     for r in rangs[1:]:
         if len(r) <= max(i_l, *(c[0] for c in cols)):
@@ -534,11 +563,11 @@ def _comparer_reseaux(ctx: Contexte, rangs: list[list[str]] | None, source: str)
             if v is None or abs(v - l[cle]) > TOL_M + 1e-6:
                 R.erreur("E6", f"{source} · {lid}", f"{nom} = {mtr.nombre_fr(l[cle])} (recalcul depuis le dessin)",
                          r[i], "Le tableau ne correspond plus au dessin : regénérer (generer.py).")
+        _controler_marque(R, f"{source} · {lid}", r[i_total], l["origine"] == mtr.MESUREE)
     for lid in lignes_tab:
         if lid not in m.lignes:
             R.erreur("E6", f"{source} · {lid}", "ligne présente dans le dessin", "ligne du tableau absente du dessin",
                      "Regénérer le plan.")
-    i_total = next(c[0] for c in cols if c[1] == "total_m")
     for res in m.par_reseau.values():
         r = totaux_tab.get(res["nom"])
         if r is None:
@@ -550,6 +579,7 @@ def _comparer_reseaux(ctx: Contexte, rangs: list[list[str]] | None, source: str)
             if v is None or abs(v - res[cle]) > tol:
                 R.erreur("E6", f"{source} · Total {res['nom']}", f"{nom} = {mtr.nombre_fr(res[cle])} (recalcul)",
                          r[i], "Regénérer le plan.")
+        _controler_marque(R, f"{source} · Total {res['nom']}", r[i_total], res["origine"] == mtr.MESUREE)
         valeurs = [lire_nombre(lignes_tab[i][i_total]) for i in res["lignes"] if i in lignes_tab]
         total_tab = lire_nombre(r[i_total])
         if None not in valeurs and total_tab is not None and abs(sum(valeurs) - total_tab) > 0.005 + 1e-6:
@@ -573,6 +603,9 @@ def _comparer_diametres(ctx: Contexte, rangs: list[list[str]] | None, source: st
     tab = {(r[i_t], r[i_d]): r[i_v] for r in rangs[1:] if len(r) > max(i_d, i_t, i_v)}
     for d in m.par_diametre.values():
         cle = (d["libelle_type"], d["diametre"])
+        if cle in tab:
+            _controler_marque(R, f"{source} · {d['libelle_type']} {d['diametre']}", tab[cle],
+                              m.origine(d["lignes"]) == mtr.MESUREE)
         v = lire_nombre(tab.pop(cle)) if cle in tab else None
         if v is None or abs(v - d["total_m"]) > TOL_M * max(1, len(d["lignes"])) + 1e-6:
             R.erreur("E6", f"{source} · {d['libelle_type']} {d['diametre']}",
@@ -615,6 +648,16 @@ def _comparer_plan_md(ctx: Contexte) -> None:
             continue
         corps = [r for r in rangs[1:] if r and _sans_gras(r[0]) != "Total"]
         total = next((r for r in rangs[1:] if r and _sans_gras(r[0]) == "Total"), None)
+        if any("(hyp" in c for r in rangs[1:] for c in r):
+            R.erreur("E6", f"{source} · (hyp.)", "aucune « (hyp.) » : la phrase en tête du métré annonce les "
+                     "estimations (décision du 2026-10-08)", "« (hyp.) » dans le tableau", "Regénérer le plan.")
+        i_tot = next(c[0] for c in cols if c[1] == mtr.COL_TOTAL)
+        for lid, r in zip(res["lignes"], corps):
+            _controler_marque(R, f"{source} · {lid}", r[i_tot] if i_tot < len(r) else "",
+                              m.lignes[lid]["origine"] == mtr.MESUREE)
+        if total is not None:
+            _controler_marque(R, f"{source} · Total {nom}", total[i_tot] if i_tot < len(total) else "",
+                              res["origine"] == mtr.MESUREE)
         if len(corps) != len(res["lignes"]):
             R.erreur("E6", f"{source} · tronçons", f"{len(res['lignes'])} tronçon(s) (recalcul depuis le dessin)",
                      f"{len(corps)} dans le tableau", "Regénérer le plan.")
@@ -654,8 +697,13 @@ def _comparer_plan_md(ctx: Contexte) -> None:
         R.erreur("E6", source, f"colonnes {mtr.COL_RESEAU}, {mtr.COL_TOTAL}", " | ".join(entete), "Regénérer le plan.")
         return
     tab = {_sans_gras(r[i_r]): r[i_t] for r in rangs[1:] if len(r) > max(i_r, i_t)}
+    if any("(hyp" in c for c in tab.values()):
+        R.erreur("E6", f"{source} · (hyp.)", "aucune « (hyp.) » (décision du 2026-10-08)", "« (hyp.) » dans le tableau",
+                 "Regénérer le plan.")
     for cle, res in m.par_reseau.items():
         nom = mtr.nom_reseau_lisible(cle, ctx.relu)
+        if nom in tab:
+            _controler_marque(R, f"{source} · {nom}", tab[nom], res["origine"] == mtr.MESUREE)
         v = lire_nombre(tab.pop(nom)) if nom in tab else None
         if v is None or abs(v - res["total_m"]) > TOL_M * max(1, len(res["lignes"])) + 1e-6:
             R.erreur("E6", f"{source} · {nom}", f"{mtr.nombre_fr(res['total_m'])} m (recalcul)",
@@ -684,6 +732,152 @@ def controle_e6(ctx: Contexte) -> None:
         _comparer_diametres(ctx, rangs_markdown(ctx.md_detail, "Métré par diamètre"),
                             "metre-detail.md · Métré par diamètre")
     _comparer_plan_md(ctx)
+    _controler_phrase(ctx, tableaux)
+    _comparer_metre_json(ctx)
+    _controler_mesures(ctx)
+
+
+def _controler_phrase(ctx: Contexte, tableaux: dict) -> None:
+    """La phrase des longueurs en tête du métré de plan.md et de la page « Métré » ; plus de « (hyp.) » sur la page."""
+    R = ctx.rapport
+    if not ctx.metre.lignes:
+        return
+    phrase = mtr.PHRASE_LONGUEURS
+    if phrase not in texte_section(ctx.md, TITRE_METRE_MD):
+        R.erreur("E6", "plan.md · Métré · phrase", f"en tête du métré : « {phrase} »", "absente",
+                 "Regénérer le plan (generer.py).")
+    lue = phrase_page_metre(ctx.lecture)
+    if lue != phrase:
+        R.erreur("E6", "page Métré · phrase", f"sous le titre de la page : « {phrase} »", lue or "absente",
+                 "Regénérer le plan (generer.py).")
+    for titre in ("Métré par réseau", "Métré par diamètre"):
+        if "(hyp" in drawio.texte_brut(tableaux.get(titre, "")):
+            R.erreur("E6", f"page Métré · {titre} · (hyp.)", "aucune « (hyp.) » (décision du 2026-10-08)",
+                     "« (hyp.) » dans le tableau", "Regénérer le plan.")
+
+
+def _egal_m(lu, attendu, tol: float) -> bool:
+    if attendu is None:
+        return lu is None
+    return (isinstance(lu, (int, float)) and not isinstance(lu, bool) and math.isfinite(lu)
+            and abs(lu - attendu) <= tol + 1e-6)
+
+
+def _comparer_metre_json(ctx: Contexte) -> None:
+    """metre.json (lu par la demande fournisseur) = métré recalculé depuis le dessin : chaque ligne (nombres à 0,01 m,
+    origine, mesure, tronçon, diamètre), chaque réseau, chaque type et le récapitulatif ; phrase, échelle, version."""
+    R, m = ctx.rapport, ctx.metre
+    chemin, source = ctx.dossier / "metre.json", "metre.json"
+    if not chemin.is_file():
+        R.erreur("E6", source, "métré pour la demande fournisseur", "fichier absent", "Regénérer le plan (generer.py).")
+        return
+    try:
+        lu = json.loads(chemin.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        R.erreur("E6", source, "JSON lisible", str(exc), CONSEIL_METRE_JSON)
+        return
+    manquantes = [k for k in CLES_METRE_JSON if k not in lu] if isinstance(lu, dict) else list(CLES_METRE_JSON)
+    if manquantes:
+        R.erreur("E6", source, "clés " + ", ".join(CLES_METRE_JSON), "absentes : " + ", ".join(manquantes),
+                 CONSEIL_METRE_JSON)
+        return
+    version_md = re.search(r"· version (\d+) ·", ctx.md)
+    version = int(version_md.group(1)) if version_md else lu.get("plan_version")
+    attendu = generer.contenu_metre_json(ctx.plan, ctx.ech, m, version, lu.get("genere_le"), ctx.dossier,
+                                         generer.Vue(ctx.plan))
+    for cle in ("version", "plan_version", "dossier", "echelle", "phrase", "hauteurs_validees"):
+        if lu.get(cle) != attendu[cle]:
+            R.erreur("E6", f"{source} · {cle}", repr(attendu[cle]), repr(lu.get(cle)), CONSEIL_METRE_JSON)
+    try:
+        datetime.fromisoformat(str(lu.get("genere_le")))
+    except ValueError:
+        R.erreur("E6", f"{source} · genere_le", "date ISO (AAAA-MM-JJTHH:MM:SS)", repr(lu.get("genere_le")),
+                 CONSEIL_METRE_JSON)
+    reseaux_lus = [r for r in lu.get("reseaux") or [] if isinstance(r, dict)]
+    par_cle = {r.get("cle"): r for r in reseaux_lus}
+    if [r.get("cle") for r in reseaux_lus] != [r["cle"] for r in attendu["reseaux"]]:
+        R.erreur("E6", f"{source} · réseaux", ", ".join(r["cle"] for r in attendu["reseaux"]) + " (recalcul)",
+                 ", ".join(str(r.get("cle")) for r in reseaux_lus) or "aucun", CONSEIL_METRE_JSON)
+    for ra in attendu["reseaux"]:
+        rl = par_cle.get(ra["cle"])
+        if rl is None:
+            continue
+        el = f"{source} · {ra['cle']}"
+        for cle in ("nom", "famille", "origine"):
+            if rl.get(cle) != ra[cle]:
+                R.erreur("E6", f"{el} · {cle}", repr(ra[cle]), repr(rl.get(cle)), CONSEIL_METRE_JSON)
+        tol = TOL_M * max(1, len(ra["lignes"]))           # un arrondi au cm peut basculer par ligne (A2)
+        for cle in ("total_m", "total_estime_m", "total_mesure_m"):
+            if not _egal_m(rl.get(cle), ra[cle], tol):
+                R.erreur("E6", f"{el} · {cle}", f"{mtr.nombre_fr(ra[cle])} m (recalcul)", repr(rl.get(cle)),
+                         CONSEIL_METRE_JSON)
+        lignes_lues = [l for l in rl.get("lignes") or [] if isinstance(l, dict)]
+        if [l.get("id") for l in lignes_lues] != [l["id"] for l in ra["lignes"]]:
+            R.erreur("E6", f"{el} · lignes", ", ".join(l["id"] for l in ra["lignes"]) + " (recalcul)",
+                     ", ".join(str(l.get("id")) for l in lignes_lues) or "aucune", CONSEIL_METRE_JSON)
+        par_id = {l.get("id"): l for l in lignes_lues}
+        for la in ra["lignes"]:
+            ll = par_id.get(la["id"])
+            if ll is None:
+                continue
+            for cle in CLES_LIGNE_JSON:
+                if cle not in ll:
+                    R.erreur("E6", f"{el} · {la['id']} · {cle}", repr(la[cle]), "clé absente", CONSEIL_METRE_JSON)
+                    continue
+                ok = _egal_m(ll[cle], la[cle], TOL_M) if cle in NOMBRES_LIGNE_JSON else ll[cle] == la[cle]
+                if not ok:
+                    R.erreur("E6", f"{el} · {la['id']} · {cle}", f"{la[cle]!r} (recalcul depuis le dessin et plan.json)",
+                             repr(ll[cle]), CONSEIL_METRE_JSON)
+    types_lus = {(p.get("reseau"), p.get("type")): p for p in lu.get("par_type") or [] if isinstance(p, dict)}
+    for pa in attendu["par_type"]:
+        pl = types_lus.pop((pa["reseau"], pa["type"]), None)
+        el = f"{source} · par_type · {pa['reseau']} · {pa['type']}"
+        if pl is None:
+            R.erreur("E6", el, f"{mtr.nombre_fr(pa['total_m'])} m (recalcul)", "absent", CONSEIL_METRE_JSON)
+            continue
+        n = len(m.par_reseau[pa["reseau"]]["par_type"][pa["type"]]["lignes"])
+        if not _egal_m(pl.get("total_m"), pa["total_m"], TOL_M * max(1, n)):
+            R.erreur("E6", f"{el} · total_m", f"{mtr.nombre_fr(pa['total_m'])} m (recalcul)", repr(pl.get("total_m")),
+                     CONSEIL_METRE_JSON)
+        for cle in ("type_nom", "origine"):
+            if pl.get(cle) != pa[cle]:
+                R.erreur("E6", f"{el} · {cle}", repr(pa[cle]), repr(pl.get(cle)), CONSEIL_METRE_JSON)
+    for (res, t) in types_lus:
+        R.erreur("E6", f"{source} · par_type · {res} · {t}", "type présent dans le recalcul", "type en trop",
+                 CONSEIL_METRE_JSON)
+    recap_lu = {p.get("cle"): p for p in lu.get("recapitulatif") or [] if isinstance(p, dict)}
+    for pa in attendu["recapitulatif"]:
+        pl = recap_lu.pop(pa["cle"], None)
+        el = f"{source} · récapitulatif · {pa['cle']}"
+        if pl is None:
+            R.erreur("E6", el, f"{mtr.nombre_fr(pa['total_m'])} m (recalcul)", "absent", CONSEIL_METRE_JSON)
+            continue
+        if not _egal_m(pl.get("total_m"), pa["total_m"], TOL_M * max(1, len(m.par_reseau[pa["cle"]]["lignes"]))):
+            R.erreur("E6", f"{el} · total_m", f"{mtr.nombre_fr(pa['total_m'])} m (recalcul)", repr(pl.get("total_m")),
+                     CONSEIL_METRE_JSON)
+        for cle in ("nom", "origine"):
+            if pl.get(cle) != pa[cle]:
+                R.erreur("E6", f"{el} · {cle}", repr(pa[cle]), repr(pl.get(cle)), CONSEIL_METRE_JSON)
+    for cle in recap_lu:
+        R.erreur("E6", f"{source} · récapitulatif · {cle}", "réseau présent dans le recalcul", "réseau en trop",
+                 CONSEIL_METRE_JSON)
+
+
+def _controler_mesures(ctx: Contexte) -> None:
+    """Longueur mesurée à plus de 20 % de l'estimation du plan (recalculée depuis le dessin) : avertissement, et la
+    question doit être posée dans plan.md."""
+    R, m = ctx.rapport, ctx.metre
+    vue = None
+    for lid in m.lignes_ecart_fort():
+        l = m.lignes[lid]
+        R.avertir("E6", f"{lid} · longueur mesurée", f"écart de 20 % au plus avec l'estimation du plan "
+                  f"({mtr.longueur_fr(l['estimation_plan_m'])})", f"mesurée {mtr.longueur_fr(l['total_m'])}, écart "
+                  f"{mtr.ecart_fr(l)}", "Le tracé ne correspond peut-être pas à la réalité : revoir la ligne avec Loïc "
+                  "(points dans plan.json) ou la mesure. La question est posée dans plan.md.")
+        vue = vue or generer.Vue(ctx.plan)
+        if generer.question_ecart(vue, lid, l) not in ctx.md:
+            R.erreur("E6", f"plan.md · Questions ouvertes · {lid}", "question sur l'écart entre la mesure et "
+                     "l'estimation du plan", "absente", "Regénérer le plan (generer.py).")
 
 
 def _points_tableau_croisements(rangs: list[list[str]]) -> dict[str, tuple[float, float] | None]:

@@ -1,5 +1,5 @@
 """Génère le plan 2D d'un dossier : `plan.json` → `plan.drawio`, `plan.md` + `plan.html`, `metre-detail.md`,
-`plan.pdf` + `plan.png`, `plan-base.json`, copie `versions/plan-vN.*`, ligne datée dans `journal.md`.
+`metre.json`, `plan.pdf` + `plan.png`, `plan-base.json`, copie `versions/plan-vN.*`, ligne datée dans `journal.md`.
 
 Chaîne : charger → valider (erreurs → code 1, rien n'est écrit) → métré (A2) → croisements + recouvrements (A2),
 regroupés (≤ 0,50 m, repères G) et injectés dans le modèle (un cercle par groupe) → échelle normalisée (A1, boîte englobante croisements compris) → `drawio.ecrire` (page
@@ -9,8 +9,15 @@ emplacement en mots), le métré par réseau en noms (aucun code de ligne) et so
 mots, les cotes et ce qu'elles mesurent, les hauteurs de pose, les questions ouvertes, des détails techniques courts
 → `metre-detail.md` (mémoire, non rendue : métré par ligne avec codes et formules, par diamètre, hauteurs,
 croisements un par un, calques, notes du relevé ; relu par verifier_plan.py E6 et E7)
-→ `plan.html` (`shared/rendu_html.py`, image du plan en pleine largeur) → `plan-base.json` (contrat du Lot 6 : un point (x, y) du modèle en m
-tombe sur la page en `origine_mm + (x, y) × 1000 / S` mm) → versions → journal.
+→ `metre.json` (contrat du 2026-10-08, lu par la demande fournisseur : longueurs par ligne, par réseau, par type,
+origine estimée / mesurée) → `plan.html` (`shared/rendu_html.py`, image du plan en pleine largeur) → `plan-base.json`
+(contrat du Lot 6 : un point (x, y) du modèle en m tombe sur la page en `origine_mm + (x, y) × 1000 / S` mm)
+→ versions → journal.
+
+Longueurs (décision du 2026-10-08) : toutes sont des estimations d'après le plan (tracé et hauteurs de pose), sauf
+celles mesurées sur chantier (`longueur_mesuree` + `mesure` sur la ligne de plan.json) : dans plan.md et la page
+« Métré », la phrase `metre.PHRASE_LONGUEURS` en tête du métré, « (mesurée) » sur le total des seules lignes
+mesurées, plus de « (hyp.) » ; metre-detail.md garde tout (estimation, mesure, écart, « (hyp.) »).
 
 Usage (depuis la racine du dépôt) :
     python .claude/skills/froid-plan-2d/scripts/generer.py <dossier_plan> [--sans-rendu] [--ouvrir]
@@ -47,6 +54,7 @@ ALIGN_RESEAUX = ["g", "g", "g", "g", "d", "d", "d", "d", "d", "g"]
 TITRES_SECTIONS = {
     "reseaux": "Métré par réseau", "diametres": "Métré par diamètre", "croisements": "Croisements et recouvrements",
 }
+TITRE_MESURES = "Longueurs mesurées sur chantier"     # section de metre-detail.md
 
 
 class ErreurGeneration(RuntimeError):
@@ -88,9 +96,19 @@ def ligne_en_hypothese(l: dict, statuts: dict[str, str]) -> tuple[bool, bool]:
     return vertical, reserve
 
 
+def marque_detail(m: mtr.Metre, ids: list[str], statuts: dict[str, str]) -> str:
+    """Marque d'un total dans metre-detail.md : « (mesurée) » si toutes ses lignes sont mesurées, sinon « (hyp.) »
+    si une de ses lignes ESTIMÉES dépend d'une hauteur non validée."""
+    if m.origine(ids) == mtr.MESUREE:
+        return mtr.MARQUE_MESUREE
+    estimees = [m.lignes[i] for i in ids if m.lignes[i]["origine"] != mtr.MESUREE]
+    return HYP if any(any(ligne_en_hypothese(l, statuts)) for l in estimees) else ""
+
+
 def tableau_reseaux_md(m: mtr.Metre) -> str:
-    """« Métré par réseau » (mêmes colonnes que la page Métré du draw.io) ; « (hyp.) » après chaque valeur qui
-    dépend d'une hauteur non validée."""
+    """« Métré par réseau » de metre-detail.md (mêmes colonnes que la page Métré du draw.io) : « (hyp.) » après
+    chaque valeur qui dépend d'une hauteur non validée, « (mesurée) » après le total d'une ligne mesurée sur
+    chantier (ses autres colonnes gardent l'estimation du plan)."""
     statuts = statuts_hauteurs(m)
     rangs, gras = [], set()
     for r in m.par_reseau.values():
@@ -103,23 +121,35 @@ def tableau_reseaux_md(m: mtr.Metre) -> str:
                           l["libelle_type"], mtr.nombre_fr(l["plan_m"]), mtr.nombre_fr(l["chemin_m"]),
                           mtr.nombre_fr(l["vertical_m"]) + (HYP if hv else ""),
                           mtr.nombre_fr(l["reserve_m"]) + (HYP if hr else ""),
-                          mtr.nombre_fr(l["total_m"]) + (HYP if hv or hr else ""), l["diametre"]])
+                          mtr.nombre_fr(l["total_m"]) + marque_detail(m, [lid], statuts), l["diametre"]])
         gras.add(len(rangs))
         rangs.append([f"Total {r['nom']}", "", "", "", mtr.nombre_fr(r["plan_m"]), mtr.nombre_fr(r["chemin_m"]),
                       mtr.nombre_fr(r["vertical_m"]) + (HYP if hv_res else ""),
                       mtr.nombre_fr(r["reserve_m"]) + (HYP if hr_res else ""),
-                      mtr.nombre_fr(r["total_m"]) + (HYP if hv_res or hr_res else ""), ""])
+                      mtr.nombre_fr(r["total_m"]) + marque_detail(m, r["lignes"], statuts), ""])
     return _table_md(ENTETES_RESEAUX, rangs, ALIGN_RESEAUX, gras)
 
 
 def tableau_diametres_md(m: mtr.Metre) -> str:
     statuts = statuts_hauteurs(m)
-    rangs = []
-    for d in m.par_diametre.values():
-        hyp = any(any(ligne_en_hypothese(m.lignes[lid], statuts)) for lid in d["lignes"])
-        rangs.append([d["diametre"], d["libelle_type"], mtr.nombre_fr(d["total_m"]) + (HYP if hyp else ""),
-                      ", ".join(d["lignes"])])
+    rangs = [[d["diametre"], d["libelle_type"], mtr.nombre_fr(d["total_m"]) + marque_detail(m, d["lignes"], statuts),
+              ", ".join(d["lignes"])] for d in m.par_diametre.values()]
     return _table_md(["Diamètre", "Type", "Total (m)", "Lignes"], rangs, ["g", "g", "d", "g"])
+
+
+def tableau_mesures_md(m: mtr.Metre) -> str:
+    """Longueurs mesurées sur chantier (metre-detail.md) : estimation du plan, mesure, écart, qui, quand, note."""
+    rangs = []
+    for lid, l in m.lignes.items():
+        if l["origine"] != mtr.MESUREE:
+            continue
+        mesure = l["mesure"] or {}
+        ecart = mtr.ecart_fr(l) + (" (au delà de 20 % : question posée)" if l["ecart_fort"] else "")
+        rangs.append([lid, f"{l['de'] or mtr.TIRET_VIDE} {mtr.FLECHE} {l['a'] or mtr.TIRET_VIDE}",
+                      mtr.nombre_fr(l["estimation_plan_m"]), mtr.nombre_fr(l["longueur_mesuree_m"]), ecart,
+                      mesure.get("par") or "", mesure.get("date") or "", mesure.get("note") or ""])
+    return _table_md(["Ligne", f"De {mtr.FLECHE} À", "Estimation du plan (m)", "Mesurée (m)", "Écart", "Par", "Date",
+                      "Note"], rangs, ["g", "g", "d", "d", "d", "g", "g", "g"])
 
 
 def prochaine_version(dossier: Path) -> int:
@@ -156,9 +186,6 @@ FACADE = {"haut": "façade du haut", "bas": "façade du bas", "gauche": "façade
 TOL_COTE = 0.03          # m : extrémité d'une cote confondue avec un bout de mur, un bord de chambre ou de pièce
 VOYELLES = "aeiouyàâäéèêëîïôöùûüAEIOUYÀÂÄÉÈÊËÎÏÔÖÙÛÜ"
 VERSIONS_MONTREES = 5    # « Détails techniques » : les dernières versions seulement (toutes dans journal.md)
-NOTE_HYP_METRE = ("Les montées et descentes utilisent les hauteurs de pose ci-dessous, à valider (question 13) : "
-                  "les totaux sont marqués (hyp.) tant qu'elles ne le sont pas.")
-NOTE_VALIDEES_METRE = "Les montées et descentes utilisent les hauteurs de pose ci-dessous, validées."
 
 
 def _sans_accent(t: str) -> str:
@@ -473,6 +500,13 @@ class Vue:
         return f"- **{g['id']}**, {self.lieu(g['point'])} : {texte}."
 
 
+def question_ecart(vue: Vue, lid: str, l: dict) -> str:
+    """Question posée quand une longueur mesurée s'écarte de plus de 20 % de l'estimation du plan (en mots)."""
+    return (f"La ligne « {vue.type_ligne(lid, l)} : {vue.troncon(l)} » mesurée à {mtr.longueur_fr(l['total_m'])} "
+            f"s'écarte de l'estimation du plan ({mtr.longueur_fr(l['estimation_plan_m'])}) : le tracé correspond-il "
+            "à la réalité ?")
+
+
 def questions_ouvertes(plan: mod.Plan, m: mtr.Metre, vue: Vue | None = None) -> list[str]:
     """Questions pour Loïc, en mots (aucun code de ligne)."""
     vue = vue or Vue(plan)
@@ -491,10 +525,12 @@ def questions_ouvertes(plan: mod.Plan, m: mtr.Metre, vue: Vue | None = None) -> 
                 verbe = "n'ont" if pluriel else "n'a"
                 q.append(f"{_maj(desc)} {verbe} pas d'équipement {bout} "
                          f"({vue.lieu(point)}) : à quel équipement {'les' if pluriel else 'la'} relier ?")
+    for lid in m.lignes_ecart_fort():
+        q.append(question_ecart(vue, lid, m.lignes[lid]))
     a_definir = [l["id"] for l in plan.lignes if mtr.normaliser_diametre(l.get("diametre")) == mtr.A_DEFINIR
                  and l["type"] not in ("chemin_cables",)]
     if a_definir:
-        q.append(f"Diamètres des tuyaux et sections des câbles : à définir par le dimensionnement "
+        q.append(f"Diamètres des tuyaux et sections des câbles : {mtr.A_DEFINIR_FOURNISSEUR} "
                  f"({len(a_definir)} lignes).")
     if any(h["statut"] == mtr.HYPOTHESE for h in m.hypotheses):
         q.append("Hauteurs de pose à valider (question 13) : tableau « Hauteurs de pose » ci-dessus.")
@@ -507,9 +543,9 @@ def questions_ouvertes(plan: mod.Plan, m: mtr.Metre, vue: Vue | None = None) -> 
 
 def tableaux_metre_lisibles(m: mtr.Metre, vue: Vue) -> list[str]:
     """Un tableau par réseau (« ### <réseau> » : Tronçon | Type | En plan | [dont chemin de câbles] | Montées et
-    descentes | [Réserve] | Total, ligne de total) puis le récapitulatif « Réseau | Total ». « (hyp.) » après chaque
-    valeur qui dépend d'une hauteur non validée ; jamais sur la longueur en plan."""
-    statuts = statuts_hauteurs(m)
+    descentes | [Réserve] | Total, ligne de total) puis le récapitulatif « Réseau | Total ». Toutes les longueurs
+    sont des estimations (phrase en tête du métré) ; « (mesurée) » après le total d'une ligne mesurée sur chantier,
+    et après un total (réseau, récapitulatif) dont toutes les lignes le sont ; plus de « (hyp.) »."""
     morceaux, recap = [], []
     for cle, r in m.par_reseau.items():
         lignes = [(lid, m.lignes[lid]) for lid in r["lignes"]]
@@ -520,10 +556,8 @@ def tableaux_metre_lisibles(m: mtr.Metre, vue: Vue) -> list[str]:
                    + ([mtr.COL_DONT_CHEMIN] if avec_chemin else []) + [mtr.COL_MONTEES]
                    + ([mtr.COL_RESERVE] if avec_reserve else []) + [mtr.COL_TOTAL])
         aligne = ["g", "g"] + (["g"] if avec_diametre else []) + ["d"] * (len(entetes) - 2 - avec_diametre)
-        rangs, hv_res, hr_res = [], False, False
+        rangs = []
         for lid, l in lignes:
-            hv, hr = ligne_en_hypothese(l, statuts)
-            hv_res, hr_res = hv_res or hv, hr_res or hr
             support = l["type"] == "chemin_cables"
             rang = [vue.troncon(l), vue.type_ligne(lid, l)]
             if avec_diametre:
@@ -531,22 +565,22 @@ def tableaux_metre_lisibles(m: mtr.Metre, vue: Vue) -> list[str]:
             rang.append(mtr.nombre_fr(mtr.arrondi(l["plan_m"] + l["chemin_m"])))
             if avec_chemin:
                 rang.append("" if support else mtr.nombre_fr(l["chemin_m"]))
-            rang.append(mtr.nombre_fr(l["vertical_m"]) + (HYP if hv else ""))
+            rang.append(mtr.nombre_fr(l["vertical_m"]))
             if avec_reserve:
-                rang.append("" if support else mtr.nombre_fr(l["reserve_m"]) + (HYP if hr else ""))
-            rang.append(mtr.nombre_fr(l["total_m"]) + (HYP if hv or hr else ""))
+                rang.append("" if support else mtr.nombre_fr(l["reserve_m"]))
+            rang.append(mtr.nombre_fr(l["total_m"]) + m.marque([lid]))
             rangs.append(rang)
         total = ["Total", ""] + ([""] if avec_diametre else []) + [mtr.nombre_fr(mtr.arrondi(r["plan_m"] + r["chemin_m"]))]
         if avec_chemin:
             total.append(mtr.nombre_fr(r["chemin_m"]))
-        total.append(mtr.nombre_fr(r["vertical_m"]) + (HYP if hv_res else ""))
+        total.append(mtr.nombre_fr(r["vertical_m"]))
         if avec_reserve:
-            total.append(mtr.nombre_fr(r["reserve_m"]) + (HYP if hr_res else ""))
-        total.append(mtr.nombre_fr(r["total_m"]) + (HYP if hv_res or hr_res else ""))
+            total.append(mtr.nombre_fr(r["reserve_m"]))
+        total.append(mtr.nombre_fr(r["total_m"]) + m.marque(r["lignes"]))
         rangs.append(total)
         nom = mtr.nom_reseau_lisible(cle, vue.plan.donnees)
         morceaux += [f"### {nom}", "", _table_md(entetes, rangs, aligne, {len(rangs) - 1}), ""]
-        recap.append([nom, mtr.nombre_fr(r["total_m"]) + (HYP if hv_res or hr_res else "")])
+        recap.append([nom, mtr.nombre_fr(r["total_m"]) + m.marque(r["lignes"])])
     morceaux += [f"### {mtr.TITRE_RECAPITULATIF}", "",
                  _table_md([mtr.COL_RESEAU, mtr.COL_TOTAL], recap, ["g", "d"]), ""]
     return morceaux
@@ -593,15 +627,9 @@ def ecrire_plan_md(chemin: Path, plan: mod.Plan, ech, m: mtr.Metre, liste_x: lis
     # 4. métré
     morceaux += ["## Métré", ""]
     if m.lignes:
+        morceaux += [mtr.PHRASE_LONGUEURS, ""]
         morceaux += tableaux_metre_lisibles(m, vue)
-        hyp = any(h["statut"] == mtr.HYPOTHESE for h in m.hypotheses)
-        note = [NOTE_HYP_METRE if hyp else NOTE_VALIDEES_METRE]
-        diam = [l["diametre"] for l in m.lignes.values() if l["type"] != "chemin_cables"]
-        if diam and all(d == mtr.A_DEFINIR for d in diam):
-            note.append("Les diamètres sont à définir par le dimensionnement.")
-        elif mtr.A_DEFINIR in diam:
-            note.append("Les diamètres non indiqués sont à définir par le dimensionnement.")
-        morceaux += [" ".join(note), ""]
+        morceaux += [m.note(), ""]
     else:
         morceaux += ["Aucune ligne à métrer.", ""]
 
@@ -694,6 +722,13 @@ def ecrire_metre_detail(chemin: Path, plan: mod.Plan, m: mtr.Metre, liste_x: lis
         morceaux += [f"- **{lid}** ({l['libelle_type']}, {l['de'] or mtr.TIRET_VIDE} {mtr.FLECHE} "
                      f"{l['a'] or mtr.TIRET_VIDE}) : {l['formule']}" for lid, l in m.lignes.items()]
         morceaux += ["", f"## {TITRES_SECTIONS['diametres']}", "", tableau_diametres_md(m), ""]
+        morceaux += [f"## {TITRE_MESURES}", "", mtr.PHRASE_LONGUEURS + " Une ligne mesurée garde ici son "
+                     "estimation du plan (colonnes de « Métré par réseau ») ; son total est la mesure. Au delà de "
+                     "20 % d'écart, une question est posée dans plan.md et le vérificateur avertit (E6).", ""]
+        if any(l["origine"] == mtr.MESUREE for l in m.lignes.values()):
+            morceaux += [tableau_mesures_md(m), ""]
+        else:
+            morceaux += ["Aucune longueur mesurée sur chantier : toutes sont des estimations d'après le plan.", ""]
     else:
         morceaux += ["Aucune ligne à métrer.", ""]
     morceaux += ["## Hauteurs utilisées", ""]
@@ -724,6 +759,23 @@ def ecrire_metre_detail(chemin: Path, plan: mod.Plan, m: mtr.Metre, liste_x: lis
     if plan.notes:
         morceaux += ["## Notes du relevé", ""] + [f"- {n}" for n in plan.notes] + [""]
     chemin.write_text("\n".join(morceaux), encoding="utf-8", newline="\n")
+    return chemin
+
+
+def contenu_metre_json(plan: mod.Plan, ech, m: mtr.Metre, version: int | None, genere_le: str | None,
+                       dossier_plan: Path | None = None, vue: Vue | None = None) -> dict:
+    """Contenu de `plan/metre.json` (contrat du 2026-10-08) : tronçons en noms comme dans plan.md, dossier =
+    `plan.json` « dossier » (sinon le nom du dossier d'installation)."""
+    vue = vue or Vue(plan)
+    troncons = {lid: vue.troncon(l) for lid, l in m.lignes.items()}
+    dossier = plan.dossier or (Path(dossier_plan).resolve().parent.name if dossier_plan else None)
+    return m.contrat_json(troncons, dossier=dossier, plan_version=version, echelle=f"1:{ech.S}", genere_le=genere_le)
+
+
+def ecrire_metre_json(chemin: Path, plan: mod.Plan, ech, m: mtr.Metre, version: int, maintenant: datetime) -> Path:
+    """plan/metre.json : métré pour la demande fournisseur (froid-demande-fournisseur, `assembler.py`)."""
+    contenu = contenu_metre_json(plan, ech, m, version, maintenant.isoformat(timespec="seconds"), chemin.parent)
+    chemin.write_text(json.dumps(contenu, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     return chemin
 
 
@@ -801,7 +853,8 @@ def generer(dossier_plan, rendu_pdf: bool = True, ouvrir: bool = False, maintena
 
     f = res["fichiers"]
     f["drawio"] = drawio.ecrire(p["plan_x"], ech, dossier / "plan.drawio",
-                                tableaux_page_metre(m, liste_x, p["groupes"]))
+                                tableaux_page_metre(m, liste_x, p["groupes"]),
+                                entete=mtr.PHRASE_LONGUEURS if m.lignes else None)
 
     rendu_info = None
     if rendu_pdf:
@@ -826,6 +879,7 @@ def generer(dossier_plan, rendu_pdf: bool = True, ouvrir: bool = False, maintena
                              rendu_info, journal, p["groupes"], sans_image=sans_image)
     f["metre_detail"] = ecrire_metre_detail(dossier / "metre-detail.md", plan, m, liste_x, p["recouvrements"],
                                             version, maintenant, p["groupes"])
+    f["metre_json"] = ecrire_metre_json(dossier / "metre.json", plan, ech, m, version, maintenant)
     try:
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
