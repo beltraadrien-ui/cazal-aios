@@ -30,10 +30,14 @@ Si `1-existant.md` n'existe pas encore (« sors-moi les puissances » sur un rap
 
 1. **Relire `dossier.md` et `1-existant.md`.** Si l'étape 1 n'est pas *validée* par Loïc dans `dossier.md`,
    **refuser** : « On valide d'abord le relevé de l'existant », et lister ses points « à confirmer ». Seule
-   exception : Loïc demande explicitement d'avancer quand même ; le bloc A l'écrit alors (« relevé non validé »).
+   exception : Loïc demande explicitement d'avancer quand même, ou demande les trois étapes sans être là
+   (`dimensionnement/CLAUDE.md`, « Loïc absent : tout d'un coup ») ; le bloc A l'écrit alors (« relevé non validé »).
 
 2. **Loïc dicte le projet** : ce qu'il remplace par quoi, le fluide cible, ce qu'il garde, les fournitures
-   annexes. Questions courtes s'il manque une de ces quatre choses. S'il répond à l'une des six questions
+   annexes. Questions courtes s'il manque une de ces quatre choses. Loïc absent : chacune devient une hypothèse
+   écrite (source « hypothèse du AAAA-MM-JJ : … »), appuyée sur une règle générale de `regles-loic.md` s'il y en a
+   une ; une règle marquée « observée sur le dossier test » n'est qu'une piste (son contenu chiffré, ex. un nombre de
+   soupapes, n'est jamais recopié : c'est une question). S'il répond à l'une des six questions
    (régime et condition, marge, seuil d'écart, ratio par m³, CV / HP, proposer ou vérifier le fluide), sa
    réponse entre dans `2-entrees.json` avec la source `dicté par Loïc le AAAA-MM-JJ`, dans `dossier.md`
    (Décisions), et est signalée à Adrien pour `regles-loic.md` (le socle est maintenu par Adrien).
@@ -43,9 +47,22 @@ Si `1-existant.md` n'existe pas encore (« sors-moi les puissances » sur un rap
    `photo p11-3` · `rapport p. 10` · `dicté par Loïc le 2026-10-06` · `hypothèse : …` ·
    `savoir/methodes/regles-loic.md R1` · `web : <lien>` ; une donnée absente est une `Valeur` « à confirmer »
    (nombre `null`) dont la source dit pourquoi (« non écrite dans le rapport »). Depuis `1-existant.md` :
-   tableau B → `compresseurs` (volume balayé, photo, lecture), B2 → `plaques_ensemble`, C → postes (volume,
-   dessert, évaporateurs), rapport → charges. Les lectures : **douteuse** → volume balayé en statut
-   « hypothèse » avec « lecture douteuse : … » dans la source ; **illisible** → volume « à confirmer ».
+   tableau B → `compresseurs` (volume balayé, photo, lecture), B2 (plaques d'ensemble et vues des productions) →
+   `plaques_ensemble`, C → postes (volume, dessert, évaporateurs), rapport → charges. Les lectures : **douteuse** →
+   volume balayé en statut « hypothèse » avec « lecture douteuse : … » dans la source ; **illisible** → volume
+   « à confirmer ».
+   **Des sous-points aux postes** (définitions dans `dimensionnement/CLAUDE.md`, Vocabulaire) : un poste par
+   production (centrale, ou groupes d'une chambre), id court (`a`, `b`, `cf`) ; la chambre qu'il dessert vient du
+   tableau C (« Desservi par ») dans `dessert` ; déduite des lettres des titres, `dessert` est en statut
+   « hypothèse » (l'étape 3 affiche alors « (hyp.) » sur la ligne « Dessert » du PDF). Le modèle d'un évaporateur
+   s'écrit comme au tableau C (sans guillemets) : l'étape 3 y retrouve son n° de série.
+   **Formes attendues par les étapes suivantes** : le `volume` d'un poste porte son champ **`formule`** (L × l × h tels
+   que lus, ex. `"formule": "14,6 × 50 × 2,7"`) : l'étape 3 en tire la surface au sol, et `--verifier` signale un
+   nombre écarté de plus de 0,5 % de sa formule ou un volume sans formule ; dans les sources et les textes, espace
+   insécable (U+00A0) entre un nombre et son unité et dans les milliers (« 1 450 min⁻¹ ») ; un fluide s'écrit comme
+   sur la plaque ou le rapport (« R507 », « R-449A », « r404a ») : `calculs.py` le ramène à la désignation
+   (« R507A », « R449A », ligne ATTENTION), la source garde l'écriture d'origine ; une série à plusieurs fluides
+   (« R449 », « R407 ») est refusée sans sa lettre : c'est une question.
    Paramètres : ne rien écrire garde les défauts du script (écrits comme hypothèses) ; une réponse de Loïc
    remplace le défaut. Puis contrôler :
    ```
@@ -67,17 +84,47 @@ Si `1-existant.md` n'existe pas encore (« sors-moi les puissances » sur un rap
    <!-- titre: Dimensionnement du remplacement — <CLIENT> -->
    <!-- mention: Valeurs indicatives, sélection finale chez le fournisseur. -->
    ```
-   puis un titre `# …`, un encadré d'état (« à valider par Loïc ✋ », niveau de précision), et les blocs :
+   puis un titre `# …`, un encadré d'état (« à valider par Loïc ✋ », niveau de précision), et les blocs, titrés
+   `## A. Projet` à `## G. Hypothèses et questions` (l'étape 3 les retrouve par « ## A. », « ## E. », « ## F. ») :
    - **A. Projet** : ce qui est remplacé par quoi, fluide actuel et cible, ce qu'on garde, régimes, niveau
-     de précision, état du relevé ; chaque ligne sourcée.
+     de précision, état du relevé ; chaque ligne sourcée. **Forme lue par l'étape 3** : un tableau
+     `| Élément | Contenu | Source |` ; l'étape 3 reprend la colonne Contenu des lignes dont l'Élément contient
+     « remplace » (« Ce qu'on remplace »), « par quoi », « marché » (nombre d'entreprises « 3 entreprises »,
+     « souhait du client : avril ») et « dessert » (« Qui dessert quoi » : segments séparés par « ; », ceux sans
+     « → » deviennent la note des chambres). Une ligne vide ou absente disparaît du PDF : ne jamais écrire
+     « à dicter par Loïc » dans Contenu (ça partirait tel quel), mettre la question en G3.
    - **B. Puissance existante par compresseur**, **C. Besoins par poste**, **D. Fluide et conformité** :
      tableaux **recopiés tels quels** depuis `2-tableaux.md`, avec leurs notes. Le bloc D ne contient **que**
      le texte produit par le script : aucune phrase réglementaire ajoutée à la main.
    - **E. Ce qu'on garde, ce qu'on remplace** : par poste (compresseurs, condenseurs, évaporateurs,
      détendeurs, régulation, tuyauterie, récupération de chaleur), avec la raison prise dans
-     `methodes/transitions.md` et ce que Loïc a dicté ; points de vigilance.
+     `methodes/transitions.md` et ce que Loïc a dicté ; points de vigilance. **Forme lue par l'étape 3** : un
+     tableau `| Élément | Existant (A = Centrale négative A, B = Centrale négative B, CF = Chambre froide) | Avec … |`
+     dont l'en-tête de la 2ᵉ colonne porte la **légende des codes** (« CODE = nom du poste ou de sa chambre »,
+     séparés par des virgules) et dont chaque cellule Existant s'écrit « A : … · B : … · CF : … » ; la 3ᵉ colonne
+     (propositions séparées par « ; » ou par des phrases) va au chapitre de chaque poste cité. Puis des puces
+     « - Vigilance : … ». Une proposition avec « ? », « à confirmer », « à vérifier », « lesquels garder » ou qui
+     commence par « vigilance » reste une question pour Loïc (jamais dans le PDF).
    - **F. Fournitures annexes** : ce que Loïc liste pour le fournisseur (régulation, supervision, cordons
-     chauffants, soupapes, récupération de chaleur, cuivre…), sourcé (`regles-loic.md`, dictée).
+     chauffants, soupapes, récupération de chaleur, cuivre…), sourcé (`regles-loic.md`, dictée). **Forme lue par
+     l'étape 3** : des puces `- …` ; leurs **mots** (sans accents ni casse, avec ceux du bloc A et du projet)
+     décident des points de la demande grossiste, et un **nombre écrit juste avant un mot du bloc F** (« deux
+     soupapes », « 3 portes ») est repris tel quel, sinon aucune quantité :
+
+     | Point de la demande (grossiste) | Sort si le bloc F, le bloc A ou le projet contient |
+     |---|---|
+     | a) Centrale booster (toujours) ; « avec récupération de chaleur… » | récupération de chaleur |
+     | b) Évaporateurs neufs ; « de préférence Alfa Laval » | évaporateur ; Alfa Laval |
+     | c) Armoire de régulation ; « en Danfoss » ; supervision ; régulateurs de poste | armoire ou régulat… ; Danfoss ; AK-SM 800A ; AK-CC 55 |
+     | c) partie négative / positive | dégivrage électrique ; cordon (+ nombre avant « porte ») ; soupape (+ nombre avant « soupape ») ; dégivrage naturel ; chauffage du sol |
+     | d) Matériel de régulation (détendeurs, transducteurs, sondes) | détendeur, sonde ou transducteur |
+     | e) Détection de fuite | détection de fuite |
+     | f) Tarifs indicatifs (cuivre, K65, isolants, petites fournitures) | cuivre, isolant ou petites fournitures ; K65 |
+
+     Variante fabricant : gas cooler, récupération de chaleur, chauffage du sol, désurchauffeur, aimants, variateur,
+     ULSH, extérieur, toit ou grillag…, carénage. Un mot absent : le point ne sort pas, sans erreur ; un bloc F
+     absent : tous les points sortent (avertissement). Détail : docstring d'`assembler.py`, gabarits
+     `templates/textes-*.md` du skill `froid-demande-fournisseur`.
    - **G. Hypothèses et questions** : **G1** la comparaison **chiffrée et expliquée** aux contrôles du
      tableau C (estimations antérieures, plaques d'ensemble, ratio de Loïc), avec le tableau
      « G-estimations » de `2-tableaux.md` recopié tel quel s'il existe ; **G2** les hypothèses datées et
@@ -89,7 +136,9 @@ Si `1-existant.md` n'existe pas encore (« sors-moi les puissances » sur un rap
      du § E de `1-existant.md` (étape 1), (b) **toutes** les hypothèses de `dossier.md`, (c) les nouvelles
      questions de l'étape 2 (régime et condition, marge, seuil, ratio, proposer ou vérifier le fluide, unité
      des dimensions, écarts de lecture, etc.). **Jamais un renvoi en bloc** (« voir § E ») : chaque point est
-     reformulé en question courte.
+     reformulé en question courte. **Une question par point** : quand des lignes de (a), (b) et (c) portent sur le
+     même point (ex. le motif du remplacement au § E et l'hypothèse « ce qu'on remplace » de `dossier.md`), elles se
+     **fusionnent** en une seule question, dans la première liste où le point apparaît, avec ses deux origines.
    Dans la prose, **un nombre n'apparaît que s'il est dans `2-resultats.json`, dans `2-tableaux.md` ou dans
    une source citée** (avec sa référence) ; une explication qui demanderait un nouveau calcul se fait par
    script ou se formule sans chiffre. **Une ligne vide avant chaque liste** (puces ou numéros) : sans elle,
@@ -168,15 +217,18 @@ Si `1-existant.md` n'existe pas encore (« sors-moi les puissances » sur un rap
   exception. Une question réglementaire non couverte par la table devient une question pour Adrien.
 - **Une plaque d'ensemble sans régime** se compare à titre indicatif seulement ; une puissance en **CV ou HP
   n'est jamais une puissance frigorifique** (refus du script, question 5 à Loïc).
-- **Fluide** : celui qui est **dans** l'installation, pas la liste de la plaque ; un doute (plaque d'origine
-  à un autre fluide) se saisit en « hypothèse » et devient une question.
+- **Fluide** : la plaque fait foi pour l'existant tel que lu (fluide d'origine, recopié comme il est écrit) ; le
+  rapport ou Loïc font foi pour le fluide actuel réel (celui qui est dans l'installation aujourd'hui). Quand les deux
+  divergent, le calcul prend le fluide du rapport en hypothèse et la divergence devient une question pour Loïc.
 - **Table F-gas non relue** tant que la colonne `relu_par` est vide : le bloc D le dit, toujours.
 - Rien du dossier ne sort du PC (pas de commit, pas d'envoi). Aucun envoi au fournisseur à cette étape.
 
 ## Vocabulaire
 
-- **Poste** : un ensemble de production (une centrale, ou les groupes d'une chambre) ; **centrale** :
-  compresseurs en parallèle ; **groupe (unité) de condensation** : un compresseur et son condenseur.
+- **Poste** : une production et ce qu'elle refroidit (une centrale, ou les groupes d'une chambre) ; à ne pas
+  confondre avec le sous-point du rapport (définitions et passage de l'un à l'autre : `dimensionnement/CLAUDE.md`,
+  Vocabulaire) ; **centrale** : compresseurs en parallèle ; **groupe (unité) de condensation** : un compresseur et
+  son condenseur.
 - **Régime** : T0 (évaporation) / Tc (condensation), au **point de rosée** pour un mélange (convention
   Bitzer, hypothèse tant que Loïc n'a pas dit autre chose) ; **gaz aspiré** : température du gaz à l'entrée
   du compresseur (20 °C dans les catalogues).

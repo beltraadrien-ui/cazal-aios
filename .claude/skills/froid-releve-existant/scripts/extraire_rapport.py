@@ -52,6 +52,18 @@ def slugifier(texte: str) -> str:
     return t or "sans-titre"
 
 
+def titre_lisible(titre: str) -> str:
+    """Titre InterFast pour les tableaux B à D : sans capitales forcées, lettre finale gardée en capitale, « À » final
+    (accent ajouté par la saisie InterFast sur la lettre A) écrit « A » : « ÉVAPORATEURS NÉGATIF À » → « Évaporateurs
+    négatif A ». Le tableau A garde le titre tel quel."""
+    t = re.sub(r"\s+À$", " A", (titre or "").strip())
+    if t.isupper():
+        mots = t.lower().split()
+        mots = [m.upper() if len(m) == 1 and m.isalpha() and i == len(mots) - 1 else m for i, m in enumerate(mots)]
+        t = " ".join(mots)
+    return t[:1].upper() + t[1:]
+
+
 def nombre(s: str) -> float:
     return float(s.replace(",", "."))
 
@@ -326,13 +338,29 @@ def ecrire_existant_md(dossier: Path, s: dict) -> None:
         n = sp["lu"].get("compresseurs", {}).get("valeur")
         if n:
             for i in range(1, n + 1):
-                L.append(f"| {sp['titre']} — compresseur {i}/{n} | à lire | à lire | à lire | à lire | à lire | à lire | ? | — | nombre : {sp['lu']['compresseurs']['source']} |")
+                L.append(f"| {titre_lisible(sp['titre'])} — compresseur {i}/{n} | à lire | à lire | à lire | à lire | à lire | à lire | ? | — | nombre : {sp['lu']['compresseurs']['source']} |")
         n2 = sp["lu"].get("unites_condensation", {}).get("valeur")
         if n2:
             for i in range(1, n2 + 1):
-                L.append(f"| {sp['titre']} — unité de condensation {i}/{n2} | à lire | à lire | à lire | à lire | à lire | à lire | ? | — | nombre : {sp['lu']['unites_condensation']['source']} |")
+                L.append(f"| {titre_lisible(sp['titre'])} — unité de condensation {i}/{n2} | à lire | à lire | à lire | à lire | à lire | à lire | ? | — | nombre : {sp['lu']['unites_condensation']['source']} |")
     L.append("")
     L.append("*Lecture* : `sûre`, `douteuse (lecture la plus probable + doute)` ou `illisible`. Voir `dimensionnement/savoir/materiel/lecture-plaques.md`.")
+    L.append("*Forme lue par l'étape 3* : Photo = nom du fichier entre accents graves (`p05-2.jpeg`) ; modèle et n° de série "
+             "tels que lus, sans guillemets ni gras ; volume balayé « 56,2 m³/h » (espace insécable avant l'unité).")
+    L.append("")
+    L.append("### B2. Plaques d'ensemble et vues des centrales et groupes")
+    L.append("")
+    L.append("| Poste | Équipement | Plaque (ce qui est lu) | Lecture | Photo | Source |")
+    L.append("|---|---|---|---|---|---|")
+    for sp in s["sous_points"]:
+        if sp["lu"].get("compresseurs") or sp["lu"].get("unites_condensation"):
+            L.append(f"| {titre_lisible(sp['titre'])} | plaque d'ensemble (centrale, groupe, condenseur) | à lire | — | ? | |")
+    L.append("")
+    L.append("*B2* : une ligne par photo d'un poste de production qui n'est pas une plaque de compresseur (plaque d'ensemble, "
+             "condenseur, échangeur, vue). Plaque lue : segments séparés par « ; » (désignation « … » ou type « … » ; n° … ; "
+             "année ; fluide ; charge ; puissance) et Lecture `sûre` / `douteuse` / `illisible` ; vue sans plaque : « vue "
+             "d'ensemble (pas de plaque) » et Lecture « — ». Plaque attendue mais non photographiée (condenseur, "
+             "régulateur…) : « plaque non photographiée », et une question au § E.")
     L.append("")
     L.append("## C. Chambres froides et postes desservis")
     L.append("")
@@ -347,18 +375,30 @@ def ecrire_existant_md(dossier: Path, s: dict) -> None:
             temp = f"{fr(lu['temperature_c']['valeur'])} °C" if "temperature_c" in lu else "à confirmer"
             ev = f"{lu['evaporateurs']['valeur']}" if "evaporateurs" in lu else "à confirmer"
             src = (d or lu.get("evaporateurs"))["source"]
-            L.append(f"| {sp['titre']} | {dims} | {vol} | {temp} | à confirmer | {ev} | à confirmer | {src} |")
+            ev = f"{ev} : à lire" if ev != "à confirmer" else ev
+            L.append(f"| {titre_lisible(sp['titre'])} | {dims} | {vol} | {temp} | à confirmer | {ev} | à confirmer | {src} |")
+    L.append("")
+    L.append("*Évaporateurs* : un segment par plaque, séparés par « ; » : « Marque Modèle n° X, année, fluide (`pNN-k.jpeg`) » "
+             "(deux plaques identiques : « 2 × Marque Modèle n° X et Y, année (`pNN-k.jpeg`, `pNN-k.jpeg`) ») ; modèle "
+             "écrit comme dans `2-entrees.json`, sans guillemets ni gras ; lecture douteuse : « (lecture douteuse : …) » "
+             "dans le segment. *Usage* : usage et photo de la chambre « (photo pNN-k) ». *Desservi par* : production qui "
+             "dessert la chambre, avec sa source ; déduit (même lettre dans les titres) = « hypothèse », et une question.")
     L.append("")
     L.append("## D. Régulation, récupération de chaleur, autres éléments")
     L.append("")
-    L.append("| Élément | Ce que dit le rapport | Lu sur les photos | Source |")
-    L.append("|---|---|---|---|")
+    L.append("| Élément | Ce que dit le rapport | Lu sur les photos | Photo | Source |")
+    L.append("|---|---|---|---|---|")
     for sp in s["sous_points"]:
         lu = sp["lu"]
         if "recuperation_chaleur" in lu:
-            L.append(f"| Récupération de chaleur — {sp['titre']} | {' / '.join(sp['commentaire'])} | à lire | {lu['recuperation_chaleur']['source']} |")
+            L.append(f"| Récupération de chaleur — {titre_lisible(sp['titre'])} | {' / '.join(sp['commentaire'])} | à lire | ? | {lu['recuperation_chaleur']['source']} |")
         if not any(k in lu for k in ("compresseurs", "dimensions", "evaporateurs", "unites_condensation")):
-            L.append(f"| {sp['titre']} | {' / '.join(sp['commentaire']) or '—'} | à lire | rapport p. {sp['pages'][0]} |")
+            photos_sp = ", ".join(f"`{Path(ph).name}`" for ph in sp["photos"]) or "—"
+            L.append(f"| {titre_lisible(sp['titre'])} | {' / '.join(sp['commentaire']) or '—'} | à lire | {photos_sp} | rapport p. {sp['pages'][0]} |")
+    L.append("")
+    L.append("*D* : « Lu sur les photos » = un segment par photo, séparés par « ; », chacun terminé par sa photo : « armoire "
+             "Danfoss avec variateur (`p14-1.jpeg`) ; régulateurs d'évaporateurs (`p14-2.jpeg`) » ; colonne Photo = toutes "
+             "les photos de la ligne, entre accents graves. L'étape 3 en tire la légende de chaque vue.")
     L.append("")
     L.append("## E. À confirmer par Loïc")
     L.append("")

@@ -11,7 +11,10 @@ Usage (depuis la racine du dépôt) :
     PYTHONUTF8=1 python .claude/skills/froid-dimensionnement/scripts/calculs.py dimensionnement/dossiers/<slug> --verifier
     option : --points <csv> (points catalogue ; défaut : dimensionnement/savoir/materiel/points-catalogue/bitzer-r449a.csv)
 --verifier relit seulement les entrées et signale les incohérences (id en double, unités, statuts, lectures, sources
-non reconnues), sans rien écrire. Sans --verifier, la même vérification passe d'abord : une erreur bloque l'écriture.
+non reconnues, nombre écarté de plus de 0,5 % de sa formule numérique, volume sans formule), sans rien écrire. Sans
+--verifier, la même vérification passe d'abord : une erreur bloque l'écriture. Avant elle, les écritures de plaque des
+fluides choisis (« R507 », « R-507A », « r404a », « R 449 A ») sont ramenées à la désignation de référence (« R507A »,
+« R404A », « R449A » : fluides.designation), avec une ligne ATTENTION par réécriture.
 Codes de sortie : 0 fait (ou entrées cohérentes) ; 1 entrées incohérentes, rien n'est écrit ; 2 dossier ou
 2-entrees.json absent, JSON illisible.
 
@@ -34,7 +37,9 @@ Chaque source dit d'où vient la donnée : « photo p11-3 », « rapport p. 10 �
       "type_equipement_cible": "centrale", "precision": "remise de prix" | "exécution", "date_analyse": "AAAA-MM-JJ"},
   "postes": [{
       "id", "nom", "dessert": texte sourcé, "fluide": choix (facultatif ; sinon le fluide actuel du projet),
-      "temperature_chambre": Valeur °C, "volume": Valeur m³, "regime": {"t0": Valeur °C, "tc": Valeur °C},
+      "temperature_chambre": Valeur °C, "volume": Valeur m³ avec "formule" (L × l × h tels que lus, ex.
+      « 14,6 × 50 × 2,7 » : l'étape 3 en tire la surface au sol ; absente → surface « à confirmer »),
+      "regime": {"t0": Valeur °C, "tc": Valeur °C},
       "charge": Valeur kg,
       "compresseurs": [{"id", "marque", "modele", "volume_balaye": Valeur m³/h (photo en source),
                         "lecture": "sûre" | "douteuse" | "illisible", "note": texte, "frequence": Valeur Hz,
@@ -78,7 +83,7 @@ from compresseurs import CHEMIN_POINTS_DEFAUT, CLES_PARAMETRES, charger_points, 
 from compresseurs import _parametres as parametres_effectifs  # noqa: E402  (défauts + vérification, même skill)
 from controles import comparer, puissance_demandee, somme  # noqa: E402
 from valeur import (A_CONFIRMER, HYPOTHESE, RANG, SOURCE, Valeur, a_confirmer, calculer,  # noqa: E402
-                    combiner, depuis_json, en_json, normaliser_statut)
+                    combiner, depuis_json, en_json, nombre_fr, normaliser_statut)
 
 # ---------- constantes ----------
 FORMAT_ENTREES = "2-entrees v1"
@@ -255,6 +260,63 @@ def charger_entrees(dossier: Path) -> tuple[dict | None, list[str]]:
     return depuis_json(texte), []
 
 
+# Écart toléré entre le nombre saisi et sa formule (« 14,6 × 11,6 × 2,4 ») : au-delà, avertissement de --verifier.
+# Seuil de saisie (arrondi à l'affichage), pas une donnée physique ; consigne du 2026-10-08 (comparaison H1).
+ECART_FORMULE = 0.005
+_RE_FORMULE = re.compile(r"[\d\s.,()+\-−*/×xX÷]+")
+
+
+def valeur_formule(formule: Any) -> float | None:
+    """Valeur d'une formule purement numérique (« 14,6 × 50 × 2,7 », « (10 + 4) × 2 ») ; None si la formule est vide,
+    cite des identifiants (« c1-vb × c1-lambda ») ou ne se calcule pas."""
+    if not isinstance(formule, str) or not formule.strip() or not _RE_FORMULE.fullmatch(formule) \
+            or not re.search(r"\d", formule):
+        return None
+    expr = re.sub(r"(\d),(\d)", r"\1.\2", formule)
+    expr = expr.replace("×", "*").replace("x", "*").replace("X", "*").replace("−", "-").replace("÷", "/")
+    try:
+        n = eval(expr, {"__builtins__": {}}, {})          # noqa: S307 (chiffres et opérateurs seulement, vérifié)
+    except Exception:                                     # syntaxe, division par zéro
+        return None
+    return float(n) if isinstance(n, (int, float)) and not isinstance(n, bool) else None
+
+
+def normaliser_fluides(e: dict) -> list[str]:
+    """Écritures de plaque des fluides choisis (« R507 », « R-507A », « r404a », « R 449 A ») ramenées à la
+    désignation de référence (« R507A », « R404A », « R449A », fluides.designation) avant la vérification : CoolProp
+    et la table F-gas lisent alors le même nom. Modifie en place parametres.fluide_base, projet.fluide_actuel,
+    projet.fluide_cible, postes[].fluide et postes[].plaques_ensemble[].fluide ; la source garde l'écriture d'origine.
+    Rend un message « ATTENTION » par réécriture. Le fluide d'origine d'un évaporateur (texte lu) n'est pas réécrit :
+    il est normalisé seulement pour la recherche des variantes F-gas."""
+    messages: list[str] = []
+
+    def un(chemin: str, c: Any) -> None:
+        if not isinstance(c, dict) or not isinstance(c.get("valeur"), str):
+            return
+        d = fluides.designation(c["valeur"])
+        if d and d != c["valeur"]:
+            messages.append(f"ATTENTION · {chemin} : fluide « {c['valeur']} » lu « {d} » (écriture de plaque "
+                            "normalisée ; la source garde l'écriture d'origine)")
+            c["valeur"] = d
+
+    params = e.get("parametres")
+    if isinstance(params, dict):
+        un("parametres.fluide_base", params.get("fluide_base"))
+    projet = e.get("projet")
+    if isinstance(projet, dict):
+        for k in ("fluide_actuel", "fluide_cible"):
+            un(f"projet.{k}", projet.get(k))
+    for i, p in enumerate(e.get("postes") if isinstance(e.get("postes"), list) else []):
+        if not isinstance(p, dict):
+            continue
+        ch = f"postes[{i}] ({p.get('id')})"
+        un(f"{ch}.fluide", p.get("fluide"))
+        for j, pl in enumerate(p.get("plaques_ensemble") if isinstance(p.get("plaques_ensemble"), list) else []):
+            if isinstance(pl, dict):
+                un(f"{ch}.plaques_ensemble[{j}].fluide", pl.get("fluide"))
+    return messages
+
+
 class _Rapport:
     def __init__(self) -> None:
         self.erreurs: list[str] = []
@@ -311,6 +373,12 @@ class _Rapport:
             self.erreur(chemin, "statut « sourcé » mais la source commence par « hypothèse »")
         if v.statut == HYPOTHESE and not re.search(r"hypothese|lecture douteuse|suppose|estimation", s):
             self.attention(chemin, "statut « hypothèse » : dire pourquoi dans la source (« hypothèse : … »)")
+        attendu = valeur_formule(v.formule)
+        if attendu is not None and v.nombre is not None and attendu != 0 \
+                and abs(v.nombre - attendu) / abs(attendu) > ECART_FORMULE:
+            self.attention(chemin, f"nombre {nombre_fr(v.nombre, 3)} différent de sa formule « {v.formule} » = "
+                                   f"{nombre_fr(attendu, 3)} (écart au-delà de {nombre_fr(ECART_FORMULE * 100, 1)} %) : "
+                                   "corriger le nombre ou la formule")
         return v
 
     def choix(self, chemin: str, c: Any, obligatoire: bool = True, permis: tuple | None = None,
@@ -450,7 +518,10 @@ def verifier(e: dict) -> tuple[list[str], list[str]]:
         r.texte(f"{ch}.dessert", poste.get("dessert"))
         fl = r.choix(f"{ch}.fluide", poste.get("fluide"), obligatoire=False, fluide="coolprop")
         r.valeur(f"{ch}.temperature_chambre", poste.get("temperature_chambre"), ("°C",))
-        r.valeur(f"{ch}.volume", poste.get("volume"), ("m³", "m3"))
+        vol = r.valeur(f"{ch}.volume", poste.get("volume"), ("m³", "m3"))
+        if vol is not None and vol.nombre is not None and valeur_formule(vol.formule) is None:
+            r.attention(f"{ch}.volume", "pas de « formule » numérique (L × l × h tels que lus, ex. « 14,6 × 50 × 2,7 ») : "
+                                        "la surface au sol sera « à confirmer » à l'étape 3")
         r.regime(f"{ch}.regime", poste.get("regime"))
         r.valeur(f"{ch}.charge", poste.get("charge"), ("kg",))
         if fl is None and not (projet.get("fluide_actuel") or {}).get("valeur"):
@@ -658,7 +729,8 @@ def _variantes_fluide(poste: dict, fluide_nom: str, type_eq: str, charge: Valeur
         if nom and nom != actuel:
             origines.setdefault(nom, []).append(f"plaque d'ensemble {pl['id']}")
     for ev in poste.get("evaporateurs") or []:
-        nom = fgas.nom_canonique(ev.get("fluide_origine")) if ev.get("fluide_origine") else None
+        fo = ev.get("fluide_origine")
+        nom = fgas.nom_canonique(fluides.designation(fo) or fo) if fo else None     # « R507 » de la plaque → R507A
         if nom and nom != actuel:
             origines.setdefault(nom, []).append(" ".join(x for x in ("évaporateur", ev.get("id"), ev.get("modele"),
                                                                      f"de {ev['annee']}" if ev.get("annee") else "")
@@ -1211,7 +1283,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     attentions: list[str] = []
     if entrees is not None:
+        notes = normaliser_fluides(entrees)                 # « R507 » (plaque) → « R507A » avant la vérification
         erreurs, attentions = verifier(entrees)
+        attentions = notes + attentions
     for m in erreurs + attentions:
         print(m)
     if erreurs:

@@ -7,6 +7,7 @@ les calculs de puissance de compresseurs.py (méthode : dimensionnement/savoir/m
 Usage (bibliothèque) :
     from fluides import nom_coolprop, p_saturation, etat_aspiration, delta_h_evaporateur
     nom_coolprop("R449A")                                   → « R449A.mix »
+    designation("R 507") ; designation("r404a")             → « R507A » ; « R404A »  (écritures de plaque)
     p_saturation("R449A", -30).texte()                      → « 1,60 bar »  (pression absolue, point de rosée)
     e = etat_aspiration("R449A", -30, gaz_aspire_c=20)
     e["densite"].texte(), e["enthalpie"].texte()            → « 5,88 kg/m³ », « 428,2 kJ/kg »
@@ -31,6 +32,7 @@ from __future__ import annotations
 
 import functools
 import math
+import re
 import sys
 import unicodedata
 from pathlib import Path
@@ -76,6 +78,11 @@ NOMS_COOLPROP = {
 }
 # Un nom CoolProp déjà écrit (« R449A.mix », « CO2 ») est accepté tel quel.
 _NOMS_DIRECTS = {nom.upper(): nom for nom in NOMS_COOLPROP.values()}
+# Écritures de plaque sans la lettre de la série ASHRAE 34, acceptées seulement quand la série n'a qu'un membre
+# (R404A, R507A) : « R507 » → « R507A ». Les séries à plusieurs membres (R407A/C/F, R410A/B, R449A/B/C, R452A/B/C,
+# R513A/B) restent refusées sans leur lettre : la lettre change le fluide. Décision du 2026-10-08 (friction 7 du test
+# « session neuve » : la plaque d'une centrale écrivait « R507 »).
+ALIAS_PLAQUE = {"R404": "R404A", "R507": "R507A"}
 
 # Conventions de température de saturation acceptées et leur libellé dans les sources.
 LIBELLES = {"rosee": "rosée", "bulle": "bulle", "moyenne": "moyenne"}
@@ -91,13 +98,29 @@ def nom_coolprop(fluide: str) -> str:
     """« R449A », « R-449A », « r449a » → « R449A.mix » ; « R744 » ou « CO2 » → « CO2 » ; inconnu : ValueError."""
     if not isinstance(fluide, str) or not fluide.strip():
         raise ValueError(f"fluide absent ou illisible : {fluide!r}")
-    cle = _cle(fluide)
+    cle = ALIAS_PLAQUE.get(_cle(fluide), _cle(fluide))
     if cle in NOMS_COOLPROP:
         return NOMS_COOLPROP[cle]
     if fluide.strip().upper() in _NOMS_DIRECTS:
         return _NOMS_DIRECTS[fluide.strip().upper()]
     connus = ", ".join(sorted(k for k in NOMS_COOLPROP if k[0] == "R" or k == "CO2"))
     raise ValueError(f"fluide inconnu : « {fluide} » ; fluides pris en charge : {connus}")
+
+
+def designation(fluide: str) -> str | None:
+    """Désignation de référence (ASHRAE 34) d'une écriture de plaque ou de rapport, None si elle n'est pas reconnue :
+    « R507 », « R-507A », « r507a » → « R507A » ; « R404a » → « R404A » ; « R 449 A » → « R449A » ; « R134A » →
+    « R134a » ; « R744 » → « R744 ». Seules les désignations « R » + chiffres (+ une lettre) sont traitées : « CO2 »,
+    « propane », « R1234yf » ou un texte (« non indiqué ») rendent None et restent tels qu'écrits."""
+    if not isinstance(fluide, str) or not fluide.strip():
+        return None
+    cle = ALIAS_PLAQUE.get(_cle(fluide), _cle(fluide))
+    if not re.fullmatch(r"R\d+[A-Z]?", cle) or cle not in NOMS_COOLPROP:
+        return None
+    nom = NOMS_COOLPROP[cle]
+    if nom.endswith(".mix"):
+        return nom[:-len(".mix")]
+    return nom if nom.startswith("R") else cle
 
 
 def convention_normalisee(convention: str, permises: tuple[str, ...] = ("rosee", "moyenne")) -> str:

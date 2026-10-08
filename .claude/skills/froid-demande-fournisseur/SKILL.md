@@ -34,7 +34,8 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
 
 1. **Relire `dossier.md`.** Si l'étape 1 ou l'étape 2 n'est pas *validée* par Loïc, **refuser** : « On valide
    d'abord le relevé et le dimensionnement : un chiffre faux envoyé au fournisseur, c'est le mauvais compresseur
-   commandé », et lister ce qui reste à valider. Seule exception : Loïc demande explicitement d'avancer quand même ;
+   commandé », et lister ce qui reste à valider. Seule exception : Loïc demande explicitement d'avancer quand même,
+   ou demande les trois étapes sans être là (`dimensionnement/CLAUDE.md`, « Loïc absent : tout d'un coup ») ;
    le journal de `dossier.md` l'écrit (« étapes 1-2 non validées ») et on le lui redit à l'étape 8. Puis relire les
    fichiers de la liste ci-dessus.
 
@@ -55,7 +56,20 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
    légendées, longueurs de cuivre de `plan/metre.json` et annexe `plan/plan.pdf` s'ils existent, anonymisation,
    pièces jointes), `identifiants-client.json` (ce qui a été cherché et remplacé) et
    `valeurs-derivees.json` (surfaces L × l et volumes balayés totaux, seuls calculs de l'étape 3, par script).
-   Lire chaque « attention » affichée. Code 1 ou 2 : rien n'est écrit, lire le motif.
+   Lire chaque « attention » affichée : elles sont aussi recopiées dans `demande.json` (`avertissements`, jamais
+   rendues dans le PDF ni le mail) et se relisent à l'étape 4 (ex. modèle entre guillemets lu malgré tout, légendes
+   de vues rapprochées par position). Code 1 ou 2 : rien n'est écrit, lire le motif. Code 1 « format inattendu » :
+   un chiffre écrit dans `1-existant.md` serait devenu « à confirmer » ou « non relevé » (volume sans `formule` alors
+   que le tableau C a les cotes, n° de série que la mise en forme rend illisible, photo d'un compresseur introuvable) :
+   corriger la source (format dans le SKILL de l'étape 1 ou 2), relancer l'étape 2 si `2-entrees.json` change, puis
+   ce point ; jamais `demande.json` à la main.
+   **La demande dépend de la forme des blocs A, E, F** de `2-dimensionnement.md` : A = tableau
+   `| Élément | Contenu | Source |` (lignes « Ce qu'on remplace », « Par quoi », « Marché », « Qui dessert quoi ») ;
+   E = tableau dont l'en-tête Existant porte la légende des codes (« A = Centrale négative A, … ») et dont les cellules
+   s'écrivent « A : … · B : … » ; F = puces dont les mots décident des points a) à f) (Danfoss, AK-SM 800A, AK-CC 55,
+   soupape, cordon, détection de fuite, cuivre, K65…) et dont un nombre écrit juste avant « soupapes » ou « portes »
+   est repris tel quel. Table complète : SKILL de l'étape 2, étape 5. Un point attendu absent de la demande se corrige
+   dans le bloc F, puis on réassemble.
 
 4. **Relire `demande.json` et n'ajuster que les textes dictés** : `contexte.texte`, `demande` (intro, points,
    sous-points, résumé), `postes[].remplacement`, `mail` (objet, corps, formule), selon ce que Loïc a dit à l'étape 2.
@@ -70,6 +84,14 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
    corrige dans `plan/plan.json`, étape P, puis on reprend l'étape 3). Un chiffre faux se corrige à l'étape 2
    (`2-entrees.json`, `calculs.py`), puis on reprend à l'étape 3 ci-dessus (`--force` si la version n'est pas envoyée).
    Variante grossiste : ne réintroduire aucun nom, lieu ou référence du client.
+   **Le mail affirme ce que Loïc relira** : aucune formulation de doute (« nous supposons », « que nous pensons »,
+   « d'après le relevé ») ; les hypothèses restent marquées « (hyp.) » dans le PDF et listées dans `dossier.md` pour
+   sa relecture.
+   **Ligne « Dessert »** d'un poste : le rattachement chambre ↔ production vient de l'étape 2 ; en hypothèse, il
+   porte « (hyp.) » dans le PDF. Si Loïc le conteste : le corriger dans `2-entrees.json` (`postes[].dessert`, texte,
+   source « dicté par Loïc le … », statut « sourcé »), relancer `calculs.py` et remettre à jour le bloc A
+   (« Qui dessert quoi ») et la vue HTML de l'étape 2, puis réassembler (nouvelle version, ou `--force` si elle n'est
+   pas envoyée) ; jamais à la main dans `demande.json`.
 
 5. **Rendre le PDF et le mail** :
    ```
@@ -88,7 +110,10 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
    Sept contrôles : (1) anonymisation (aucun identifiant du client, ni ses variantes de casse, d'accents ou
    d'espaces, dans `demande.json`, la page, le mail ni le texte du PDF, page du plan comprise) ; (2) chaque nombre
    des tableaux et des puissances par poste existe au même rendu dans `2-resultats.json` ou `valeurs-derivees.json` ;
-   (3) chaque photo des tableaux B, B2, C de l'étape 1 figure une fois, légendée ; (4) PDF lisible, plus d'une page,
+   (3) chaque photo des tableaux B, B2, C de l'étape 1 figure une fois, légendée, et chaque légende de plaque reprend
+   les valeurs du relevé pour cette photo (marque, modèle, n° de série, volume balayé ; n° de la plaque d'ensemble) :
+   une valeur absente, vide ou remplacée par « non relevé » échoue, comme tout caractère invisible (U+0001…) dans
+   `demande.json` ou `1-existant.md` ; (4) PDF lisible, plus d'une page,
    moins de 5 Mo, pas plus ancien que `demande.json`, aucune image manquante ; (5) mail sans tableau, objet non vide,
    chiffres clés présents et retrouvés dans `2-resultats.json`, renvoi au PDF ; (6) pièces jointes et plan
    d'implantation présents ; plan du local en annexe si `plan/plan.pdf` existe : PDF = pages d'Edge + 1, page A4 à
@@ -183,7 +208,9 @@ Lire d'abord `dimensionnement/CLAUDE.md` (règles de fiabilité). Ce manuel prim
 Coordonnées de Cazal Réfrigération sur la page de garde et dans la signature : `societe`, `contact`, `telephone`,
 `mail`, `adresse` (+ `source`). Fichier **local** (dossier gitignoré), **à compléter par Loïc** (adresse postale,
 mail de contact voulu). Un `emetteur.json` dans le dossier d'une installation, ou `--emetteur`, le remplace pour ce
-dossier. Champ vide : la ligne disparaît du PDF, rien n'est inventé.
+dossier. Champ vide : la ligne disparaît du PDF, rien n'est inventé. L'adresse postale de Cazal est vide tant que
+Loïc ne l'a pas donnée : ne jamais la recopier d'un rapport ni d'ailleurs, c'est la question 11 de sa liste
+(rappelée à l'étape 8 tant qu'elle manque).
 
 ## Règles fermes
 
@@ -202,8 +229,9 @@ dossier. Champ vide : la ligne disparaît du PDF, rien n'est inventé.
 
 Pendant la construction et les essais du système, **aucune question n'est posée à Loïc** : chaque question est
 consignée dans le fichier privé de questions tenu par la session principale (hors de ce dépôt) et lui est remise à
-la livraison ; on avance sur des hypothèses écrites (`regles-loic.md`, gabarits). En usage réel avec Loïc, les
-questions se posent courtes, dans la conversation, et ses réponses vont dans `dossier.md` et `regles-loic.md`.
+la livraison ; on avance sur des hypothèses écrites (`regles-loic.md`, gabarits). En usage réel avec Loïc (ou si
+la session ne connaît pas ce fichier privé), les questions se posent courtes, dans la conversation, et ses réponses
+vont dans `dossier.md` et `regles-loic.md` ; Loïc absent : une seule liste à la fin (`dimensionnement/CLAUDE.md`).
 
 ## Limites de la V1 (à dire à Loïc, simplement)
 

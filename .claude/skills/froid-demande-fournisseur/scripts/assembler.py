@@ -13,8 +13,14 @@ Usage, depuis la racine du dépôt :
     Variante fabricant : nommée par défaut (--anonymiser pour la rendre anonyme) ; dossier vN-fabricant/.
     --version absent : dernier numéro de la variante + 1. Une version existante n'est remplacée qu'avec --force
     (Claude a pu y ajuster des textes).
-Codes de sortie : 0 écrit ; 1 refusé (version existante, gabarit invalide, anonymisation incomplète) ;
-2 dossier, dossier.md ou 2-resultats.json absent.
+Codes de sortie : 0 écrit ; 1 refusé (version existante, gabarit invalide, anonymisation incomplète, ou format
+inattendu : un chiffre écrit dans 1-existant.md deviendrait « à confirmer » ou « non relevé » dans la demande, par
+exemple un volume sans « formule » alors que le tableau C donne L × l × h, ou un n° de série que la mise en forme
+rend illisible) ; 2 dossier, dossier.md ou 2-resultats.json absent.
+Les écarts de forme récupérables (modèle ou n° entre guillemets ou en gras, photo hors de la colonne Photo, légendes
+du tableau D rapprochées par position) sont lus malgré tout et signalés : chaque « attention » est affichée et
+recopiée dans demande.json (« avertissements »). Formes attendues de 1-existant.md et des blocs A, E, F de
+2-dimensionnement.md : SKILL.md des étapes 1, 2 et 3.
 
 Python : from assembler import assembler ; resultat = assembler(dossier, "grossiste", ...) → {"demande", "chemin",
 "identifiants", "avertissements", ...}. verifier_schema(demande) rend la liste des écarts au schéma (vide = conforme).
@@ -67,7 +73,10 @@ racine du dossier) :
                  "pieces_jointes": [],
                  "documents": [{"type": "plan", "fichier": "../../plan/plan.pdf", "titre", "pages": 1}]},
      "mail": {"objet", "salutation", "corps", "formule", "signature"},
-     "exclus_internes": [{"element", "postes": [id du poste…], "texte", "raison"}]}
+     "exclus_internes": [{"element", "postes": [id du poste…], "texte", "raison"}],
+     "avertissements": [texte…] (facultatif : absent des demande.json antérieurs au 2026-10-08 ; anonymisé)}
+« dessert » d'un poste : texte du rattachement chambre ↔ production, suivi de « (hyp.) » s'il est en hypothèse à
+l'étape 2 (« (à confirmer) » s'il est à confirmer) ; il se corrige dans 2-entrees.json, jamais dans demande.json.
 « longueurs » : familles cuivre_froid et cuivre_clim de plan/metre.json, réseau par réseau (total_m en mètres, nombre
 JSON à 2 décimales ; origine « estimee » ou « mesuree » par ligne, « estimee », « mesuree » ou « mixte » par réseau) ;
 toute longueur est une estimation d'après le plan, sauf celle mesurée sur chantier par Loïc ; diamètres et charge de
@@ -78,6 +87,8 @@ de la version (3-demande-fournisseur/<vN>/), contrairement aux photos.
 chambre, marque / modèle / année cités, sinon code de la colonne Existant). « exclus_internes » : les propositions du
 bloc E interrogatives ou qui contiennent « à confirmer », « lesquels garder », « ? » : questions pour Loïc, jamais
 dans le livrable fournisseur ; Claude les relit à l'étape 4 (elles ne sont ni rendues ni envoyées).
+Légendes des vues du tableau D : par identifiant d'abord (le segment qui cite « pNN-k » est la légende de cette
+photo), puis par position (segments_par_photo).
 Photos d'un poste : « plaque » = plaque d'un compresseur ou d'un évaporateur ; « ensemble » = plaque d'ensemble
 (centrale, condenseur, échangeur : tableau B2 avec une plaque lue). Les vues sans plaque (régulation, condenseurs en
 cage, échangeurs, locaux, chambres) vont dans annexes.vues_ensemble. Chaque photo n'apparaît qu'une fois.
@@ -146,7 +157,7 @@ ROOT = Path(__file__).resolve().parents[4]          # racine du dépôt (…/.cl
 DOSSIERS = ROOT / "dimensionnement" / "dossiers"
 sys.path.insert(0, str(SKILL.parent / "froid-dimensionnement" / "scripts"))
 from controles import somme  # noqa: E402
-from valeur import HYPOTHESE, SOURCE, Valeur, a_confirmer, calculer, depuis_json  # noqa: E402
+from valeur import A_CONFIRMER, HYPOTHESE, SOURCE, Valeur, a_confirmer, calculer, depuis_json  # noqa: E402
 
 GROSSISTE, FABRICANT = "grossiste", "fabricant"
 VARIANTES = (GROSSISTE, FABRICANT)
@@ -171,7 +182,9 @@ REMPLACEMENTS = {"client": "le client", "adresse": "le site", "rue": "le site", 
                  "mail": "(adresse mail retirée)", "fiche": "(référence retirée)"}
 CLES_DEMANDE = ("version", "date", "variante", "destinataire", "anonymise", "emetteur", "site", "titre", "mention",
                 "contexte", "chambres", "production", "evaporateurs", "longueurs", "demande", "postes", "annexes",
-                "mail", "exclus_internes")
+                "mail", "exclus_internes", "avertissements")
+# Clés facultatives du schéma : « avertissements » (ajoutée le 2026-10-08) manque aux demande.json antérieurs.
+CLES_FACULTATIVES = ("avertissements",)
 CLES_ANNEXES = ("vues_ensemble", "plan_implantation", "pieces_jointes", "documents")
 
 # Lot 7 : longueurs de cuivre et plan du local (étape P, skill froid-plan-2d ; contrat plan/metre.json)
@@ -199,6 +212,15 @@ PHRASES_MAIL = {(True, True): "Les longueurs de cuivre estimées d'après le pla
 
 class Refus(Exception):
     """Demande impossible (code de sortie 1)."""
+
+
+class FormatInattendu(Refus):
+    """Un chiffre écrit dans 1-existant.md deviendrait « à confirmer » ou « non relevé » à cause de sa mise en forme
+    (code de sortie 1) ; porte aussi les avertissements, affichés par main()."""
+
+    def __init__(self, message: str, avertissements: list[str]):
+        super().__init__(message)
+        self.avertissements = avertissements
 
 
 class SourceAbsente(Exception):
@@ -898,26 +920,64 @@ def _b2_est_plaque(ligne: dict) -> bool:
     return not plaque.startswith(("vue d'ensemble", "plaque non photographiee", "plaques d'ensemble non lisibles"))
 
 
-def _serie_evaporateur(releve: Releve, ev: dict, refs: list[str], rang: int) -> str:
-    """N° de série d'un évaporateur, lu au tableau C (segment qui cite son modèle)."""
+def _cle_souple(texte: Any) -> str:
+    """Lettres et chiffres seulement (« Profroid « CAB5367 » » → « profroidcab5367 ») : comparaison d'un modèle écrit
+    avec guillemets, gras, espaces ou tirets."""
+    return re.sub(r"[^a-z0-9]", "", _norm(texte))
+
+
+_SERIE_SOUPLE = r"[«\"“]?\s*([^\s,;()«»\"“”]*[^\W_][^\s,;()«»\"“”]*)"
+
+
+def _series_du_segment(seg: str, souple: bool) -> list[str]:
+    """N° de série écrits dans un segment du tableau C : « n° A et B », sinon « fabr. A » ; souple : guillemets
+    tolérés autour du numéro (« n° « 1234 » »), et un numéro contient au moins une lettre ou un chiffre."""
+    if souple:
+        m = re.search(rf"n°\s*:?\s*{_SERIE_SOUPLE}((?:\s+et\s+{_SERIE_SOUPLE})*)", seg)
+        if m:
+            return [m.group(1)] + re.findall(rf"\s+et\s+{_SERIE_SOUPLE}", m.group(2))
+        m = re.search(rf"fabr\.\s*{_SERIE_SOUPLE}", seg)
+        return [m.group(1)] if m else []
+    m = re.search(r"n°\s*([^\s,;()]+)((?:\s+et\s+[^\s,;()]+)*)", seg)
+    if m:
+        return [m.group(1)] + re.findall(r"\s+et\s+([^\s,;()]+)", m.group(2))
+    m = re.search(r"fabr\.\s*([^\s,;()]+)", seg)
+    return [m.group(1)] if m else []
+
+
+def _serie_evaporateur(releve: Releve, ev: dict, refs: list[str], rang: int,
+                       photos: list[str] | None = None) -> tuple[str, str, str]:
+    """N° de série d'un évaporateur, lu au tableau C : (n°, avertissement, erreur).
+
+    1. segment qui cite son modèle tel quel (espaces ignorés), numéro « n° X » ou « fabr. X » : forme attendue ;
+    2. sinon, segment qui cite son modèle aux guillemets, gras et tirets près, ou qui cite sa photo (« pNN-k ») :
+       numéro lu malgré tout, avec un avertissement (format inattendu, à corriger dans 1-existant.md) ;
+    3. segment trouvé, « n° » écrit, mais aucun numéro lisible : erreur (le n° existe, le format le perd).
+    Aucun segment pour ce modèle : « » (n° de série non relevé), sans erreur."""
     cle_modele = re.sub(r"\s+", "", _norm(ev.get("modele")))
     if not cle_modele:
-        return ""
+        return "", "", ""
     lignes = [l for l in releve.c if any(r in _col(l, "source") for r in refs)] or releve.c
-    for l in lignes:
-        for seg in _segments(_propre(_col(l, "evaporateur")), ";"):
-            if cle_modele in re.sub(r"\s+", "", _norm(seg)):
-                series = []
-                m = re.search(r"n°\s*([^\s,;()]+)((?:\s+et\s+[^\s,;()]+)*)", seg)
-                if m:
-                    series = [m.group(1)] + re.findall(r"\s+et\s+([^\s,;()]+)", m.group(2))
-                else:
-                    m = re.search(r"fabr\.\s*([^\s,;()]+)", seg)
-                    if m:
-                        series = [m.group(1)]
-                if series:
-                    return series[min(rang, len(series) - 1)]
-    return ""
+    segments = [seg for l in lignes for seg in _segments(_propre(_col(l, "evaporateur")), ";")]
+    for seg in segments:
+        if cle_modele in re.sub(r"\s+", "", _norm(seg)):
+            series = _series_du_segment(seg, souple=False)
+            if series and all(re.search(r"[^\W_]", x) for x in series):
+                return series[min(rang, len(series) - 1)], "", ""
+    souple = _cle_souple(ev.get("modele"))
+    for seg in segments:
+        if (souple and souple in _cle_souple(seg)) or any(r in _refs(seg) for r in photos or []):
+            series = _series_du_segment(seg, souple=True)
+            if series:
+                serie = series[min(rang, len(series) - 1)]
+                return serie, (f"{ev.get('id')} : n° de série {serie} lu malgré un format inattendu au tableau C de "
+                               f"1-existant.md (« {_couper(seg, 90)} ») ; forme attendue : « Marque Modèle n° X, année, "
+                               "fluide (`pNN-k.jpeg`) », sans guillemets ni gras autour du modèle ou du numéro"), ""
+            if re.search(r"n°|fabr\.", seg):
+                return "", "", (f"{ev.get('id')} : n° de série illisible pour le script au tableau C de 1-existant.md "
+                                f"(« {_couper(seg, 90)} ») alors qu'il y est écrit ; forme attendue : « n° X » ou "
+                                "« n° X et Y », sans guillemets")
+    return "", "", ""
 
 
 # =====================================================================================================
@@ -1191,22 +1251,87 @@ def _bloc_e(dim_md: str, postes: list[dict]) -> tuple[dict[str, list[str]], list
     return par_poste, exclus
 
 
-def segments_par_photo(lu: str, refs: list[str]) -> list[tuple[str, str]]:
+def _ligne_c_du_volume(releve: Releve, volume: float | None) -> dict | None:
+    """Ligne du tableau C de 1-existant.md dont le volume (colonne « Volume ») est celui du poste, à 0,5 % près."""
+    if volume is None:
+        return None
+    for l in releve.c:
+        m = re.search(r"\d+(?:[ \u00a0\u202f]\d{3})*(?:[.,]\d+)?", _propre(_col(l, "volume")))
+        if m:
+            n = float(re.sub(r"[ \u00a0\u202f]", "", m.group(0)).replace(",", "."))
+            if n and abs(n - volume) <= 0.005 * abs(n):
+                return l
+    return None
+
+
+def _dessert(poste: dict) -> str:
+    """Ligne « Dessert » d'un poste : le rattachement chambre ↔ production garde son statut (« (hyp.) » comme les
+    chiffres ; « (à confirmer) »), car il vient souvent d'une hypothèse de l'étape 2 (même lettre dans les titres)."""
+    d = poste.get("dessert") or {}
+    texte = str(d.get("texte") or "").strip()
+    if not texte:
+        return "à confirmer"
+    statut = _norm(d.get("statut"))
+    if statut == _norm(HYPOTHESE) and "(hyp" not in texte:
+        return f"{texte} (hyp.)"
+    if statut == _norm(A_CONFIRMER) and "a confirmer" not in _norm(texte):
+        return f"{texte} (à confirmer)"
+    return texte
+
+
+_RE_ETIQUETTE = re.compile(r"^(?:«|[^\s«]+\s+«)")
+
+
+def segments_par_photo(lu: str, refs: list[str], avert: list | None = None,
+                       ou: str = "") -> list[tuple[str, str]]:
     """Ce qu'on voit sur chaque photo d'une ligne du tableau D : le texte « Lu sur les photos » est découpé en segments
-    (« ; » hors parenthèses et guillemets) ; un segment qui n'est qu'une étiquette citée (« « Rés. porte » », « départs
-    « … » ») est un détail du précédent, pas une vue à part : il n'entre pas dans les légendes. Photos et segments sont
-    rapprochés dans l'ordre : autant de segments que de photos → un chacun ; moins de segments → les premières photos
-    partagent le premier, les dernières prennent les suivants ; plus de segments → les derniers sont laissés."""
-    segs = [s for i, s in enumerate(_segments(lu or "", ";")) if i == 0 or not re.match(r"^(?:«|[^\s«]+\s+«)", s)]
+    (« ; » hors parenthèses et guillemets).
+    1. Par identifiant : un segment qui cite une photo de la ligne (« … (`p14-2.jpeg`) ») est la légende de cette photo,
+       quel que soit son rang ; une photo absente de la ligne ne décale donc plus les autres.
+    2. Par position, pour les photos qu'aucun segment ne cite, avec les segments qui ne citent aucune photo de la
+       ligne : un segment qui n'est qu'une étiquette citée (« « Rés. porte » », « départs « … » ») est un détail du
+       précédent, pas une vue à part ; autant de segments que de photos → un chacun ; moins de segments → les premières
+       photos partagent le premier, les dernières prennent les suivants ; plus de segments → les derniers sont laissés.
+       Un partage ou un segment laissé (ligne à plusieurs photos) ajoute un avertissement à avert (rapprochement par
+       position, à vérifier ; citer la photo dans chaque segment le rend sûr)."""
     if not refs:
         return []
+    tous = _segments(lu or "", ";")
+    gardes = [s for i, s in enumerate(tous) if i == 0 or not _RE_ETIQUETTE.match(s)]
+    cites: dict[str, str] = {}
+    libres: list[str] = []
+    for s in gardes:
+        propres = [r for r in _refs(s) if r in refs]
+        for r in propres:
+            cites.setdefault(r, s)
+        if not propres:
+            libres.append(s)
+    for s in tous:                               # une étiquette qui cite sa photo reste la légende de cette photo
+        for r in _refs(s):
+            if r in refs:
+                cites.setdefault(r, s)
+    restants = [r for r in refs if r not in cites]
+    if not restants:
+        return [(r, cites[r]) for r in refs]
+    segs = libres if cites else gardes
+    n, m = len(restants), len(segs)
     if not segs:
-        return [(r, "") for r in refs]
-    n, m = len(refs), len(segs)
-    if m >= n:
-        return list(zip(refs, segs))
-    partage = n - m + 1
-    return [(r, segs[0] if k < partage else segs[k - partage + 1]) for k, r in enumerate(refs)]
+        par_position = [(r, "") for r in restants]
+    elif m >= n:
+        par_position = list(zip(restants, segs))
+        if m > n and n > 1 and avert is not None:
+            avert.append(f"{ou} : {m - n} segment(s) de texte sans photo laissé(s) de côté (« {_couper(segs[n], 60)} » "
+                         "…) ; rapprochement des légendes par position, à vérifier (citer `pNN-k.jpeg` dans chaque "
+                         "segment)")
+    else:
+        partage = n - m + 1
+        par_position = [(r, segs[0] if k < partage else segs[k - partage + 1]) for k, r in enumerate(restants)]
+        if avert is not None:
+            avert.append(f"{ou} : {n} photos pour {m} segment(s) de texte : {', '.join(restants[:partage])} partagent "
+                         f"la légende « {_couper(segs[0], 60)} » (rapprochement par position, à vérifier ; un segment "
+                         "« mot « … » » est lu comme une étiquette du précédent ; citer `pNN-k.jpeg` dans chaque segment)")
+    position = dict(par_position)
+    return [(r, cites.get(r) or position.get(r, "")) for r in refs]
 
 
 def _photo_chemin(s: Sources, ref: str) -> str:
@@ -1260,6 +1385,7 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
         dossier = DOSSIERS / str(dossier)
     s = lire_sources(dossier)
     avert = s.avertissements
+    erreurs_format: list[str] = []          # chiffre présent dans 1-existant.md, perdu par un format inattendu
     res = s.resultats
     postes = res.get("postes") or []
     if not postes:
@@ -1458,6 +1584,19 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
                 derivees.append(sv)
                 surface = sv.texte()
                 hyp = hyp or sv.statut == HYPOTHESE
+            else:
+                ligne_c = _ligne_c_du_volume(releve, vol.nombre)
+                cotes = _propre(_col(ligne_c, "l × l × h", "dimensions")) if ligne_c else ""
+                nombres_c = re.findall(r"\d+(?:[.,]\d+)?", cotes)
+                if len(nombres_c) >= 2:
+                    erreurs_format.append(
+                        f"{p['id']} : surface « à confirmer » alors que 1-existant.md (tableau C, "
+                        f"« {_propre(_col(ligne_c, 'poste'))} ») donne « {cotes} » : la Valeur « volume » de "
+                        f"2-entrees.json n'a pas de champ « formule » (ici « {' × '.join(nombres_c[:3])} ») ; "
+                        "l'ajouter, relancer calculs.py (étape 2), puis assembler.py")
+                else:
+                    avert.append(f"{p['id']} : surface « à confirmer » (volume sans « formule » L × l × h dans "
+                                 "2-entrees.json, et pas de cotes au tableau C de 1-existant.md)")
         if vol is not None:
             hyp = hyp or vol.statut == HYPOTHESE
         lignes_ch.append({"chambre": _majuscule(nom_chambre(p)), "regime": regime, "surface": surface,
@@ -1557,7 +1696,22 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
                              "de 2-entrees.json")
             refs = [Path(x).stem for x in chemins]
             ligne_b = next((l for l in releve.b if any(r in _refs(_col(l, "photo")) for r in refs)), None)
+            if ligne_b is None and refs:
+                ligne_b = next((l for l in releve.b if any(r in _refs(" ".join(l.values())) for r in refs)), None)
+                if ligne_b is not None:
+                    avert.append(f"{c['id']} : photo {', '.join(refs)} trouvée au tableau B de 1-existant.md hors de la "
+                                 "colonne « Photo » (forme attendue : `pNN-k.jpeg` dans la colonne Photo)")
             serie = _propre(_col(ligne_b, "serie")) if ligne_b else ""
+            if not serie:
+                cle = _cle_souple(c.get("modele"))
+                autre = next((l for l in releve.b if l is not ligne_b and cle and cle in _cle_souple(_col(l, "modele"))
+                              and re.search(r"\d", _propre(_col(l, "serie")))), None)
+                if ligne_b is None and autre is not None:
+                    erreurs_format.append(
+                        f"{c['id']} : n° de série « non relevé » alors que 1-existant.md (tableau B, "
+                        f"« {_propre(_col(autre, 'poste'))} ») donne « {_propre(_col(autre, 'serie'))} » : la photo du "
+                        "compresseur n'y est pas retrouvée (colonne Photo : `pNN-k.jpeg` ; champ « photo » de "
+                        "2-entrees.json)")
             modele = c.get("modele") or "modèle à confirmer"
             if c.get("lecture") in ("douteuse", "illisible"):
                 modele += f" (lecture {c['lecture']})"
@@ -1598,7 +1752,12 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
             refs = [Path(x).stem for x in chemins] + _refs(ev.get("source"))
             refs += re.findall(r"rapport p\. ?\d+", ev.get("source") or "")
             freres_modele = [e for e in evs if _norm(e.get("modele")) == _norm(ev.get("modele"))]
-            serie = _serie_evaporateur(releve, ev, refs, freres_modele.index(ev))
+            serie, avert_serie, erreur_serie = _serie_evaporateur(releve, ev, refs, freres_modele.index(ev),
+                                                                  [Path(x).stem for x in chemins])
+            if avert_serie:
+                avert.append(avert_serie)
+            if erreur_serie:
+                erreurs_format.append(erreur_serie)
             fl_o = ev.get("fluide_origine") or ""
             fl_o = f"fluide {fl_o}" if fl_o and not fl_o.upper().startswith("R") else fl_o
             morceaux = [ev.get("modele") or "modèle à confirmer", f"n° {serie}" if serie else "n° de série non relevé",
@@ -1621,7 +1780,7 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
         if renvoi_regulation and not any(_norm(x).startswith("regulation") for x in rempl):
             rempl.append(renvoi_regulation)
         postes_json.append({"id": p["id"], "titre": p["nom"],
-                            "dessert": ((p.get("dessert") or {}).get("texte") or "à confirmer"),
+                            "dessert": _dessert(p),
                             "existant": existant, "puissance": puissance, "statut": ex.statut,
                             "remplacement": " ".join(x.rstrip(".") + "." for x in rempl) if rempl else "à confirmer",
                             "photos": photos, "_plaques": p.get("plaques") or []})
@@ -1681,7 +1840,8 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
         if lu in ("", "—", "-"):
             lu = _propre(_col(l, "rapport"))
         refs = _refs(_col(l, "photo"))
-        for pos, (r, seg) in enumerate(segments_par_photo(lu if lu not in ("—", "-") else "", refs)):
+        for pos, (r, seg) in enumerate(segments_par_photo(lu if lu not in ("—", "-") else "", refs, avert,
+                                                          f"tableau D, « {_couper(element, 50)} »")):
             extrait = _majuscule(_couper_elements(_sans_parentheses_chiffrees(seg)))
             candidat(r, (pos > 0, 0, i), " · ".join(x for x in (element, extrait) if x))
     for i, l in enumerate(releve.b2):
@@ -1765,6 +1925,17 @@ def assembler(dossier: Path, variante: str, destinataire: str | None = None, tut
     nb_photos = sum(len(pj["photos"]) for pj in demande["postes"]) + len(demande["annexes"]["vues_ensemble"])
     if nb_photos != len(s.photos):
         avert.append(f"{len(s.photos) - nb_photos} photo(s) de sources/photos non placée(s)")
+    if erreurs_format:
+        raise FormatInattendu("format inattendu dans les sources : un chiffre écrit dans 1-existant.md deviendrait "
+                              "« à confirmer » ou « non relevé » dans la demande ; rien n'est écrit. Corriger la "
+                              "source, puis relancer :\n" + "\n".join(f"  - {x}" for x in erreurs_format), avert)
+    # avertissements recopiés dans demande.json (relus par Claude à l'étape 4 ; jamais rendus dans le PDF ni le mail)
+    demande["avertissements"] = []
+    for a in avert:
+        a_json = _remplacer(a, motifs) if anonyme else a
+        if anonyme and identifiants_restants(a_json, motifs):
+            a_json = "(avertissement non recopié : il cite un identifiant du client ; voir la sortie d'assembler.py)"
+        demande["avertissements"].append(a_json)
 
     identifiants = {"anonymise": anonyme, "source": "dossier.md (titre, ligne Client, Adresse d'intervention) et "
                     "sources/structure.json", **{k: v for k, v in ids.items()},
@@ -1799,11 +1970,11 @@ def verifier_schema(d: Any) -> list[str]:
     """Écarts au schéma commun de demande.json (liste vide = conforme)."""
     err = []
 
-    def cles(obj, attendues, chemin):
+    def cles(obj, attendues, chemin, facultatives=()):
         if not isinstance(obj, dict):
             err.append(f"{chemin} : objet attendu")
             return False
-        manquantes = [k for k in attendues if k not in obj]
+        manquantes = [k for k in attendues if k not in obj and k not in facultatives]
         en_trop = [k for k in obj if k not in attendues]
         if manquantes:
             err.append(f"{chemin} : clés manquantes {manquantes}")
@@ -1823,8 +1994,10 @@ def verifier_schema(d: Any) -> list[str]:
             return []
         return obj
 
-    if not cles(d, CLES_DEMANDE, "demande"):
+    if not cles(d, CLES_DEMANDE, "demande", CLES_FACULTATIVES):
         return err
+    if "avertissements" in d and not all(isinstance(x, str) for x in liste(d["avertissements"], "avertissements")):
+        err.append("avertissements : textes attendus")
     for k in ("version", "date", "titre", "mention"):
         if not isinstance(d[k], str) or not d[k]:
             err.append(f"{k} : texte non vide attendu")
@@ -1945,6 +2118,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     except Refus as exc:
         print(f"refusé : {exc}")
+        for m in getattr(exc, "avertissements", []):
+            print(f"  attention : {m}")
         return 1
     d = r["demande"]
     print(f"Écrit : {r['chemin']}")

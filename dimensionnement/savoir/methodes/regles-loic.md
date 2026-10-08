@@ -4,7 +4,9 @@
 > R20, plans 2D, en hypothèse tant que Loïc ne les a pas validées, sauf R18 et R20 qui sont des décisions d'Adrien). Chaque règle est
 > **datée et sourcée**. Sources : « conversation Claude de Loïc
 > du 16/09/2026 » (numéro de capture d'écran) et « visio du 24/09/2026 » (minute de l'enregistrement).
-> Une règle énoncée pour un seul dossier est marquée « à confirmer comme règle générale ». Les réponses de
+> Une règle énoncée pour un seul dossier est marquée « observé sur le dossier test, à généraliser avec Loïc »
+> (statut hypothèse) ; le **dossier test** est le chantier réel qui a servi à construire le système (septembre
+> 2026) : ses particularités (nombres, implantation, fluide) ne valent pas pour une autre affaire. Les réponses de
 > Loïc aux six questions du 2026-10-06 s'ajoutent en fin de fichier, avec leur date. Toute correction de
 > Loïc à l'usage modifie la règle ici (et le pourquoi va dans `carnet/lecons.md`).
 
@@ -39,17 +41,21 @@
 - Conséquence pour le système : chaque chiffre porte sa source et son statut ; la sélection finale du
   matériel reste chez le fournisseur.
 
-## R4. Ce qu'il envoie aux grossistes et fournisseurs
+## R4. Ce qu'il envoie aux grossistes et fournisseurs (observé sur le dossier test, à généraliser avec Loïc)
+
+> **Statut : hypothèse** pour tout ce qui décrit l'installation ou le partage des tableaux : c'est ce que Loïc a fait
+> sur le dossier test. Le but et l'anonymat valent pour toute demande.
 
 - **Le but** : un mail de demande d'offre de prix, avec la capacité frigorifique actuelle, que le
   fournisseur utilise pour sélectionner le matériel. Conversation du 16/09/2026, capture 2.
-- **Sans nom de client** : présenter « une centrale HFC au R449 à passer en CO2 booster », la solution
-  restant adaptée à ce que propose le fournisseur. Conversation du 16/09/2026, capture 9.
+- **Sans nom de client** : présenter l'installation sans la nommer (sur le dossier test : « une centrale HFC au R449
+  à passer en CO2 booster »), la solution restant adaptée à ce que propose le fournisseur. Conversation du
+  16/09/2026, capture 9.
 - **Mail aux grossistes** (version complète) : introduction (soumission pour un marché de remodeling,
   offre de prix compétitive, installation complète de A à Z), renvoi au dossier photo, puis tableaux
   1. chambres à traiter, 2. production frigorifique existante, 3. évaporateurs en place, puis la demande
   d'offre détaillée. Conversation du 16/09/2026, captures 12 et 17 à 19.
-- **Mail au fournisseur de la centrale CO2 : deux tableaux seulement**, « chambres à traiter » et
+- **Mail au fournisseur de la centrale CO2 (dossier test) : deux tableaux seulement**, « chambres à traiter » et
   « puissance frigorifique existante » (pas d'évaporateurs ni d'armoire). Conversation du 16/09/2026,
   message daté du 24/09, capture 21.
 - **Format** : tableaux qui passent au copier-coller dans Outlook (version HTML) ; dossier photo des
@@ -66,28 +72,38 @@
   Conversation du 16/09/2026, capture 17.
 - **Tuyauterie et raccords en cuivre K65** (confirmé). Conversation du 16/09/2026, captures 6 et 11.
 
-## R6. Règles de régulation énoncées (à confirmer comme règles générales)
+## R6. Règles de régulation (observé sur le dossier test, à généraliser avec Loïc)
 
-Conversation du 16/09/2026, capture 9, pour un dossier de chambres négatives et positive :
+> **Statut : hypothèse.** Énoncées le 16/09/2026 (capture 9) pour le dossier test (chambres négatives et une
+> positive). Pour une autre affaire : pistes à confirmer avec Loïc, jamais recopiées telles quelles ; les **nombres**
+> (évaporateurs par régulateur, soupapes, portes) sont ceux du dossier test et deviennent des questions.
 
-- **Un régulateur par groupe d'évaporateurs d'une même chambre** (en négatif : un pour trois
+- **Un régulateur par groupe d'évaporateurs d'une même chambre** (sur le dossier test, en négatif : un pour trois
   évaporateurs, un autre pour deux, pour séparer les deux congélateurs).
 - **Négatif : dégivrage électrique sur chaque évaporateur.**
-- **Positif : un seul régulateur pour les deux évaporateurs, dégivrage naturel** (pas de dégivrage électrique).
-- Cordons chauffants de portes gérés par l'armoire ; **deux soupapes de décompression** à inclure dans l'armoire.
-- Régulation du **chauffage du sol** des chambres négatives.
+- **Positif : un seul régulateur pour les évaporateurs de la chambre, dégivrage naturel** (pas de dégivrage
+  électrique ; deux évaporateurs sur le dossier test).
+- Cordons chauffants de portes gérés par l'armoire ; **soupapes de décompression** à inclure dans l'armoire (deux sur
+  le dossier test ; ailleurs, le nombre est une question).
+- Régulation du **chauffage du sol** des chambres négatives (quand il existe, comme sur le dossier test).
 - **Armoire complète, pré-câblée.**
 
-## R7. Ce qu'il demande pour une centrale CO2 booster
+## R7. Ce qu'il demande pour une centrale CO2 booster (observé sur le dossier test, à généraliser avec Loïc)
 
-Conversation du 16/09/2026, message daté du 24/09, capture 21 :
+> **Statut : hypothèse.** Conversation du 16/09/2026, message daté du 24/09, capture 21, pour le dossier test. Les
+> options (gas coolers, aimants, variateur, désurchauffeur, ULSH) sont des pistes pour une autre centrale CO2 ; la
+> récupération de chaleur et l'implantation sont celles du dossier test : à confirmer à chaque affaire. Le projet
+> lui-même (ce qu'on remplace par une centrale CO2) n'est jamais déduit de cette règle : il se dicte, ou reste une
+> hypothèse écrite avec sa question.
 
 - **Gas coolers dimensionnés sur les températures de l'été passé.**
-- **Récupération de chaleur** conservée (chauffage du sol, aujourd'hui assuré par les centrales HFC).
+- **Récupération de chaleur** conservée (sur le dossier test : chauffage du sol, aujourd'hui assuré par les
+  centrales HFC).
 - **Aimants permanents** sur les compresseurs ; **variateur** sur les premiers compresseurs.
 - **Désurchauffeur sur le refoulement négatif** (dicté « surchauffeurs ») ; **module ULSH en option** ;
   demander au fournisseur les autres options pertinentes.
-- Centrale en extérieur sous toit et grillagée : poser la question d'un **carénage** (rongeurs).
+- Sur le dossier test, centrale en extérieur sous toit et grillagée : poser la question d'un **carénage**
+  (rongeurs). Pour une autre affaire, l'implantation est une question.
 
 ## R8. Fournitures et prix indicatifs demandés
 

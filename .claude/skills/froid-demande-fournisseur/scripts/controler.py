@@ -29,6 +29,13 @@ Les sept contrôles :
     « 2 × ». Le nombre d'évaporateurs doit être celui d'un poste de 2-resultats.json.
  3. Plaques : chaque photo citée dans les tableaux B, B2 et C de 1-existant.md (références pNN-k) figure une fois et
     une seule dans postes[].photos ou annexes.vues_ensemble, avec une légende non vide ; aucune photo du PDF sans légende.
+    Chaque légende de plaque (postes[].photos) reprend les valeurs lues dans 1-existant.md pour cette photo : tableau B
+    (marque, modèle, n° de série, volume balayé en m³/h), tableau C (modèle et n° de série de l'évaporateur : segment
+    qui cite la photo, sinon celui qui partage le plus de références avec la légende), tableau B2 (n° de la plaque
+    d'ensemble) ; une valeur absente, vide ou remplacée par « non relevé » est un échec. Aucun caractère invisible
+    (contrôle U+0000 à U+001F hors tabulation et retours à la ligne, U+007F à U+009F, espaces de largeur nulle, marques
+    de direction, U+FEFF) dans les textes de demande.json ni dans 1-existant.md (un remplacement raté par script peut
+    changer des chiffres en U+0001 sans que rien d'autre ne le voie).
  4. PDF : demande-<vN>.pdf existe, s'ouvre, a plus d'une page, pèse moins de 5 Mo, n'est pas plus ancien que
     demande.json ; la page HTML existe et chaque image qu'elle cite existe (une par photo de demande.json).
  5. Mail : mail-<variante>.txt existe, objet non vide, aucun « | » ni « <table » (ni dans le .html), il cite au moins
@@ -70,7 +77,7 @@ for _chemin in (ICI, ICI.parents[1] / "froid-dimensionnement" / "scripts"):
         sys.path.insert(0, str(_chemin))
 import generer_livrable as gl  # noqa: E402
 from assembler import (FAMILLES_CUIVRE, PHRASE_DIAMETRES, PHRASE_NON_RELEVEES,  # noqa: E402
-                       TITRE_ANNEXE_PLAN)
+                       TITRE_ANNEXE_PLAN, _col, _propre, _segments, section_md, tableau_md)
 from valeur import DECIMALES, DECIMALES_DEFAUT, Valeur, depuis_json, nombre_fr  # noqa: E402
 
 OK, ECHEC, SANS_OBJET = "OK", "ÉCHEC", "sans objet"
@@ -98,6 +105,15 @@ RE_MULTIPLICATEUR = re.compile(rf"^[{ESPACES}]*[×x][{ESPACES}]")
 RE_REF_PHOTO = re.compile(r"(?<![A-Za-z0-9])(p\d{2,}-\d+)(?!\d)")
 RE_TABLEAU_PHOTOS = re.compile(r"^#{2,3}\s+(B2|B|C)\b")
 RE_IMG = re.compile(r"<img\b[^>]*?\bsrc=\"([^\"]*)\"", re.I)
+# Caractères invisibles interdits (contrôle 3) : contrôle C0 sauf tabulation et retours à la ligne, DEL et contrôle C1,
+# espaces de largeur nulle et marques de direction, séparateurs de ligne Unicode, U+FEFF. Les espaces insécables
+# (U+00A0, U+202F) sont voulus et restent permis.
+RE_INVISIBLE = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u200b-\u200f\u2028\u2029\u2060-\u2064\ufeff]")
+RE_M3H = re.compile(r"(\d+(?:[.,]\d+)?)[\s\u00a0\u202f]*m(?:³|3)/h")
+RE_NUMERO = re.compile(r"(?:n°|fabr\.)\s*:?\s*[«\"“]?\s*([^\s,;()«»\"“”]*\d[^\s,;()«»\"“”]*)")
+RE_NUMERO_SUITE = re.compile(r"\s+et\s+[«\"“]?\s*([^\s,;()«»\"“”]*\d[^\s,;()«»\"“”]*)")
+TOLERANCE_M3H = 0.005
+MAX_DETAILS_INVISIBLES = 10
 # Lot 7 : pagination d'Edge, longueurs du chapitre (« 4,21 », « 1 234,50 », « 12,00 (mesurée) » ; unité dans l'en-tête)
 RE_PAGINATION = re.compile(r"Page\s+(\d+)\s*/\s*(\d+)")
 RE_LONGUEUR = re.compile(r"(?<![\d,.])(\d{1,3}(?:[\u00a0\u202f]\d{3})*,\d{2})(?![\d,])"
@@ -428,6 +444,126 @@ def photos_demande(demande: dict) -> list[tuple[str, str, str]]:
     return sortie
 
 
+def souple(texte: str) -> str:
+    """Lettres et chiffres seulement, sans accents ni casse (« **CAB 5267** » → « cab5267 »)."""
+    return re.sub(r"[^a-z0-9]", "", normaliser(texte))
+
+
+def refs_ligne(ligne: dict, colonne: str = "photo") -> list[str]:
+    """Références pNN-k de la colonne Photo d'une ligne de tableau, sinon de toute la ligne."""
+    cellule = next((v for k, v in ligne.items() if normaliser(k).strip() == colonne), None)
+    return RE_REF_PHOTO.findall(cellule if cellule is not None else " ".join(ligne.values()))
+
+
+def references(texte: str) -> list[str]:
+    """Références de modèle d'un texte : mots qui portent un chiffre (« 4H-15.2Y-40P », « CAB5367 », « 5267 »)."""
+    return [m for m in re.findall(r"[^\s,;()«»\"“”*`]+", texte or "") if re.search(r"\d", m)
+            and not RE_REF_PHOTO.fullmatch(m.replace(".jpeg", "").replace(".jpg", "").replace(".png", ""))]
+
+
+def a_lire(texte: str) -> bool:
+    """Case vide ou non lue (« à lire », « — », « ? », « illisible », « à confirmer »)."""
+    n = normaliser(_propre(texte)).strip()
+    return not re.search(r"[a-z0-9]", n) or n.startswith(("a lire", "illisible", "a confirmer", "non lu", "non releve"))
+
+
+def valeurs_releve(existant_md: str) -> dict[str, list[tuple[str, str, list[str], str]]]:
+    """{référence pNN-k: [(tableau, nature, variantes acceptées, texte lu)]} : ce que 1-existant.md dit de chaque
+    plaque. Une valeur est retrouvée si l'une de ses variantes est dans la légende (lettres et chiffres seulement ;
+    volumes balayés comparés en nombres). Lecture indépendante d'assembler.py (seul le découpage markdown est commun)."""
+    attendues: dict[str, list] = {}
+    for l in tableau_md(section_md(existant_md, "## B.")):
+        val = []
+        marque = _propre(_col(l, "marque"))
+        if not a_lire(marque):
+            val.append(("B", "marque", [marque], marque))
+        modele = _propre(_col(l, "modele"))
+        modeles = [m for m in references(modele) if len(souple(m)) >= 3]
+        if not a_lire(modele) and modeles:
+            val.append(("B", "modèle", modeles, modele))
+        serie = _propre(_col(l, "serie"))
+        if not a_lire(serie) and references(serie):
+            val.append(("B", "n° de série", references(serie)[:1], serie))
+        volumes = RE_M3H.findall(_propre(_col(l, "volume")))
+        if volumes:
+            val.append(("B", "volume balayé", volumes, _propre(_col(l, "volume"))))
+        for r in refs_ligne(l):
+            attendues.setdefault(r, []).extend(val)
+    for l in tableau_md(section_md(existant_md, "### B2.")):
+        plaque = _propre(_col(l, "plaque"))
+        numero = next((s for s in _segments(plaque, ";") if normaliser(s).startswith(("n°", "n "))), "")
+        refs_num = references(numero)
+        if refs_num:
+            for r in refs_ligne(l):
+                attendues.setdefault(r, []).append(("B2", "n° de la plaque", refs_num[:1], numero))
+    for l in tableau_md(section_md(existant_md, "## C.")):
+        cellule = _propre(_col(l, "evaporateur"))
+        segments = _segments(cellule, ";")
+        for r in dict.fromkeys(RE_REF_PHOTO.findall(f"{cellule} {_col(l, 'source')}")):
+            attendues.setdefault(r, []).append(("C", "évaporateur", segments, cellule))
+    return attendues
+
+
+def ecarts_legende(legende: str, attendues: list[tuple[str, str, list[str], str]], ref: str = "",
+                   type_photo: str = "plaque") -> list[str]:
+    """Valeurs de 1-existant.md absentes de la légende d'une photo de poste (liste vide : légende fidèle). Une plaque
+    (« plaque ») se compare aux tableaux B et C, une plaque d'ensemble (« ensemble ») au tableau B2."""
+    ecarts = []
+    leg = souple(legende)
+    for tableau, nature, variantes, lu in attendues:
+        if (tableau == "B2") != (type_photo == "ensemble"):
+            continue
+        if nature == "évaporateur":
+            if variantes:
+                ecarts += ecart_evaporateur(legende, variantes, lu, ref)
+            continue
+        if nature == "volume balayé":
+            vus = [float(x.replace(",", ".")) for x in RE_M3H.findall(legende)]
+            if not any(abs(v - float(a.replace(",", "."))) <= TOLERANCE_M3H for v in vus for a in variantes):
+                ecarts.append(f"{nature} « {', '.join(variantes)} m³/h » (tableau {tableau}) absent")
+            continue
+        if not any(souple(v) and souple(v) in leg for v in variantes):
+            ecarts.append(f"{nature} « {_couper_texte(lu)} » (tableau {tableau}) absent")
+    return ecarts
+
+
+def ecart_evaporateur(legende: str, segments: list[str], cellule: str, ref: str = "") -> list[str]:
+    """Évaporateur : le segment du tableau C qui le décrit (celui qui cite sa photo, sinon celui qui partage le plus de
+    références avec la légende) ; son modèle et son n° de série doivent être dans la légende."""
+    leg = souple(legende)
+
+    def score(seg: str) -> int:
+        return sum(1 for m in references(seg) if len(souple(m)) >= 3 and souple(m) in leg)
+    seg = next((s for s in segments if ref and ref in RE_REF_PHOTO.findall(s)), None) or max(segments, key=score)
+    if score(seg) == 0 and not (ref and ref in RE_REF_PHOTO.findall(seg)):
+        return [f"évaporateur : aucune référence du tableau C (« {_couper_texte(cellule)} ») dans la légende"]
+    ecarts = []
+    numeros = []
+    for m in RE_NUMERO.finditer(seg):                      # « n° A et B » : un numéro par évaporateur
+        numeros.append(m.group(1))
+        fin = m.end()
+        while (suite := RE_NUMERO_SUITE.match(seg, fin)) is not None:
+            numeros.append(suite.group(1))
+            fin = suite.end()
+    tete = re.split(r"n°|fabr\.|\(|,", seg)[0]
+    modeles = [m for m in references(tete) if len(souple(m)) >= 3]
+    if modeles and not any(souple(m) in leg for m in modeles):
+        ecarts.append(f"modèle d'évaporateur « {_couper_texte(tete)} » (tableau C) absent")
+    if numeros and not any(souple(n) in leg for n in numeros):
+        ecarts.append(f"n° de série d'évaporateur « {' et '.join(numeros)} » (tableau C) absent")
+    return ecarts
+
+
+def _couper_texte(texte: str, n: int = 70) -> str:
+    texte = " ".join(str(texte).split())
+    return texte if len(texte) <= n else texte[:n].rsplit(" ", 1)[0] + " …"
+
+
+def invisibles(texte: str) -> list[str]:
+    """Caractères invisibles d'un texte, en notation U+XXXX, sans doublon."""
+    return list(dict.fromkeys(f"U+{ord(ch):04X}" for ch in RE_INVISIBLE.findall(texte or "")))
+
+
 def controle_plaques(liv: Livrable) -> Controle:
     c = Controle(3, "Plaques et photos")
     existant = liv.dossier / "1-existant.md"
@@ -446,8 +582,40 @@ def controle_plaques(liv: Livrable) -> Controle:
     for ref, legende, ou in presentes:
         if not legende.strip():
             c.echec(f"{ref} ({ou}) : légende vide")
-    c.resume = (f"{len(citees)} photos citées aux tableaux B, B2 et C ; {len(presentes)} photos dans le PDF"
-                + ("" if c.statut == ECHEC else " : chacune une fois, toutes légendées"))
+    # légendes des plaques fidèles au relevé
+    texte_existant = existant.read_text(encoding="utf-8")
+    attendues = valeurs_releve(texte_existant)
+    verifiees = 0
+    for p in liv.demande.get("postes") or []:
+        for ph in p.get("photos") or []:
+            ref, legende = Path(str(ph.get("fichier") or "")).stem, str(ph.get("legende") or "")
+            if not legende.strip() or ref not in attendues:
+                continue
+            verifiees += 1
+            for ecart in ecarts_legende(legende, attendues[ref], ref, str(ph.get("type") or "plaque")):
+                remplace = " (remplacé par « non relevé »)" if "non releve" in normaliser(legende) else ""
+                c.echec(f"{ref} (poste « {p.get('titre') or p.get('id')} ») : {ecart} de la légende "
+                        f"« {_couper_texte(legende, 110)} »{remplace}")
+    # caractères invisibles
+    signales = 0
+    for chemin, texte in textes_json(liv.demande):
+        codes = invisibles(texte)
+        if codes:
+            signales += 1
+            if signales <= MAX_DETAILS_INVISIBLES:
+                c.echec(f"demande.json › {chemin} : caractère invisible {', '.join(codes)} "
+                        f"(« {_couper_texte(RE_INVISIBLE.sub('⍰', texte))} »)")
+    lignes_inv = [(i, l) for i, l in enumerate(texte_existant.splitlines(), 1) if invisibles(l)]
+    for i, l in lignes_inv[:MAX_DETAILS_INVISIBLES]:
+        c.echec(f"1-existant.md, ligne {i} : caractère invisible {', '.join(invisibles(l))} "
+                f"(« {_couper_texte(RE_INVISIBLE.sub('⍰', l))} ») : réparer le relevé, puis assembler.py à nouveau")
+    if signales > MAX_DETAILS_INVISIBLES or len(lignes_inv) > MAX_DETAILS_INVISIBLES:
+        c.echec(f"caractères invisibles : {signales} texte(s) de demande.json et {len(lignes_inv)} ligne(s) de "
+                "1-existant.md en tout (les premiers seulement sont détaillés)")
+    c.resume = (f"{len(citees)} photos citées aux tableaux B, B2 et C ; {len(presentes)} photos dans le PDF ; "
+                f"{verifiees} légendes de plaques comparées au relevé"
+                + ("" if c.statut == ECHEC else " : chacune une fois, toutes légendées, fidèles au relevé, sans "
+                   "caractère invisible"))
     if not citees:
         c.echec("aucune photo citée dans les tableaux B, B2 et C de 1-existant.md : relevé incomplet ?")
     return c

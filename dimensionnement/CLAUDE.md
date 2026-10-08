@@ -20,6 +20,17 @@
 Chaque étape relit `dossier.md` en premier (état, décisions, hypothèses, questions, corrections) et
 l'écrit en dernier. Si la conversation est perdue, « on reprend le dossier X » repart du fichier.
 
+**Loïc absent : tout d'un coup.** Quand Loïc demande les trois étapes sans être devant l'écran (« chiffre-moi … et
+prépare-moi la demande, je ne suis pas là »), c'est sa demande explicite d'avancer : on enchaîne les étapes 1, 2 et 3
+**sans validation intermédiaire** ✋ et sans ouvrir les pages HTML en cours de route. Ce qu'il aurait dicté (ce qu'on
+remplace par quoi, fluide cible, fournitures, qui dessert quoi) devient une **hypothèse écrite** : `dossier.md`
+§ Hypothèses, statut « hypothèse » dans `2-entrees.json`, « (hyp.) » dans les tableaux et le PDF, appuyée sur
+`savoir/methodes/regles-loic.md` quand une règle générale s'applique (une règle « observée sur le dossier test »
+n'est qu'une piste, jamais recopiée telle quelle). `dossier.md` note « étapes 1-2 non validées » ; les vérificateurs
+tournent comme d'habitude. À la fin, **une seule liste de questions** (bloc G3 de `2-dimensionnement.md`, reprise
+dans la réponse), un seul `controler.py --ouvrir`, et cette phrase : « rien n'est envoyé : tu relis le PDF et le mail,
+tu réponds aux questions, puis c'est toi qui envoies ».
+
 **Deux formes pour chaque document du dossier.** Le markdown (`dossier.md`, `1-existant.md`…) est la
 **mémoire de Claude** : complet, sourcé, relu par les skills. Pour **Loïc**, on génère toujours la **vue
 HTML** (`shared/rendu_html.py`, convertisseur commun à toutes les étapes ; `rendu_html.py` du skill
@@ -44,7 +55,9 @@ les grossistes) ; Claude n'y ajuste que les textes dictés, jamais un chiffre ; 
 PDF unique** (contexte, chambres, production existante, évaporateurs, demande, détail par poste avec les photos
 légendées, annexes ; moins de 5 Mo) et **un mail court sans tableau** ; `controler.py` vérifie anonymisation,
 chiffres, plaques, PDF, mail et annexes (0 échec exigé), un vérificateur relit, puis Loïc relit ✋ et **envoie
-lui-même** ; `envois.md` garde la trace de chaque envoi. Une version envoyée ne se réécrit jamais : `v2`, `v3`…
+lui-même** ; `envois.md` garde la trace de chaque envoi. **Le mail affirme ce que Loïc relira** : aucune
+formulation de doute (« nous supposons », « d'après le relevé », « que nous pensons ») ; les hypothèses restent
+marquées « (hyp.) » dans le PDF et listées dans `dossier.md` pour sa relecture. Une version envoyée ne se réécrit jamais : `v2`, `v3`…
 (grossistes) et `v1-fabricant`… (fabricant). Si l'étape P est faite, le PDF reprend les **longueurs de cuivre
 estimées** de `plan/metre.json` (froid et clim seulement ; « (mesurée) » pour une longueur mesurée sur chantier ;
 diamètres et charge de fluide laissés au fournisseur) et la page 1 de `plan/plan.pdf` en dernière page ; sinon une
@@ -72,7 +85,9 @@ commencer (meilleure lecture des croquis et des rendus).
 dimensionnement/
 ├── CLAUDE.md            ← ce manuel
 ├── savoir/              ← SOCLE versionné, maintenu par Adrien (INDEX.md = routeur « pour trouver X → fichier Y, page Z »)
-├── bibliotheque/        ← LOCAL (gitignoré) : documents originaux de Loïc, cache des pages et de l'OCR
+├── bibliotheque/        ← LOCAL, jamais versionné : JONCTION vers le dossier des documents originaux de Loïc sur son
+│                          PC (cache des pages et de l'OCR), créée à l'installation (Lot 8) ; avant, sur un autre PC,
+│                          elle peut manquer ou pointer ailleurs : ne pas la suivre, le socle d'un dossier est savoir/
 ├── carnet/              ← LOCAL (gitignoré) : lecons.md, les corrections de Loïc et le pourquoi
 └── dossiers/            ← LOCAL (gitignoré) : un dossier par installation
     ├── emetteur.json                  ← coordonnées de Loïc pour les demandes de prix (à compléter par lui)
@@ -127,10 +142,21 @@ Code commun : `shared/savoir.py`.
    suffit) ou « exécution » (après signature : tout est à faire confirmer par le fournisseur).
 7. **Chaque correction de Loïc** va dans `carnet/lecons.md` avec le pourquoi, et est relue au dossier suivant.
 8. Recherche web autorisée pour une donnée constructeur, **avec le lien en source**, et marquée « indicatif ».
+9. **Fluide** : la plaque fait foi pour l'existant tel que lu (fluide d'origine, recopié comme il est écrit) ; le
+   rapport ou Loïc font foi pour le fluide actuel réel (celui qui est dans l'installation aujourd'hui). Quand les deux
+   divergent, le calcul prend le fluide du rapport en hypothèse et la divergence devient une question pour Loïc.
 
 ## Vocabulaire de Loïc
 
-- **Poste** = un sous-point du rapport InterFast (ex. « Centrale négative B », « Chambre froide »).
+- **Sous-point** = une section du rapport InterFast, par équipement ou par chambre (« CENTRALE NÉGATIVE B »,
+  « ÉVAPORATEURS NÉGATIF À » : ce « À » est la lettre A, accentuée par la saisie InterFast). C'est l'unité de
+  l'étape 1 : la colonne « Poste » des tableaux de `1-existant.md` reprend le titre du sous-point.
+- **Poste** (étapes 2 et 3) = **une production et ce qu'elle refroidit** : une centrale, ou les groupes de
+  condensation d'une chambre ; une entrée de `postes[]` dans `2-entrees.json`, un chapitre de la demande. Passage du
+  rapport aux postes : chaque sous-point « centrale » ou « groupes » devient un poste ; chaque sous-point
+  « évaporateurs » ou « chambre » se rattache au poste qui la dessert (champ `dessert`, tableau C « Desservi par ») ;
+  si ni le rapport ni Loïc ne disent qui dessert quoi, le rattachement (même lettre dans les titres) est une
+  hypothèse, écrite comme telle et posée en question.
 - **Centrale** = plusieurs compresseurs en parallèle ; **groupe / unité de condensation** = un compresseur
   avec son condenseur ; **négatif** = congélation (≈ −18 à −25 °C) ; **positif** = réfrigération (≈ 0 à +4 °C).
 - **Remodeling** = remplacement d'une installation existante (gaz, compresseurs, régulation).
