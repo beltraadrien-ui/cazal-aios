@@ -42,6 +42,10 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 | Tâche demandée | Skill / commande | Surface | Sources utilisées |
 |---|---|---|---|
 | **Résumer un vocal** (visite avant-devis, réunion archi, dépannage) | `resume-vocal-devis` | Surface | template figé `templates/format-resume.md` (bundlé dans le skill) |
+| **Chiffrer le remplacement d'une installation frigo** (« nouveau dossier », « voici le rapport de visite », « relevé de l'existant », « sors-moi les puissances existantes », remodeling) | `froid-releve-existant` (étape 1) → `froid-dimensionnement` (étape 2) → `froid-demande-fournisseur` (étape 3) ; plan du local en étape P (`froid-plan-2d`), avant ou après l'étape 2 | Engine | branche **`dimensionnement/`** : lire `dimensionnement/CLAUDE.md` (parcours, règles de fiabilité) ; savoir distillé `dimensionnement/savoir/INDEX.md` ; un dossier par installation dans `dimensionnement/dossiers/` (local, jamais sur GitHub) |
+| **Dessiner le plan d'un local** (« fais-moi le plan », « mets ce croquis au propre », « trace les cuivres », « métré des lignes », « feuille à imprimer », « voilà la photo du tracé ») | `froid-plan-2d` (étape P, Opus forcé par le skill) | Engine | `dimensionnement/CLAUDE.md` (étape P), `dimensionnement/savoir/methodes/plan-2d.md`, draw.io Desktop pour les retouches à la souris ; sorties dans `dimensionnement/dossiers/<slug>/plan/` |
+| **Question technique froid / clim / CO2 / régulation** (« qu'est-ce que dit le Kotza sur… », « comment régler l'AK-CC 55 », « retrouve le schéma de… ») | `froid-question` | Surface (mobile et desktop) | base de savoir dans Supabase (`rechercher_savoir`) via le connecteur Supabase lecture seule + `references/INDEX.md` bundlé |
+| **Entretenir la base de savoir** (« ajoute ce document au savoir », « retiens ça », « état du savoir », « la base est en pause ») | `froid-savoir` | Engine | `dimensionnement/bibliotheque/` (PDF, catalogue, cache OCR) → tables `savoir_*` + bucket `savoir-pages` ; `shared/savoir.py`, `shared/sql/schema_savoir.sql` |
 | **Reel / post depuis un chantier** (vocal + photos → script prêt à filmer, + variantes post réalisation & Google) | `script-reel-chantier` | Surface | `references/framework-hook.md`, `voice.md`, `angles-signature-cazal.md`, `rapport-perf-digest.md`, `format-*.md` |
 | **Proposer / développer des idées de contenu** (« qu'est-ce que je peux poster ? ») | `idee-contenu` | Surface | table Supabase `idees` (vérité) ou `references/base-idees.md` (snapshot) + digest |
 | **Noter une idée à la volée** (« garde ça pour plus tard ») | `ajout-idee` | Engine | insertion via `shared/scripts/post/insert_idee.py` (jamais à la main) |
@@ -70,7 +74,7 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 
 | Question | Où chercher |
 |---|---|
-| Ce qu'on a **vendu** à Loïc (scope 800 €, périmètre ferme) | [`convention-build.md`](convention-build.md) |
+| Ce qu'on a **vendu** à Loïc (périmètre ferme) | [`convention-build.md`](convention-build.md) |
 | **Où en est le build** / ce qui reste à faire | [`.claude/reste-a-faire.md`](.claude/reste-a-faire.md) |
 | **Pourquoi** ces choix d'architecture (journal append-only) | [`decisions/log.md`](decisions/log.md) |
 | **Comment construire** (conventions, pièges, double-version repo+zip) | [`.claude/build-conventions.md`](.claude/build-conventions.md) |
@@ -85,7 +89,7 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 | Le cerveau opérateur (3Ms : Mindset/Method/Machine) | `references/3ms-framework.md` |
 | **Systèmes atteignables** (quoi est branché, comment, fraîcheur) | [`connections.md`](connections.md) |
 | **Secrets / clés API** | `.env` local — vérifier via `python shared/config.py` (`SET`/`MISSING`), **jamais** afficher une valeur |
-| Historique (call de vente, onboarding, cadrage) | `archives/` |
+| **Branche dimensionnement** (chiffrage des remplacements frigo : parcours d'un dossier, règles, vocabulaire, savoir) | [`dimensionnement/CLAUDE.md`](dimensionnement/CLAUDE.md) · `dimensionnement/savoir/INDEX.md` |
 | Sorties temporaires (rapports datés, logs de veille, zips) | `active/` (gitignoré) |
 | Évolutions futures envisagées | `EXPANSIONS.md` + section Hors-scope de `reste-a-faire.md` |
 

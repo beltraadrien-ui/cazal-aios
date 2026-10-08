@@ -4,7 +4,7 @@
 > correction, rangement) vit ici. On coche au fur et à mesure. En **mode build**, Claude lit ce
 > fichier pour savoir « où on en est », et le met à jour en fin de build.
 >
-> Le *quoi vendu* (engagement 800 €) et le *pourquoi technique* sont dans
+> Le *quoi vendu* et le *pourquoi technique* sont dans
 > [`../convention-build.md`](../convention-build.md). Le *pourquoi des décisions* est dans
 > [`../decisions/log.md`](../decisions/log.md). Le *comment construire* est dans
 > [`build-conventions.md`](build-conventions.md).
@@ -177,7 +177,31 @@ type='own'` et ne touche qu'à ces contenus.
 
 ---
 
-## Hors-scope (évolutions futures, PAS dans les 800 €)
+## Bloc 6 — Branche « dimensionnement » (v2 : chiffrage des remplacements d'installations frigorifiques, vendu le 2026-09-28)
+
+Architecture validée le 2026-10-03 (cf. `decisions/log.md`). Manuel de branche : `dimensionnement/CLAUDE.md`.
+Dossier test : ETS Denis (rapport InterFast IN01834 du 14/09/2026, local, jamais versionné).
+
+- [x] **Lot 0** (2026-10-03) : arborescence `dimensionnement/`, 5 skills nommés, choix techniques (CoolProp, double index, abaque de volume, ETS Denis).
+- [x] **Lot 1 — relevé de l'existant** (2026-10-03) : `dimensionnement/` (CLAUDE.md, `.gitignore` local, `savoir/INDEX.md`,
+      `methodes/checklist-releve.md`, `materiel/lecture-plaques.md`) ; skill `froid-releve-existant` + `scripts/extraire_rapport.py`
+      (PyMuPDF ajouté à `requirements.txt`) ; test ETS Denis : 9 postes, 43 photos, 7 compresseurs et 7 évaporateurs lus,
+      concordance avec la conversation Claude de Loïc du 16/09 ; double lecture par sous-agent vérificateur. **Validation d'Adrien ✋ en attente.**
+- [x] **Lot 4 — base de savoir** (2026-10-05, validé par Adrien le 2026-10-06 : réponses sourcées depuis le téléphone, coût réel OpenAI 11,18 $) : skill `froid-savoir` (catalogue, pages, OCR OpenAI sous budget, sections par titres
+      courants, chargement Supabase, recherche PC, carnet, index mobile), `shared/savoir.py`, `shared/sql/schema_savoir.sql`,
+      skill mobile `froid-question` final (zip). **Ingestion terminée le 2026-10-06 : 46 documents, 5 517 pages, 763 Mo / 1 Go, OCR 22,4 $ au total.**
+      Stockage : ≈ 240 Mo restants sur le plan gratuit → prochain livre scanné en 800 px ou plan payant. Retours de Loïc sur les réponses mobiles.
+- [x] **Lot 2 — dimensionnement** (2026-10-06, commit 103d164) : skill `froid-dimensionnement` (puissance existante par cylindrée et point catalogue,
+      F-gas, `Valeur` sourcée, 124 tests), socle v1 (`prp.csv`, F-gas **non relue**, méthode, règles de Loïc, transitions, Bitzer, 306 points
+      catalogue), `shared/rendu_html.py`, CoolProp 8.0.0 épinglé. Pas de polynômes ni d'abaque de volume en V1 (options futures).
+      Reste : Adrien juge la vue HTML du dossier test ✋, relit la table F-gas, valide la table de rendement volumétrique ; réponses de Loïc aux six questions.
+- [x] **Lot 3 — demande fournisseur** (2026-10-07, commit 66f122b) : skill `froid-demande-fournisseur` (PDF unique anonymisé par Edge + mail court sans tableau, deux variantes grossiste / fabricant, `controler.py`, 74 tests), socle `demande-fournisseur.md`. Reste : Adrien relit le PDF ETS Denis ✋, tranche l'ajout de `pillow` à `requirements.txt` ; `dossiers/emetteur.json` à compléter par Loïc ; questions 7-11 à la livraison.
+- [x] **Lots 5 et 6 — plans 2D** (2026-10-07, commit 493204e) : skill `froid-plan-2d` (plan A4 à échelle normalisée dans draw.io, métré, croisements, `verifier_plan.py` à 11 contrôles jusque dans le PDF, import des retouches à la souris, feuille à repères ArUco + lecture des photos de tracés, 471 tests), méthode `plan-2d.md`, règles R14-R19, étape P du manuel. Page de lecture refaite après retour d'Adrien (commit 1fcbd94) ; première photo réelle lue, stylo bille et basse résolution (commit 43a8aac), réseau d'eau glacée intégré à la boucherie v8. Reste : original de la photo en pleine résolution ; champ `model` à trancher ; questions 13-21 à la livraison.
+- [x] **Lot 7 — intégration et bout en bout** (2026-10-08, commits ec57149 et 4b9ebda) : longueurs estimées / mesurées, métré du plan vers la demande fournisseur (chapitre + annexe plan), ETS Denis rejoué en session neuve sans contexte (mêmes chiffres), scripts durcis et manuels complétés. Reste : `CLAUDE.md` racine ligne 45 (« à venir ») à corriger par Adrien.
+- [ ] **Lot 8 — livraison** chez Loïc (`maj-aios`, clés à lui, connecteur Supabase + accès réseau sur son claude.ai, zip `froid-question`, visio).
+- [ ] `maj-aios` : ajouter `resume-vocal-devis` et `froid-question` à la liste des skills mobiles à ré-uploader.
+
+## Hors-scope (évolutions futures, hors du périmètre vendu)
 - ⏳ Connecteur Supabase MCP sur le claude.ai de Loïc (phase 2 — cf. decisions/log.md 2026-07-19 ; activer sur frustration réelle uniquement).
 - ⏳ Prospection LinkedIn / cold email (~500 € en plus, 3ᵉ espace de travail).
 - ⏳ Génération vidéo (Nano Banana / avant-après immo).

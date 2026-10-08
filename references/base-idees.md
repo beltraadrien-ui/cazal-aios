@@ -5,7 +5,7 @@
 > idée est rattachée à un **archétype** (cf. `angles-signature-cazal.md`) et à un **statut**.
 >
 > Statuts : `idée` (brute) · `choisie` (en cours de scripting) · `produite` (script/article généré) ·
-> `publiée`. Origine : `veille` (auto) · `chantier` (terrain) · `manuelle` (Loïc/Adrien).
+> `publiée`. Origine : `veille` (auto) · `chantier` (terrain) · `manuelle` (Loïc).
 
 > **Statut global : 🟠 AMORÇAGE** — quelques idées de départ ci-dessous (issues de
 > `angles-signature-cazal.md`). La veille auto les complétera quand Apify sera branché.

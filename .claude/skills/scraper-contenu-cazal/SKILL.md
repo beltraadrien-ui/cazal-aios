@@ -23,7 +23,7 @@ concurrents via **Apify**, et les **enregistre dans Supabase** (`comptes`, `cont
 ## Étapes
 
 1. **Vérifier les clés** : `python shared/config.py` → `APIFY_API_TOKEN` doit être SET. Sinon, demander
-   à Loïc/Adrien de remplir le `.env` et s'arrêter (ne pas tâtonner).
+   à Loïc de remplir le `.env` et s'arrêter (ne pas tâtonner).
 2. **Scraper + enregistrer** via le script engine, un appel par groupe :
    ```bash
    python shared/scripts/post/upsert_contenu_apify.py <handle_loic> --type own --limit 30

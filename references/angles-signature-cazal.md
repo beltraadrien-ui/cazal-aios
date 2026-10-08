@@ -1,6 +1,6 @@
 # Angles signature & filtre éditorial — Cazal Réfrigération
 
-> Équivalent du *Brand Toolkit* de BeltraTech, adapté à Loïc. Sert à l'idéation (`veille-niche`,
+> Le *Brand Toolkit* de Loïc. Sert à l'idéation (`veille-niche`,
 > `idee-contenu`) et au scripting : des angles récurrents **à recycler et décliner**, plus un filtre
 > « est-ce bon pour Cazal ? » à passer avant de proposer/publier. Source de la voix : `voice.md`.
 

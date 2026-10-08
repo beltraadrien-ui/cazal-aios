@@ -8,7 +8,7 @@
 
 ## Ce qui doit être fait
 
-> **Le périmètre ferme vendu à Loïc (800 €), tel qu'établi pendant l'appel de vente.** C'est la liste
+> **Le périmètre ferme vendu à Loïc, tel qu'établi pendant l'appel de vente.** C'est la liste
 > des composantes à livrer — le *comment* (sections suivantes) peut évoluer, mais ce *quoi* est l'engagement.
 > Livraison **clé en main en 7 jours**, **tout lui appartient**, pilotage **mobile/vocal** au centre.
 
@@ -37,7 +37,7 @@
 - [ ] **Support WhatsApp** perso pendant **1 an**.
 - [ ] Côté Loïc : **Claude Pro 20 €/mois** (utilisation seule) — confirmé.
 
-### Hors-scope (établi comme évolution future, PAS dans les 800 €)
+### Hors-scope (établi comme évolution future, hors du périmètre vendu)
 - ⏳ **Prospection** LinkedIn / cold email (syndics de copro, ~500 € en plus, 3ᵉ espace de travail).
 - ⏳ **Génération vidéo** (type Nano Banana / vidéos immo avant-après) — branchable plus tard.
 
