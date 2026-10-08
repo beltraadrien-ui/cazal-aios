@@ -42,7 +42,8 @@ et le cache `_cache/` (pages, OCR payé, sections). **Une page transcrite n'est 
 4. **Ingérer** (`ingerer.py --doc`). Lire le bilan : pages chargées, figures, dollars. Un arrêt « budget » ou
    « plafond OpenAI » est normal : relancer plus tard, la reprise est automatique.
 5. **Régénérer l'index mobile et le zip**, puis dire à Loïc de remplacer le zip `froid-question` sur son claude.ai
-   (Réglages ▸ Fonctionnalités ▸ Skills). Sans ça, le téléphone ne connaît pas le nouveau document.
+   (Personnaliser ▸ Compétences ▸ Téléverser ▸ Remplacer ; mode d'emploi : `skills-mobiles/README.md`). Sans ça,
+   le téléphone ne connaît pas le nouveau document.
 
 ## Étapes : « retiens ça » / « note cette leçon »
 

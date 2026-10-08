@@ -26,13 +26,33 @@ Détail → `context/about-business.md`, `context/about-me.md`, `context/priorit
 
 - **Mode utilisation** (défaut, ~90 %) : Loïc veut *produire un livrable* → invoquer le skill de la
   table de routage ci-dessous, produire l'artefact. Ne rien rebuilder.
-- **Mode build** (créer/modifier une capacité, brancher un outil, changer la structure) :
+- **Mode build** (créer/modifier une capacité, brancher un outil, changer la structure) — **côté Adrien**.
+  Sur le PC de Loïc, le build se limite à la zone perso et à un nouveau skill dans son propre dossier
+  (section suivante) ; les fichiers du système ne se modifient pas :
   1. Lire [`.claude/build-conventions.md`](.claude/build-conventions.md) (où ça vit, comment, pièges).
   2. Lire [`.claude/reste-a-faire.md`](.claude/reste-a-faire.md) (*où on en est*, ce qui est prévu).
   3. Vérifier le *pourquoi* des choix passés dans [`decisions/log.md`](decisions/log.md).
   4. En fin de build : logger la décision dans `decisions/log.md`, cocher `reste-a-faire.md`,
      ajouter une ligne à `connections.md` si un outil a été branché, et **re-publier le zip** si un
      skill de surface a changé (cf. « Cycle de publication mobile »).
+
+## Ce que l'assistant peut créer, et où (zone perso de Loïc)
+
+- **Fichiers du système** = tout ce que git suit : ce fichier, `.claude/skills/`, `references/`,
+  `shared/`, `dimensionnement/savoir/`, `skills-mobiles/`… Ils viennent d'Adrien par la mise à jour
+  (`maj-aios`). **Ne jamais les modifier** : une modification locale serait mise de côté à la
+  prochaine mise à jour (copiée dans `active/sauvegarde-maj/`, puis fichier remis d'origine). Cela
+  vaut aussi pour les journaux du système (`decisions/log.md`, `.claude/reste-a-faire.md`) : sur le
+  PC de Loïc, une décision ou une note se range dans `perso/`. Besoin d'un changement dans le
+  système → l'écrire dans `perso/demandes-a-adrien.md`, Adrien l'intègre.
+- **Zone perso = [`perso/`](perso/README.md)** : notes, annuaires, modèles de mail, brouillons, tout
+  ce que Loïc demande de créer ou de garder. Jamais sur GitHub, jamais touché par la mise à jour.
+- **Données de travail déjà locales** : `dimensionnement/dossiers/`, `dimensionnement/bibliotheque/`,
+  `dimensionnement/carnet/`, `active/`. Idem : jamais touchées par la mise à jour.
+- **Nouvel outil (skill) demandé par Loïc** : le créer dans un **nouveau** dossier
+  `.claude/skills/<nom>/` (jamais modifier un dossier existant) et le noter dans
+  `perso/demandes-a-adrien.md` pour qu'Adrien l'intègre au système ; en attendant, il reste local et
+  survit aux mises à jour.
 
 ## Table de routage (le schéma le plus important)
 
@@ -58,8 +78,8 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 | **« Qu'est-ce qui marche ? »** — rapport de performance | `rapport-performance` | Engine | vue `contenu_avec_scores` via `shared/scripts/search/list_contenu_scores.py` ; régénère le digest |
 | **Comparaison aux concurrents** | `rapport-concurrents` | Engine | même vue, `--type concurrent` (⚠️ nécessite des concurrents scrapés) |
 | **Rafraîchir les KPIs** (vues, likes… du compte de Loïc) | `python shared/scripts/post/poller.py` | Engine (routine quotidienne) | dual-mode : **Meta Graph** si token dans `.env` (KPIs riches), sinon **Apify** → tables `contenu` + `contenu_snapshots` |
-| **Mettre à jour l'AIOS chez Loïc** (« maj ») | `maj-aios` | Desktop Loïc | `git pull --ff-only` depuis le repo GitHub privé `cazal-aios` |
-| **Publier une skill modifiée sur mobile** | `python shared/scripts/export_skills.py <skill>` | Engine | zip dans `active/skills-zip/` → ré-upload manuel sur claude.ai |
+| **Mettre à jour l'AIOS chez Loïc** (« maj ») | `maj-aios` | Desktop Loïc | mise à jour autonome (`shared/scripts/maj_aios.py`) depuis le repo GitHub privé `cazal-aios` : met de côté les fichiers du système modifiés (`active/sauvegarde-maj/`), tire en `--ff-only`, dit quels zips de `skills-mobiles/` recharger |
+| **Publier une skill modifiée sur mobile** | `python shared/scripts/export_skills.py <skill>` | Engine (côté Adrien) | zip dans `skills-mobiles/` (versionné, part chez Loïc avec la mise à jour) → `maj-aios` dit lequel recharger sur claude.ai |
 | **Audit structurel de l'AIOS** (score Four Cs) | `audit` | Engine (côté Adrien) | registres du repo |
 | **Rituel hebdo : trouver UNE automatisation** | `level-up` | Engine (côté Adrien) | `references/3ms-framework.md` |
 | **Installation initiale / re-onboarding** | `onboard` | Engine (côté Adrien) | `aios-intake.md` → remplit `context/` |
@@ -90,7 +110,8 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 | **Systèmes atteignables** (quoi est branché, comment, fraîcheur) | [`connections.md`](connections.md) |
 | **Secrets / clés API** | `.env` local — vérifier via `python shared/config.py` (`SET`/`MISSING`), **jamais** afficher une valeur |
 | **Branche dimensionnement** (chiffrage des remplacements frigo : parcours d'un dossier, règles, vocabulaire, savoir) | [`dimensionnement/CLAUDE.md`](dimensionnement/CLAUDE.md) · `dimensionnement/savoir/INDEX.md` |
-| Sorties temporaires (rapports datés, logs de veille, zips) | `active/` (gitignoré) |
+| Sorties temporaires (rapports datés, logs de veille) et sauvegardes de la mise à jour | `active/` (gitignoré) ; fichiers du système mis de côté par `maj-aios` : `active/sauvegarde-maj/<date-heure>/` (avec un `LISEZMOI.md`) |
+| **Zone perso de Loïc** (notes, annuaires, modèles de mail, brouillons, demandes à Adrien) | [`perso/`](perso/README.md) (jamais sur GitHub, jamais touché par la mise à jour) · `perso/demandes-a-adrien.md` |
 | Évolutions futures envisagées | `EXPANSIONS.md` + section Hors-scope de `reste-a-faire.md` |
 
 ## La couche data (Supabase)
@@ -119,8 +140,11 @@ Surfaces : **Surface** = app Claude (mobile/desktop, skill zippée sur le compte
 ## Cycle de publication mobile (règle d'or)
 
 Le repo est la **source de vérité**. Modifier un skill de surface dans le repo ne change RIEN sur le
-téléphone de Loïc : il faut `python shared/scripts/export_skills.py <skill>` puis **ré-uploader le
-zip** (`active/skills-zip/`) sur son compte claude.ai (Réglages ▸ Fonctionnalités). Pas de sync auto.
+téléphone de Loïc : il faut `python shared/scripts/export_skills.py <skill>` (zip écrit dans
+`skills-mobiles/`, **versionné**), committer et pousser le zip. Il arrive chez Loïc avec la mise à jour
+(`maj-aios` dit lequel recharger), puis Loïc le **recharge** sur son compte claude.ai (Personnaliser ▸
+Compétences ▸ Téléverser ▸ Remplacer ; mode d'emploi : `skills-mobiles/README.md`). Pas de sync auto
+vers claude.ai.
 **Exception depuis 2026-07-19** : les données de perf (digest) ne demandent **plus** de re-zip — les
 skills les lisent en live dans la table `syntheses` ; le re-zip ne sert qu'aux changements de
 **logique** des skills et aux références éditoriales bundlées (voix, formats, frameworks).
@@ -143,7 +167,8 @@ nom de Loïc sans lui montrer un brouillon d'abord.**
 - Direct, concis, clair — pas de blabla. Commencer par ce qui demande une action.
 - Répondre à la question posée, sans la reformuler.
 - **Ne rien inventer** (prix, aides, normes, chiffres) → marquer `[à vérifier par Loïc]`.
-- Une décision prise → proposer de la logger dans `decisions/log.md`.
+- Une décision prise → la noter : côté Adrien dans `decisions/log.md` ; sur le PC de Loïc dans `perso/`
+  (jamais dans les journaux du système).
 - Une tâche manuelle répétée 3+ fois → la signaler au prochain `/level-up`.
 - Nouveau besoin → demander d'abord « dans quelle mesure l'IA peut-elle aider ici ? » avant de
   supposer la méthode ancienne.

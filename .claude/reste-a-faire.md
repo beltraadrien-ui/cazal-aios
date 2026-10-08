@@ -55,7 +55,7 @@
 - [x] Idéation : `veille-niche` (réécrit 2026-06-24 = orchestrateur complet calqué `veille-quotidienne` : multi-sources + dédup veille-logs + scoring + Top 10 + `AskUserQuestion` ; sources WebSearch Google/PAA + actus aides/primes + forums Reddit FR via `shared/scripts/scrape_forums.py` ; destination Supabase `idees` avec fallback `base-idees.md`), `idee-contenu` (liste → choix idée → choix format → variations).
 - [x] Scripting : `script-reel-chantier` (A/B/C), `generateur-hooks`, `scripter-reel`, `rediger-article`.
 - [x] `.env` (placeholders), `shared/config.py`, `shared/scripts/{scrape_instagram_apify,export_skills}.py`.
-- [x] Zips générés dans `active/skills-zip/` (slashes `/`, références bundlées).
+- [x] Zips générés (slashes `/`, références bundlées) ; depuis le 2026-10-08 dans `skills-mobiles/`, versionnés.
 
 **Reste à activer (dépend de Loïc) :**
 - [ ] Remplir les clés API dans `.env` (Apify + OpenAI) → débloque le moteur.
@@ -163,8 +163,8 @@ type='own'` et ne touche qu'à ces contenus.
 - [ ] **(install chez Loïc, en visio)** dérouler le § « JOUR J » de `MIGRATION-SUPABASE.md`
       (PC + GitHub → base Supabase à lui + copie des données → zips + connecteur → tests de sortie).
 - [ ] **(quotidien)** Boucle : Adrien `commit`+`push` → Loïc « mets à jour mon AIOS » (`maj-aios`) →
-      si une skill mobile a changé, `maj-aios` régénère les zips localement et guide Loïc pour le
-      ré-upload sur SON claude.ai.
+      si un zip de `skills-mobiles/` a changé, `maj-aios` le signale et guide Loïc pour le
+      recharger sur SON claude.ai.
 
 ## Bloc 4 — Process & friction (avant la formation)
 - [ ] Mini-process « publication contexte repo → Projet mobile » (sync voix de marque).
@@ -199,7 +199,15 @@ Dossier test : ETS Denis (rapport InterFast IN01834 du 14/09/2026, local, jamais
 - [x] **Lots 5 et 6 — plans 2D** (2026-10-07, commit 493204e) : skill `froid-plan-2d` (plan A4 à échelle normalisée dans draw.io, métré, croisements, `verifier_plan.py` à 11 contrôles jusque dans le PDF, import des retouches à la souris, feuille à repères ArUco + lecture des photos de tracés, 471 tests), méthode `plan-2d.md`, règles R14-R19, étape P du manuel. Page de lecture refaite après retour d'Adrien (commit 1fcbd94) ; première photo réelle lue, stylo bille et basse résolution (commit 43a8aac), réseau d'eau glacée intégré à la boucherie v8. Reste : original de la photo en pleine résolution ; champ `model` à trancher ; questions 13-21 à la livraison.
 - [x] **Lot 7 — intégration et bout en bout** (2026-10-08, commits ec57149 et 4b9ebda) : longueurs estimées / mesurées, métré du plan vers la demande fournisseur (chapitre + annexe plan), ETS Denis rejoué en session neuve sans contexte (mêmes chiffres), scripts durcis et manuels complétés. Reste : `CLAUDE.md` racine ligne 45 (« à venir ») à corriger par Adrien.
 - [ ] **Lot 8 — livraison** chez Loïc (`maj-aios`, clés à lui, connecteur Supabase + accès réseau sur son claude.ai, zip `froid-question`, visio).
-- [ ] `maj-aios` : ajouter `resume-vocal-devis` et `froid-question` à la liste des skills mobiles à ré-uploader.
+  - [x] **(2026-10-08) Lot 8 (1/2)** : zips des 8 skills mobiles versionnés dans `skills-mobiles/` (liste `MOBILES`
+        de `export_skills.py`, zips reproductibles) ; `shared/scripts/maj_aios.py` (mise à jour autonome : fichiers
+        du système modifiés mis de côté dans `active/sauvegarde-maj/`, `pull --ff-only`, zips à recharger ; 20 tests)
+        branché dans `maj-aios` ; zone perso `perso/` (gitignorée sauf son README) décrite dans le routeur.
+  - [ ] Première mise à jour chez Loïc : son `maj-aios` actuel est l'ancien (il s'arrête sur les fichiers modifiés).
+        Lancer le nouveau script par amorce, dans Git Bash à la racine du dépôt : `git fetch origin && git show
+        origin/main:shared/scripts/maj_aios.py > active/maj_aios_amorce.py && PYTHONUTF8=1 python active/maj_aios_amorce.py`.
+- [x] `maj-aios` : ajouter `resume-vocal-devis` et `froid-question` à la liste des skills mobiles à ré-uploader
+      (2026-10-08 : liste `MOBILES`, `maj-aios` signale les zips changés).
 
 ## Hors-scope (évolutions futures, hors du périmètre vendu)
 - ⏳ Connecteur Supabase MCP sur le claude.ai de Loïc (phase 2 — cf. decisions/log.md 2026-07-19 ; activer sur frustration réelle uniquement).

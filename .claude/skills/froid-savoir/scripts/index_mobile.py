@@ -3,7 +3,7 @@ la liste des documents et, pour chacun, ses sections avec leurs pages. Sert de s
 est en pause, et de guide pour choisir le bon document.
 
 Usage : python …/index_mobile.py [--max-sections 400]
-Ensuite : python shared/scripts/export_skills.py froid-question  → active/skills-zip/froid-question.zip à ré-uploader.
+Ensuite : python shared/scripts/export_skills.py froid-question  → skills-mobiles/froid-question.zip (versionné) à committer, puis à recharger sur claude.ai.
 """
 from __future__ import annotations
 

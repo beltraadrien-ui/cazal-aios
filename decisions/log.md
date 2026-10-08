@@ -786,3 +786,13 @@ vers les étapes 2 et 3 (Lot 7).
 
 **Owner:** Adrien. Reste : Lot 8 (push des commits, `maj-aios`, zips des skills mobiles, installation chez Loïc avec draw.io et la vraie clé dans son `.env`, visio de prise en main, liste des 21 questions, facture du solde).
 
+## 2026-10-08 — Lot 8 (1/2) — zips mobiles versionnés, mise à jour autonome avec sauvegarde, zone perso
+
+**Decision:** (1) Les zips des 8 skills mobiles sont **versionnés** dans `skills-mobiles/` (et non plus dans `active/skills-zip/`, gitignoré) : `export_skills.py` n'exporte plus que la liste `MOBILES`, refuse un skill moteur et écrit des zips reproductibles (date fixe, ordre trié : un zip ne change dans git que si son contenu change) ; `skills-mobiles/README.md` dit à Loïc comment les recharger. (2) `maj-aios` devient autonome : `shared/scripts/maj_aios.py` copie chaque fichier du système modifié, supprimé ou renommé sur le PC de Loïc dans `active/sauvegarde-maj/<AAAA-MM-JJ-HHMM>/` (avec un `LISEZMOI.md`), le remet d'origine, retire de l'index un fichier seulement ajouté, tire en `--ff-only`, déplace (sans l'effacer) un fichier non suivi qui bloquerait un fichier entrant, puis dit si `requirements.txt` a changé et quels zips recharger. Commit local ou historique divergent : arrêt (code 3) sans rien toucher ; pas de remote : code 2. Jamais de `reset --hard`, `merge`, `push`, `clean` ni `commit`. 20 tests sur des dépôts git jetables. (3) **Zone perso** `perso/` (gitignorée sauf son README) pour tout ce que Loïc fait créer ou garder, `perso/demandes-a-adrien.md` pour les changements voulus dans le système, nouveau skill de Loïc dans un nouveau dossier `.claude/skills/<nom>/` : nouvelle section du routeur.
+
+**Why:** Loïc a modifié des fichiers du système sans le savoir (son assistant a édité le guide et un journal) et sa mise à jour se bloquait depuis juin ; ses propres fichiers (annuaire, mails de demande de prix) n'avaient pas de place prévue. Adrien veut trouver les zips directement dans l'AIOS au moment de la mise à jour, sans envoi par mail.
+
+**Alternatives considered:** régénérer les zips chez Loïc (dépendait de l'export local, rejeté) ; bloquer la mise à jour et faire nettoyer à la main en visio (rejeté : une seule fois, et il recommencera) ; `git stash` (invisible pour Loïc, rejeté).
+
+**Owner:** Adrien. Reste : première mise à jour chez Loïc par amorce (son `maj-aios` actuel est l'ancien, cf. `reste-a-faire.md`), puis Lot 8 (2/2) : installation, clés, visio.
+

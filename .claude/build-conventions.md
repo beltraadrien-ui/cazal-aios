@@ -49,12 +49,17 @@ contexte→texte uniquement**. Les workflows à scripts lourds/réseau vivent c�
 Tout skill existe en **deux versions** (cf. `decisions/log.md` 2026-06-22) :
 1. **Version repo** — `.claude/skills/<nom>/SKILL.md` (+ supports). Source de vérité, utilisée dans
    **Claude Code et Cowork**.
-2. **Version zip** — `active/skills-zip/<nom>.zip`, pour upload sur **Claude Desktop / claude.ai**.
+2. **Version zip** — `skills-mobiles/<nom>.zip` (**versionné** : arrive chez Loïc avec la mise à jour,
+   `maj-aios` lui dit lequel recharger), pour upload sur **Claude Desktop / claude.ai**.
 
-- **Générer** : `python shared/scripts/export_skills.py` (tous) ou `… <nom>` (ciblé). Le script bundle
+- **Générer** : `python shared/scripts/export_skills.py` (les 8 de `MOBILES`) ou `… <nom>` (ciblé). Le script bundle
   les références nécessaires (mapping `BUNDLE`) et écrit des chemins internes en **slashes `/`**.
 - ⚠️ **Jamais `Compress-Archive`** : antislashs → erreur claude.ai « invalid characters ». Voie Python only.
-- **Pas de sync auto** : modif d'un skill ou d'une référence bundlée → **re-zipper + re-uploader**.
+- **`MOBILES`** (dans `export_skills.py`) = les 8 skills de surface, les seuls à avoir un zip. Nouveau skill
+  mobile → l'ajouter à `MOBILES` (et ses références à `BUNDLE`) ; un skill moteur demandé est refusé. Zips
+  reproductibles (date fixe, ordre trié) : un zip ne change dans git que si son contenu change.
+- **Pas de sync auto** : modif d'un skill ou d'une référence bundlée → **re-zipper + committer le zip** ;
+  Loïc le recharge sur claude.ai après sa mise à jour.
 - Les **`references/*.md`** sont la source de vérité unique ; les copies dans les zips en sont une export.
 
 ## Moteur de contenu (markdown-first)

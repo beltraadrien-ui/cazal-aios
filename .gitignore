@@ -7,3 +7,5 @@ node_modules/
 .claude/settings.local.json
 audits/
 active/
+perso/*
+!perso/README.md

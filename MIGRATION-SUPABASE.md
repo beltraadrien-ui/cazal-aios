@@ -158,8 +158,8 @@ en rejouant le schéma. *(Le re-seed du digest est couvert par la copie de ligne
    préservant ids/dates/analyses. Vérif côté Loïc : `PYTHONUTF8=1 python -m shared.database`.
 
 ### C. La surface (claude.ai de Loïc)
-8. Uploader les zips de `active/skills-zip/` (régénérés au besoin : `python
-   shared/scripts/export_skills.py`) sur **son** compte : Réglages ▸ Fonctionnalités.
+8. Uploader les zips de `skills-mobiles/` (versionnés, arrivés avec le clone ; mode d'emploi :
+   `skills-mobiles/README.md`) sur **son** compte : Personnaliser ▸ Compétences.
 9. **Connecteur Supabase MCP** sur son compte claude.ai :
    `https://mcp.supabase.com/mcp?project_ref=<SON_ref>&read_only=true&features=database,docs`.
    Sans lui, les skills retombent sur les snapshots bundlés (dégradé propre).
